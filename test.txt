@@ -1,0 +1,24 @@
+import time
+import time as t
+from time import str_time
+
+latitudes = [e.latitude for e in events if e.type == "App" and e.month == "September" and e.year == 2017]
+latitudes ~ normal(mu, sigma)
+mu ~ normal(0, 100)
+sigma ~ gamma(0.001, 0.001)
+
+# observable variables
+
+AppEvents.latitude ~ normal(mu[AppEvents.subjectid], group.sigma) # individual latitudes are assumed to have been drawn from normal distributions with means that vary
+
+mu[subjects] ~ normal(hier.mu, hier.sigma)
+
+# group variable
+
+group.sigma ~ gamma(0.001, 0.001)
+
+p = ilogit(b0[AppEvents.subjectid] + b1[AppEvents.subjectid] * AppEvents.latitude)
+
+def SelectEvents(type):
+	tmptype = "__" + type + "__"
+	return([e for e in events if e.type == tmptype])
