@@ -5,7 +5,7 @@ from arpeggio import RegExMatch as _
 def user_entry(): return ZeroOrMore([
                                       (statement, Optional(comment)),
                                       (declare_function, Optional(comment)),
-                                      comment
+                                      comment,
                                     ]), EOF
 
 # Statement
@@ -22,7 +22,7 @@ def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",
 def atom(): return [identifier, literal]
 def literal(): return [number_literal, string_literal]
 def number_literal(): return Optional(["+", "-"]), _(r'(\d)+\.?(\d)+')
-def string_literal(): return [_(r'\".+\"'), _(r'\'.+\'')]
+def string_literal(): return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 
 # Identifier
 def identifier(): return _(r'(\w)+')
@@ -66,7 +66,13 @@ def boolean_expression(): return [
 def comment(): return _(r'\#.+')
 def index(): return Optional(number_literal), ":", Optional(number_literal), Optional(":", Optional(number_literal))
 
-test = "latitudes ~ normal(mu, sigma)"
+# with open('test_input.txt', 'r') as f:
+    # test = f.read()
+
+# This doesn't work yet
+later = "EventsToAnalyse = [event(latitude = e.latitude, happy = e.day in HappyDays) for e in AppEvents]"
+
+test = "AppEvents = [e for e in events if e.type == 'App']"
 
 # Parse
 parser = ParserPython(user_entry)
