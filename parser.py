@@ -13,9 +13,9 @@ def statement(): return [
                           assign_statement,
                           import_statement,
                         ]
-def assign_statement(): return any_identifier, ["=", "~"], [function, list, expression]
+def assign_statement(): return any_identifier, ["=", "~"], [function, list, expression], Optional("in", any_identifier)
 def import_statement(): return Optional("from", identifier), "import", identifier, Optional("as", identifier)
-def return_statement(): return "return", [("(", expression, ")"), expression]
+def return_statement(): return "return", [("(", [expression, list], ")"), expression, list]
 def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",", identifier), ")", ":"
 
 # Building blocks
@@ -66,13 +66,10 @@ def boolean_expression(): return [
 def comment(): return _(r'\#.+')
 def index(): return Optional(number_literal), ":", Optional(number_literal), Optional(":", Optional(number_literal))
 
-# with open('test_input.txt', 'r') as f:
-    # test = f.read()
+with open('test_input.txt', 'r') as f:
+    test = f.read()
 
-# This doesn't work yet
-later = "EventsToAnalyse = [event(latitude = e.latitude, happy = e.day in HappyDays) for e in AppEvents]"
-
-test = "AppEvents = [e for e in events if e.type == 'App']"
+#test = "EventsToAnalyse = [event(latitude = e.latitude, happy = e.day in HappyDays) for e in AppEvents]"
 
 # Parse
 parser = ParserPython(user_entry)
