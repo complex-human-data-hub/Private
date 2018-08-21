@@ -39,19 +39,15 @@ def declare_function(): return define_statement, ZeroOrMore(statement), return_s
 
 # Expressions
 def expression_atom(): return [index_identifier, attribute_identifier, function, atom]
-def expression_molecule(): return [
-                                    ("(", expression_molecule, ")", ZeroOrMore(["*", "\\", "**"], expression_molecule)),
-                                    (expression_atom, ZeroOrMore(["*", "\\", "**"], expression_molecule))
-                                  ]
 def expression(): return [
-                            ("(", expression, ")", ZeroOrMore(["+", "-"], expression)),
-                            (expression_molecule, ZeroOrMore(["+", "-"], expression))
+                            ("(", expression, ")", ZeroOrMore(["+", "-", "/", "**", "*"], expression)),
+                            (expression_atom, ZeroOrMore(["+", "-", "/", "**", "*"], expression))
                          ]
 
 # List
 def list(): return "[", [comprehension, array], "]"
 def comprehension(): return expression, comp_for
-def comp_for(): return "for", expression, "in", expression, ZeroOrMore([comp_for, comp_if])
+def comp_for(): return Optional("for", expression), "in", expression, ZeroOrMore([comp_for, comp_if])
 def comp_if(): return "if", boolean_expression
 def array(): return expression, ZeroOrMore(",", expression)
 
@@ -64,7 +60,7 @@ def boolean_expression(): return [
 
 # Misc.
 def comment(): return _(r'\#.+')
-def index(): return Optional(number_literal), ":", Optional(number_literal), Optional(":", Optional(number_literal))
+def index(): return Optional(identifier), ":", Optional(identifier), ZeroOrMore(":", Optional(identifier))
 
 with open('test_input.txt', 'r') as f:
     test = f.read()
@@ -72,7 +68,7 @@ with open('test_input.txt', 'r') as f:
 #test = "EventsToAnalyse = [event(latitude = e.latitude, happy = e.day in HappyDays) for e in AppEvents]"
 
 # Parse
-parser = ParserPython(user_entry)
+parser = ParserPython(user_entry, debug = True)
 parse_tree = parser.parse(test)
 
 # Test
