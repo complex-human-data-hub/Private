@@ -26,8 +26,8 @@ def string_literal(): return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?
 
 # Identifier
 def identifier(): return _(r'(\w)+')
-def index_identifier(): return identifier, OneOrMore("[", [index, expression], "]")
-def attribute_identifier(): return identifier, OneOrMore((".", identifier))
+def index_identifier(): return identifier, OneOrMore("[", [index, expression], "]"), Optional(".", any_identifier)
+def attribute_identifier(): return identifier, OneOrMore((".", any_identifier))
 def any_identifier(): return [index_identifier, attribute_identifier, identifier]
 
 # Function
