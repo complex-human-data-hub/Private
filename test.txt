@@ -25,15 +25,19 @@ def SelectEvents(type):
 
 a = [b for d in c]
 a ~ b(c, [d, e])
+a ~ b(c, d, e, f, g)
+a ~ b(c + d)
+a ~ b((c + d) * (e**f - g))
 a = b + c
 a = (b + c) / d
 a = (b + c) / (d - e)
 a = (b + c * (d ** e))/ (f**g)
 a = [b in c]
 # a b # c d
+a = [b for b in d if b == e and not b == c]
 a = [b for d in c if e == f]
 a = [b for d in c if (e == f) and g == h]
-a = [b for d in c if (e == f) and !(g == h)]
+a = [b for d in c if (e == f) and not (g == h)]
 a = [b for d in c if ((e == f) and (g == h)) or i == j]
 a = [b for d in c if k == l and (((e == f) or (g == h)) and (i == j))]
 a = b[:c]
@@ -41,3 +45,6 @@ a = b[c]
 a = b[c:d]
 a = b[c:d:e]
 a = b[c:d:]
+a = b.c.d
+a = [(d, b) for c in e]
+
