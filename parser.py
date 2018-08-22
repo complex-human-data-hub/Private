@@ -13,7 +13,7 @@ def statement(): return [
                           assign_statement,
                           import_statement,
                         ]
-def assign_statement(): return any_identifier, ["=", "~"], [function, list, expression], Optional("in", any_identifier)
+def assign_statement(): return any_identifier, ["=", "~"], [function, list, expression, dictionary, set], Optional("in", any_identifier)
 def import_statement(): return Optional("from", identifier), "import", identifier, Optional("as", identifier)
 def return_statement(): return "return", [("(", [expression, list], ")"), expression, list]
 def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",", identifier), ")", ":"
@@ -38,18 +38,20 @@ def function(): return (identifier, "(",
 def declare_function(): return define_statement, ZeroOrMore(statement), return_statement
 
 # Expressions
-def expression_atom(): return [index_identifier, attribute_identifier, function, atom]
+def expression_atom(): return [index_identifier, attribute_identifier, function, list, set, atom]
 def expression(): return [
-                            ("(", [array, expression], ")", ZeroOrMore(["+", "-", "/", "**", "*"], expression)),
+                            ("(", expression, ")", ZeroOrMore(["+", "-", "/", "**", "*"], expression)),
                             (expression_atom, ZeroOrMore(["+", "-", "/", "**", "*"], expression))
                          ]
 
-# List
+# Data structures
 def list(): return "[", [comprehension, array], "]"
 def comprehension(): return expression, comp_for
 def comp_for(): return Optional("for", expression), "in", expression, ZeroOrMore([comp_for, comp_if])
 def comp_if(): return "if", boolean_expression
 def array(): return expression, ZeroOrMore(",", expression)
+def dictionary(): return "{", atom, ":", expression, ZeroOrMore(",", atom, ":", expression), "}"
+def set(): return "{", expression, ZeroOrMore(",", expression), "}"
 
 # Boolean
 def boolean(): return expression, ["==", "!="], expression
