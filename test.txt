@@ -24,6 +24,10 @@ def SelectEvents(type):
 	return([e for e in events if e.type == tmptype])
 
 a = [b for d in c]
+a = {b: c, d: e, f: g}
+a = {b: [c, d], e: f.g}
+a = {b, c, d, e, f}
+a = {[b, c], [d, e], f}
 a ~ b(c, [d, e])
 a ~ b(c, d, e, f, g)
 a ~ b(c + d)
@@ -46,5 +50,5 @@ a = b[c:d]
 a = b[c:d:e]
 a = b[c:d:]
 a = b.c.d
-a = [(d, b) for c in e]
+a = [[d, b] for c in e]
 
