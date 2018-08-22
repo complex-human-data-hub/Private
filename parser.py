@@ -40,7 +40,7 @@ def declare_function(): return define_statement, ZeroOrMore(statement), return_s
 # Expressions
 def expression_atom(): return [index_identifier, attribute_identifier, function, atom]
 def expression(): return [
-                            ("(", expression, ")", ZeroOrMore(["+", "-", "/", "**", "*"], expression)),
+                            ("(", [array, expression], ")", ZeroOrMore(["+", "-", "/", "**", "*"], expression)),
                             (expression_atom, ZeroOrMore(["+", "-", "/", "**", "*"], expression))
                          ]
 
@@ -54,8 +54,8 @@ def array(): return expression, ZeroOrMore(",", expression)
 # Boolean
 def boolean(): return expression, ["==", "!="], expression
 def boolean_expression(): return [
-                                   (Optional("!"), "(", boolean_expression, ")", ZeroOrMore(["and", "or"], boolean_expression)),
-                                   (boolean, ZeroOrMore(["and", "or"], boolean_expression))
+                                   (Optional("not"), "(", boolean_expression, ")", ZeroOrMore(["and", "or"], Optional("not"), boolean_expression)),
+                                   (boolean, ZeroOrMore(["and", "or"], Optional("not"), boolean_expression))
                                  ]
 
 # Misc.
