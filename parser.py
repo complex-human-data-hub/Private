@@ -21,11 +21,11 @@ def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",
 # Building blocks
 def atom(): return [identifier, literal]
 def literal(): return [number_literal, string_literal]
-def number_literal(): return Optional(["+", "-"]), _(r'(\d)+\.?(\d)+')
+def number_literal(): return Optional(["+", "-"]), _(r'(\d)+\.?(\d)*')
 def string_literal(): return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 
 # Identifier
-def identifier(): return _(r'(\w)+')
+def identifier(): return _(r'[a-zA-Z]\w*')
 def index_identifier(): return identifier, OneOrMore("[", [index, expression], "]"), Optional(".", any_identifier)
 def attribute_identifier(): return identifier, OneOrMore((".", any_identifier))
 def any_identifier(): return [index_identifier, attribute_identifier, identifier]
@@ -73,5 +73,56 @@ with open('test_input.txt', 'r') as f:
 parser = ParserPython(user_entry, debug = True)
 parse_tree = parser.parse(test)
 
+class InputVisitor(PTNodeVisitor):
+
+    def visit_user_entry(self, node, children):
+        return "\n".join(children)
+
+    def visit_statement(self, node, children):
+        return " ".join(children)
+
+    def visit_assign_statement(self, node, children):
+        return " ".join(children)
+
+    def visit_attribute_identifier(self, node, children):
+        return node.value.replace(" | ", "")
+
+    def visit_index_identifier(self, node, children):
+        return node.value.replace(" | ", "")
+
+    def visit_identifier(self, node, children):
+        return node.value
+
+    def visit_atom(self, node, children):
+        return children[0]
+
+    def visit_expression(self, node, children):
+        return " ".join(children)
+
+    def visit_expression_atom(self, node, children):
+        return children[0]
+
+    def visit_dictionary(self, node, children):
+        return node.value.replace(" | ", "")
+
+    def visit_comprehension(self, node, children):
+        return node.value.replace(" | ", " ")
+
+    def visit_list(self, node, children):
+        return "[" + children[0] + "]"
+
+    def visit_array(self, node, children):
+        return ", ".join(children)
+
+    def visit_set(self, node, children):
+        return "{" + ", ".join(children) + "}"
+
+    def visit_function(self, node, children):
+        return children[0] + "(" + ", ".join(children[1:]) + ")"
+
+    def visit_import_statement(self, node, children):
+        return node.value.replace(" | ", " ")
+
+result = visit_parse_tree(parse_tree, InputVisitor())
 # Test
-print(parse_tree)
+print(result)
