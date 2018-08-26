@@ -1,5 +1,6 @@
 from arpeggio import *
 from arpeggio import RegExMatch as _
+import numpy as np
 
 # Entry
 def user_entry(): return ZeroOrMore([
@@ -82,7 +83,13 @@ class InputVisitor(PTNodeVisitor):
         return " ".join(children)
 
     def visit_assign_statement(self, node, children):
-        return " ".join(children)
+        if (children[1] == "~"):
+            # We are sampling from a distribution
+            partitioned = children[2].partition("(")
+            distribution_type = partitioned[0]
+            return children[0] + " = np.random.{}(".format(distribution_type) + partitioned[2]
+        else:
+            return " ".join(children)
 
     def visit_attribute_identifier(self, node, children):
         return node.value.replace(" | ", "")
