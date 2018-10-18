@@ -1,24 +1,10 @@
-import sys
-import io
-
 import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 import pp
-import rq
-import time
-import func2 as t
-import _thread
-import pydot
-import graphviz
-import logging
 
 from arpeggio import *
 from arpeggio import RegExMatch as _
 from networkx.drawing.nx_pydot import write_dot
-from itertools import count
 from testpp import *
-from graphviz import Digraph
 
 
 # To do
@@ -120,22 +106,6 @@ def kw_or(): return _(r'or')
 def kw_and(): return _(r'and')
 def kw_not(): return _(r'not')
 # as, import, return, def, from
-
-#with open('test_input2.txt', 'r') as f:
-    #test = f.read()
-
-# Parse
-#parser = ParserPython(user_entry, debug = False)
-#parse_tree = parser.parse(test)
-
-# Create variable dependency tree
-#dependencies = nx.Graph()
-
-# Stuff for printing
-
-# Job queue
-#redis_conn = Redis('localhost')
-#queue = rq.Queue(connection=redis_conn)
 
 class InputVisitor(PTNodeVisitor):
 
@@ -253,25 +223,6 @@ def remove_fn_tags(code, func_dict):
 
 def draw_graph(graph):
     write_dot(graph, "test.dot")
-    return
-
-def draw_dependency_graph(dependencies):
-    # Test output for variable dependency tree
-    write_dot(dependencies, "dependency_tree_test.txt")
-    pos = nx.spring_layout(dependencies)
-
-    # Determine node colour
-    mapping = {True: "b", False: "r"}
-    nodes = dependencies.nodes()
-    node_colours = [mapping[dependencies.node[n]["var_defined"]] for n in nodes]
-
-    edges = dependencies.edges()
-    nx.draw_networkx_nodes(dependencies, pos, node_size=4000, alpha=0.3, node_color=node_colours)
-    nx.draw_networkx_edges(dependencies, pos, edge_color='b', alpha=0.3, edgelist=[e for e in edges if dependencies.edges[e[0], e[1]]["type"] == "deterministic"])
-    nx.draw_networkx_edges(dependencies, pos, edge_color='r', style='dashed', alpha=1.0, edgelist=[e for e in edges if dependencies.edges[e[0], e[1]]["type"] == "probabalistic"])
-    nx.draw_networkx_labels(dependencies, pos)
-    plt.axis('off')
-    plt.show()
     return
 
 commands = ["drawTree", "delete_variable"]
