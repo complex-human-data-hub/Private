@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import sys
 import io
 
@@ -5,9 +6,9 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import pp
-import rq
+#import rq
 import time
-import func2 as t
+#import func2 as t
 import _thread
 import pydot
 import graphviz
@@ -17,7 +18,7 @@ from arpeggio import *
 from arpeggio import RegExMatch as _
 from networkx.drawing.nx_pydot import write_dot
 from itertools import count
-from testpp import *
+import testpp 
 from graphviz import Digraph
 
 
@@ -48,7 +49,8 @@ def return_statement(): return "return", [("(", [expression, list], ")"), expres
 def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",", identifier), ")", ":"
 
 # Commands
-def command(): return [draw_tree, delete_variable, exit, value]
+def command(): return [show_variables, draw_tree, delete_variable, exit, value]
+def show_variables(): return "showVariables"
 def draw_tree(): return "drawTree"
 def delete_variable(): return "delete(", local_identifier, ")"
 def exit(): return "exit"
@@ -163,6 +165,10 @@ class InputVisitor(PTNodeVisitor):
         #draw_dependency_graph(dependencies.graph)
         return
 
+    def visit_show_variables(self, node, children):
+        print(depGraph)
+        return
+
     def visit_delete_variable(self, node, children):
         depGraph.delete(children[0])
         return
@@ -274,16 +280,16 @@ def draw_dependency_graph(dependencies):
     plt.show()
     return
 
-commands = ["drawTree", "delete_variable"]
+commands = ["drawTree", "delete_variable", "showVariables"]
 input_lines = []
 input_line = ''
 parser = ParserPython(user_entry, debug = False)
 parse_tree = parser.parse(input_line)
 result = visit_parse_tree(parse_tree, InputVisitor())
-depGraph = graph()
+depGraph = testpp.graph()
 
 # List of all functions accepted by private
-func_dict = {"unique": "numpy.unique", "mean": "numpy.mean"}
+func_dict = {"unique": "numpy.unique", "mean": "numpy.mean", "range": "range"}
 
 
 input_line = input("> ")
