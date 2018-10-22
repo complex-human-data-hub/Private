@@ -121,6 +121,10 @@ class graph:
               # Incomplete
               return True
 
+
+
+
+
   def __str__(self):
     res = ""
     for name in self.code.keys():
@@ -134,7 +138,7 @@ class graph:
       if self.dependson[name] != set([]):
         res += "    " + str(self.dependson[name])
       res += "\n"
-    return(res[0:-1])
+    return(res)
 
   def compute(self):
     self.lock.acquire()
