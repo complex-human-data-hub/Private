@@ -2,25 +2,9 @@ from __future__ import unicode_literals
 import sys
 import io
 
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
-import pp
-#import rq
-import time
-#import func2 as t
-import _thread
-import pydot
-import graphviz
-import logging
 
 from arpeggio import *
 from arpeggio import RegExMatch as _
-from networkx.drawing.nx_pydot import write_dot
-from itertools import count
-import testpp 
-from graphviz import Digraph
-
 
 # To do
 # - Handle indents?
@@ -50,8 +34,13 @@ def define_statement(): return "def", identifier, "(", identifier, ZeroOrMore(",
 
 # Commands
 def command(): return [show_variables, draw_tree, delete_variable, exit, value]
+<<<<<<< HEAD
 def show_variables(): return "showVariables"
 def draw_tree(): return "drawTree"
+=======
+def draw_tree(): return "drawTree"
+def show_variables(): return "sv"
+>>>>>>> 9f016ca7985ed336ea4ffe7ea542c0a8b9bf5732
 def delete_variable(): return "delete(", local_identifier, ")"
 def exit(): return "exit"
 def value(): return "value(", local_identifier, ")"
@@ -123,6 +112,7 @@ def kw_and(): return _(r'and')
 def kw_not(): return _(r'not')
 # as, import, return, def, from
 
+<<<<<<< HEAD
 #with open('test_input2.txt', 'r') as f:
     #test = f.read()
 
@@ -333,4 +323,10 @@ while input_line != 'exit':
     input_line = input("> ")
 
 
-exit()
+def PrivateParser():
+  return(ParserPython(user_entry, debug=False))
+
+if __name__ == "__main__":
+  parser = PrivateParser()
+  parse_tree = parser.parse("a=b")
+
