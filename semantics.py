@@ -12,39 +12,47 @@ import logging
 from networkx.drawing.nx_pydot import write_dot
 from testpp import *
 
-from arpeggio import *
+from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
-def flatten(x):
-    return [i for e in x for i in (flatten(e) if isinstance(e,list) else [e])]
+class result:
 
-def getDeps(children):
-    return flatten(c[1] for c in children)
+  def __init__(self, code = None, depend = None):
+    self.code = code
+    self.depend = None
+    if depend:
+      if type(depend) == SemanticActionResults:
+        self.depend = []
+        for child in depend:
+          if child.depend:
+            self.depend.extend(child.depend)
+      elif type(depend) == str:
+        self.depend = [depend]
+      else:
+        raise Exception("result in InputVisitor got a depend that was not None, and SemanticActionResults or a string: " + str(depend) + " is a " + str(type(depend)))
+
 
 class InputVisitor(PTNodeVisitor):
 
-# the return value for each visit is (code to be executed, list of dependencies)
-
-    def visit_identifier(self, node, children):               return node.value, [node.value]
-    def visit_number(self, node, children):                   return node.value, []
-    def visit_string(self, node, children):                   return node.value, []
+    def visit_identifier(self, node, children):               return result(node.value, node.value)
+    def visit_number(self, node, children):                   return result(node.value)
+    def visit_string(self, node, children):                   return result(node.value)
     def visit_atom(self, node, children):                     return children[0]
-    def visit_list(self, node, children):                     return "[" + ", ".join([c[0] for c in children]) + "]", getDeps(children)
-    def visit_factor(self, node, children):                   return "(" + children[0][0] + ")" if len(children) > 1 else children[0][0], children[0][1]
+    def visit_list(self, node, children):                     return result("[" + ", ".join([c.code for c in children]) + "]", children)
+    def visit_factor(self, node, children):                   return result("(" + children[0].code + ")" if len(children) > 1 else children[0].code, children)
     def visit_term(self, node, children):                     return children[0]
-    def visit_arithmetic_expression(self, node, children):    return " ".join(c[0] for c in children), getDeps(children)
+    def visit_arithmetic_expression(self, node, children):    return result(" ".join(c.code for c in children), children)
     def visit_boolean_expression(self, node, children):       return node.value  # FIX
     def visit_expression(self, node, children):               return children[0]
     def visit_deterministic_assignment(self, node, children):
-      depGraph.define(children[0][0], children[1][0], dependson=children[1][1])
-      depGraph.compute()
-      return None, []
+        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
+        depGraph.compute()
+        return None
     def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1], []
-    def visit_assignment(self, node, children):               return None, []
-    def visit_command(self, node, children):                  return children[0]
-    def visit_draw_tree(self, node, children):                
-      write_dot(depGraph.graph, "VariableDependencyGraph.dot")
-      return None, []
-    def visit_show_variables(self, node, children):           return str(depGraph), []
+    def visit_assignment(self, node, children):               return 
+    def visit_command(self, node, children):                  return 
+    def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
+    def visit_show_variables(self, node, children):           print str(depGraph)
+      
     def visit_line(self, node, children):
       if len(children) > 0:
         return children[0]
@@ -52,7 +60,7 @@ class InputVisitor(PTNodeVisitor):
         return
 
 def PrivateSemanticAnalyser(parse_tree):
-     return visit_parse_tree(parse_tree, InputVisitor())[0]
+    return visit_parse_tree(parse_tree, InputVisitor())
  
 '''
     def visit_user_entry(self, node, children):
