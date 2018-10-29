@@ -1,4 +1,4 @@
-import _thread
+import thread
 import pp
 import logging as l
 import networkx as nx
@@ -6,7 +6,7 @@ import networkx as nx
 class graph:
 
   def __init__(self):
-     self.lock = _thread.allocate_lock()
+     self.lock = thread.allocate_lock()
      self.value = {}
      self.stale = set() # either stale, computing or uptodate   - maybe colour red, orange, and green
      self.computing = set()

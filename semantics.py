@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 import pp
 import time
-import _thread
+#import _thread
 import pydot
 import graphviz
 import logging
@@ -18,6 +18,37 @@ from arpeggio import *
 
 class InputVisitor(PTNodeVisitor):
 
+# the return value for each visit is (code to be executed, list of dependencies)
+
+    def visit_identifier(self, node, children):               return node.value, [node.value]
+    def visit_number(self, node, children):                   return node.value, []
+    def visit_string(self, node, children):                   return node.value, []
+    def visit_atom(self, node, children):                     return children[0]
+    def visit_list(self, node, children):                     return "[" + ", ".join([c[0] for c in children]) + "]", getDeps(children)
+    def visit_factor(self, node, children):                   return "(" + children[0][0] + ")", children[0][1]
+    def visit_term(self, node, children):                     return children[0]
+    def visit_arithmetic_expression(self, node, children):    return " ".join(children)
+    def visit_boolean_expression(self, node, children):       return node.value  # FIX
+    def visit_expression(self, node, children):               return children[0]
+    def visit_deterministic_assignment(self, node, children):
+      depGraph.define(children[0], children[1])
+      depGraph.compute()
+      return
+    def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1]
+    def visit_assignment(self, node, children):               return
+    def visit_command(self, node, children):                  return children[0]
+    def visit_draw_tree(self, node, children):                return "drawtree"
+    def visit_show_variables(self, node, children):           return str(depGraph)
+    def visit_line(self, node, children):
+      if len(children) > 0:
+        return children[0]
+      else:
+        return
+
+    def getDeps(children):
+      return reduce([c[1] for c in children], [], concatenate)
+ 
+'''
     def visit_user_entry(self, node, children):
         return children
 
@@ -43,22 +74,24 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_assign_statement(self, node, children):
 
-        variables = []
-        deterministic = (children[1] == "=")
-        if (False and not deterministic):
-            # Need to change this
-
-
-            # We are sampling from a distribution
-            partitioned = children[2].partition("(")
-            distribution_type = partitioned[0]
-            return children[0] + " = np.random.{}(".format(distribution_type) + partitioned[2]
-        else:
-
-            # Add python code to node
-            execute = children[2]
-
-            return children
+        print "here: ", node, children
+        return(node)
+        #variables = []
+        #deterministic = (children[1] == "=")
+        #if (False and not deterministic):
+        #    # Need to change this
+#
+#
+#            # We are sampling from a distribution
+#            partitioned = children[2].partition("(")
+#            distribution_type = partitioned[0]
+#            return children[0] + " = np.random.{}(".format(distribution_type) + partitioned[2]
+#        else:
+#
+#            # Add python code to node
+#            execute = children[2]
+#
+#            return children
 
     def visit_attribute_identifier(self, node, children):
         return node.value.replace(" | ", "")
@@ -67,14 +100,17 @@ class InputVisitor(PTNodeVisitor):
         return node.value.replace(" | ", "")
 
     def visit_identifier(self, node, children):
-        return node.value
+        return node
 
     def visit_any_identifier(self, node, children):
-        new = "".join(node.value.replace(" | ", ""))
-        return "ID__" + "".join(node.value.replace(" | ", "")) + "__ID"
+        print "any_identifier: ", node, children
+        #new = "".join(node.value.replace(" | ", ""))
+        #return "ID__" + "".join(node.value.replace(" | ", "")) + "__ID"
+        return(node)
 
     def visit_atom(self, node, children):
-        return children[0]
+        #return children[0]
+        return(node)
 
     def visit_expression(self, node, children):
         return " ".join(children)
@@ -95,11 +131,11 @@ class InputVisitor(PTNodeVisitor):
         return "{" + ", ".join(children) + "}"
 
     def visit_function(self, node, children):
-        children[0] = "FN__" + children[0] + "__FN"
+        #children[0] = "FN__" + children[0] + "__FN"
         return children[0] + "(" + ", ".join(children[1:]) + ")"
 
     def visit_import_statement(self, node, children):
-        return node.value.replace(" | ", " ")
+        return node.value
 
 def extract_variables_from_index_variable(variable):
     split_variable = variable.split("[")
@@ -126,8 +162,10 @@ def remove_fn_tags(code, func_dict):
 #    write_dot(graph, "test.dot")
 #    return
 
-depGraph = graph()
 
 # List of all functions accepted by private
 func_dict = {"unique": "numpy.unique", "mean": "numpy.mean"}
 
+'''
+
+depGraph = graph()
