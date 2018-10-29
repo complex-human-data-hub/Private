@@ -2,30 +2,15 @@ import sys
 import io
 import traceback
 
-#import numpy as np
-#import networkx as nx
-#import pp
-#import time
-#import _thread
-#import pydot
-#import graphviz
-#import logging
-
-#from networkx.drawing.nx_pydot import write_dot
-#from itertools import count
-#from testpp import *
-
-#from arpeggio import *
 from parser import PrivateParser
-from semantics import *
+from semantics import PrivateSemanticAnalyser
+from testpp import graph
 
 def draw_graph(graph):
     write_dot(graph, "test.dot")
     return
 
 parser = PrivateParser()
-#parse_tree = parser.parse(input_line)
-#result = visit_parse_tree(parse_tree, InputVisitor())
 depGraph = graph()
 
 input_line = raw_input("> ")
@@ -36,7 +21,7 @@ while input_line != 'exit':
     print(e)
   else:
     try:
-      result = visit_parse_tree(parse_tree, InputVisitor())
+      result = PrivateSemanticAnalyser(parse_tree)
       if result:
         print(result)
     except Exception as e:

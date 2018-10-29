@@ -132,7 +132,7 @@ class graph:
         res += name + " = " + str(self.value[name])
       res += "    " + self.code[name]
       if self.dependson[name] != set([]):
-        res += "    " + str(self.dependson[name])
+        res += "    " + str(list(self.dependson[name]))
       res += "\n"
     return(res[0:-1])
 

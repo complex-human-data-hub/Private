@@ -11,10 +11,15 @@ import graphviz
 import logging
 
 from networkx.drawing.nx_pydot import write_dot
-from itertools import count
 from testpp import *
 
 from arpeggio import *
+
+def flatten(x):
+    return [i for e in x for i in (flatten(e) if isinstance(e,list) else [e])]
+
+def getDeps(children):
+    return flatten(c[1] for c in children)
 
 class InputVisitor(PTNodeVisitor):
 
@@ -25,28 +30,28 @@ class InputVisitor(PTNodeVisitor):
     def visit_string(self, node, children):                   return node.value, []
     def visit_atom(self, node, children):                     return children[0]
     def visit_list(self, node, children):                     return "[" + ", ".join([c[0] for c in children]) + "]", getDeps(children)
-    def visit_factor(self, node, children):                   return "(" + children[0][0] + ")", children[0][1]
+    def visit_factor(self, node, children):                   return "(" + children[0][0] + ")" if len(children) > 1 else children[0][0], children[0][1]
     def visit_term(self, node, children):                     return children[0]
-    def visit_arithmetic_expression(self, node, children):    return " ".join(children)
+    def visit_arithmetic_expression(self, node, children):    return " ".join(c[0] for c in children), getDeps(children)
     def visit_boolean_expression(self, node, children):       return node.value  # FIX
     def visit_expression(self, node, children):               return children[0]
     def visit_deterministic_assignment(self, node, children):
-      depGraph.define(children[0], children[1])
+      depGraph.define(children[0][0], children[1][0], dependson=children[1][1])
       depGraph.compute()
-      return
-    def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1]
-    def visit_assignment(self, node, children):               return
+      return None, []
+    def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1], []
+    def visit_assignment(self, node, children):               return None, []
     def visit_command(self, node, children):                  return children[0]
-    def visit_draw_tree(self, node, children):                return "drawtree"
-    def visit_show_variables(self, node, children):           return str(depGraph)
+    def visit_draw_tree(self, node, children):                return "drawtree", []
+    def visit_show_variables(self, node, children):           return str(depGraph), []
     def visit_line(self, node, children):
       if len(children) > 0:
         return children[0]
       else:
         return
 
-    def getDeps(children):
-      return reduce([c[1] for c in children], [], concatenate)
+def PrivateSemanticAnalyser(parse_tree):
+     return visit_parse_tree(parse_tree, InputVisitor())[0]
  
 '''
     def visit_user_entry(self, node, children):
