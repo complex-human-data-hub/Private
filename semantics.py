@@ -5,7 +5,6 @@ import numpy as np
 import networkx as nx
 import pp
 import time
-#import _thread
 import pydot
 import graphviz
 import logging
@@ -42,7 +41,9 @@ class InputVisitor(PTNodeVisitor):
     def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1], []
     def visit_assignment(self, node, children):               return None, []
     def visit_command(self, node, children):                  return children[0]
-    def visit_draw_tree(self, node, children):                return "drawtree", []
+    def visit_draw_tree(self, node, children):                
+      write_dot(depGraph.graph, "VariableDependencyGraph.dot")
+      return None, []
     def visit_show_variables(self, node, children):           return str(depGraph), []
     def visit_line(self, node, children):
       if len(children) > 0:
