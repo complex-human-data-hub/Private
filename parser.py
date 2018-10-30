@@ -26,11 +26,14 @@ def factor():                   return Optional(["+","-"]), [atom, ("(", arithme
 def term():                     return factor, ZeroOrMore(["*","/"], factor)
 def arithmetic_expression():    return term, ZeroOrMore(["+", "-"], term)
 def boolean_expression():       return ["True", "False"]
-def expression():               return [boolean_expression, arithmetic_expression, list]
-def deterministic_assignment(): return identifier, "=", arithmetic_expression
+def function_call():            return identifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def expression():               return [function_call, boolean_expression, arithmetic_expression, list]
+def deterministic_assignment(): return identifier, "=", expression
 def probabilistic_assignment(): return identifier, "~", expression
 def assignment():               return [deterministic_assignment, probabilistic_assignment]
-def line():                     return [command, assignment, expression], EOF
+def value():                    return identifier
+def command_line_expression():  return expression
+def line():                     return [command, assignment, value, command_line_expression], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))

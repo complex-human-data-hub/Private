@@ -66,9 +66,11 @@ class graph:
           self.lock.release()
           return True, None
 
-  def define(self, name, code, dependson=[]):
+  def define(self, name, code, dependson=None):
     self.lock.acquire()
     self.code[name] = code
+    if not dependson:
+      dependson = []
     self.dependson[name] = set(dependson)
     self.stale.add(name)
     if name in self.uptodate:
@@ -121,15 +123,27 @@ class graph:
               # Incomplete
               return True
 
+  def hasVariable(self, variable):
+    return variable in self.code.keys()
+
+  def getValue(self, name):
+    res = ""
+    if self.hasVariable(name):
+      if name in self.stale:
+        res += "Stale"
+      elif name in self.computing:
+        res += "Computing"
+      else:
+        res += str(self.value[name])
+    else:
+      raise Exception("Unknown variable " + name)
+    return res
+      
   def __str__(self):
     res = ""
     for name in self.code.keys():
-      if name in self.stale:
-        res += name + " [Stale] "
-      elif name in self.computing:
-        res += name + " [Computing] "
-      else:
-        res += name + " = " + str(self.value[name])
+      res += name + " = "
+      res += self.getValue(name)
       res += "    " + self.code[name]
       if self.dependson[name] != set([]):
         res += "    " + str(list(self.dependson[name]))

@@ -14,39 +14,76 @@ from testpp import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
+debug = False
+
 class result:
 
-  def __init__(self, code = None, depend = None):
+  def __init__(self, result_type, code = None, depend = None):
+    #print "create ", result_type, code, depend
+    self.result_type = result_type
     self.code = code
     self.depend = None
     if depend:
       if type(depend) == SemanticActionResults:
         self.depend = []
         for child in depend:
-          if child.depend:
-            self.depend.extend(child.depend)
+          if child.__class__.__name__ == "result":
+            if child.depend:
+              self.depend.extend(child.depend)
       elif type(depend) == str:
         self.depend = [depend]
       else:
-        raise Exception("result in InputVisitor got a depend that was not None, and SemanticActionResults or a string: " + str(depend) + " is a " + str(type(depend)))
+        raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string: " + str(depend) + " is a " + str(type(depend)))
+
+  def __repr__(self):
+    return "type: " + self.result_type + " code: " + self.code + "  depend: " + str(self.depend)
 
 
 class InputVisitor(PTNodeVisitor):
 
-    def visit_identifier(self, node, children):               return result(node.value, node.value)
-    def visit_number(self, node, children):                   return result(node.value)
-    def visit_string(self, node, children):                   return result(node.value)
-    def visit_atom(self, node, children):                     return children[0]
-    def visit_list(self, node, children):                     return result("[" + ", ".join([c.code for c in children]) + "]", children)
-    def visit_factor(self, node, children):                   return result("(" + children[0].code + ")" if len(children) > 1 else children[0].code, children)
-    def visit_term(self, node, children):                     return children[0]
-    def visit_arithmetic_expression(self, node, children):    return result(" ".join(c.code for c in children), children)
-    def visit_boolean_expression(self, node, children):       return node.value  # FIX
-    def visit_expression(self, node, children):               return children[0]
+    def visit_identifier(self, node, children):               return result("identifier", node.value, node.value)
+    def visit_number(self, node, children):                   return result("number", node.value)
+    def visit_string(self, node, children):                   return result("string", node.value)
+    def visit_atom(self, node, children):
+        if debug:
+          print "atom: ", children
+        return result("atom", children[0].code, children[0].depend)
+    def visit_list(self, node, children):
+        return result("list", "[" + ", ".join([c.code for c in children]) + "]", children)
+    def visit_factor(self, node, children):                   
+        if debug:
+          print "factor: ", children
+        if len(children) == 1:
+           return result("factor", children[0].code, children)
+        else:
+          return result("factor", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+
+    def visit_term(self, node, children):
+        if debug: print "term: ", children
+        if len(children) == 1:
+           return result("term", children[0].code, children)
+        else:
+          return result("term", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+        
+    def visit_arithmetic_expression(self, node, children):
+        if len(children) == 1:
+           return result("arthimetic_expression", children[0].code, children)
+        else:
+          return result("arthimetic_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+
+    def visit_boolean_expression(self, node, children):       return result("boolean_expression", node.value)  # FIX
+
+    def visit_function_call(self, node, children):
+        return result("function_call", children[0].code + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
+
+    def visit_expression(self, node, children):
+        return result("expression", children[0].code, children)
+
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
         depGraph.compute()
         return None
+
     def visit_probabilistic_assignment(self, node, children): return children[0] + " ~ " + children[1], []
     def visit_assignment(self, node, children):               return 
     def visit_command(self, node, children):                  return 
@@ -58,6 +95,14 @@ class InputVisitor(PTNodeVisitor):
         return children[0]
       else:
         return
+
+    def visit_value(self, node, children):
+      print depGraph.getValue(node.value)
+         
+    def visit_command_line_expression(self, node, children):
+      print "Because expressions may take a long time to compute you must assign them to a variable"
+      print "and then query the variable to see the result. For example, instead of 4*b+5 type"
+      print "t = 4*b+5 and then t."
 
 def PrivateSemanticAnalyser(parse_tree):
     return visit_parse_tree(parse_tree, InputVisitor())
@@ -150,6 +195,8 @@ def PrivateSemanticAnalyser(parse_tree):
 
     def visit_import_statement(self, node, children):
         return node.value
+
+    def command_line_expression(self, node, children):
 
 def extract_variables_from_index_variable(variable):
     split_variable = variable.split("[")
