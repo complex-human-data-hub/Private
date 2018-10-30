@@ -3,16 +3,23 @@ import pp
 import logging as l
 import networkx as nx
 
+__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "globals":globals, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "super":super, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+
+__private_dependson__ = dict(zip(__private_builtins__.keys(), [None]*len(__private_builtins__)))
+
+print __private_dependson__
+
 class graph:
 
   def __init__(self):
      self.lock = thread.allocate_lock()
-     self.value = {}
+     self.globals = __private_builtins__
+     self.locals = {}
      self.stale = set() # either stale, computing or uptodate   - maybe colour red, orange, and green
      self.computing = set()
-     self.uptodate = set()
+     self.uptodate = set(__private_builtins__.keys())
      self.code = {}
-     self.dependson = {}
+     self.dependson = __private_dependson__
      self.jobs = {}
      self.server = pp.Server()
      self.graph = nx.DiGraph()
@@ -28,7 +35,7 @@ class graph:
       changed = False
       uptodates = list(self.uptodate)
       for name in uptodates:
-        if (self.dependson[name] & (self.stale | self.computing)):
+        if ((self.dependson[name] != None) & ((name in self.stale) | (name in self.computing))):
           self.stale.add(name)
           self.uptodate.remove(name)
           changed = True
@@ -134,7 +141,7 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       else:
-        res += str(self.value[name])
+        res += str(self.locals[name])
     else:
       raise Exception("Unknown variable " + name)
     return res
@@ -157,21 +164,21 @@ class graph:
       if all([d in self.uptodate for d in self.dependson[name]]):
         self.stale.remove(name)
         self.computing.add(name)
-        self.jobs[name] = self.server.submit(job, (name, self.code[name], self.value), callback=self.callback)
+        self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
     self.lock.release()
 
   def callback(self, returnvalue):
     self.lock.acquire()
     name, value = returnvalue
-    self.value[name] = value
+    self.locals[name] = value
     del self.jobs[name]
     self.computing.remove(name)
     self.uptodate.add(name)
     self.lock.release()
     self.compute()
 
-def job(name, code, value):
-  value = eval(code, None, value)
+def job(name, code, globals, locals):
+  value = eval(code, globals, locals)
   return((name, value))
 
 def setup():

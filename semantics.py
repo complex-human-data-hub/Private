@@ -74,7 +74,12 @@ class InputVisitor(PTNodeVisitor):
     def visit_boolean_expression(self, node, children):       return result("boolean_expression", node.value)  # FIX
 
     def visit_function_call(self, node, children):
-        return result("function_call", children[0].code + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
+        fn = children[0].code
+        if fn == "set":
+          fn = "frozenset"
+        elif fn == "list":
+          fn = "tuple"
+        return result("function_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
 
     def visit_expression(self, node, children):
         return result("expression", children[0].code, children)

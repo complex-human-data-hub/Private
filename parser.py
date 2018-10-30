@@ -3,7 +3,7 @@ import sys
 import io
 
 
-from arpeggio import *
+from arpeggio import ParserPython, EOF, ZeroOrMore, Optional
 from arpeggio import RegExMatch as _
 
 # To do
