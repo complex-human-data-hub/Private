@@ -14,8 +14,9 @@ class graph:
      self.lock = thread.allocate_lock()
      self.globals = __private_builtins__
      self.locals = {}
-     self.stale = set() # either stale, computing or uptodate   - maybe colour red, orange, and green
+     self.stale = set() # either stale, computing, exception or uptodate   - maybe colour red, orange, and green
      self.computing = set()
+     self.exception = set()
      self.builtinsset = set(__private_builtins__.keys())
      self.uptodate = set(__private_builtins__.keys())
      self.code = {}
@@ -140,6 +141,8 @@ class graph:
         res += "Stale"
       elif name in self.computing:
         res += "Computing"
+      elif name in self.exception:
+        res += str(self.locals[name])
       else:
         res += str(self.locals[name])
     else:
@@ -150,7 +153,7 @@ class graph:
     res = ""
     for name in self.code.keys():
       res += name + " = "
-      res += self.getValue(name)[0:20]
+      res += self.getValue(name)[0:50]
       res += "    " + self.code[name]
       if self.dependson[name] != set([]):
         res += "    " + str(list(self.dependson[name]))
@@ -170,16 +173,25 @@ class graph:
   def callback(self, returnvalue):
     self.lock.acquire()
     name, value = returnvalue
-    self.locals[name] = value
-    del self.jobs[name]
-    self.computing.remove(name)
-    self.uptodate.add(name)
+    if type(value) == Exception:
+      self.locals[name] = repr(value)
+      self.computing.remove(name)
+      self.exception.add(name)
+    else:
+      self.locals[name] = value
+      del self.jobs[name]
+      self.computing.remove(name)
+      self.uptodate.add(name)
+
     self.lock.release()
     self.compute()
 
 def job(name, code, globals, locals):
-  value = eval(code, globals, locals)
-  return((name, value))
+  try:
+    value = eval(code, globals, locals)
+    return((name, value))
+  except Exception as e:
+    return((name, e))
 
 def setup():
   g = graph()

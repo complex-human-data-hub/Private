@@ -20,7 +20,8 @@ def show_variables():           return "sv"
 def identifier():               return _(r'[a-zA-Z_]+')
 def number():                   return Optional(["+", "-"]), _(r'[0-9]+')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
-def atom():                     return [number, identifier, string]
+def boolean():                  return ["True", "False"]
+def atom():                     return [number, identifier, string, boolean]
 def list():                     return "[", ZeroOrMore(expression, ","), expression, "]"
 def factor():                   return Optional(["+","-"]), [atom, ("(", arithmetic_expression, ")")]
 def term():                     return factor, ZeroOrMore(["*","/"], factor)
