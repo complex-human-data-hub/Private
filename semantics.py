@@ -45,14 +45,12 @@ class InputVisitor(PTNodeVisitor):
     def visit_number(self, node, children):                   return result("number", node.value)
     def visit_string(self, node, children):                   return result("string", node.value)
     def visit_atom(self, node, children):
-        if debug:
-          print "atom: ", children
-        return result("atom", children[0].code, children[0].depend)
+        if debug: print "atom: ", children
+        return result("atom", children[0].code, children)
     def visit_list(self, node, children):
         return result("list", "[" + ", ".join([c.code for c in children]) + "]", children)
     def visit_factor(self, node, children):                   
-        if debug:
-          print "factor: ", children
+        if debug: print "factor: ", children
         if len(children) == 1:
            return result("factor", children[0].code, children)
         else:
@@ -66,6 +64,7 @@ class InputVisitor(PTNodeVisitor):
           return result("term", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
         
     def visit_arithmetic_expression(self, node, children):
+        if debug: print "arithmetic_expression: ", children
         if len(children) == 1:
            return result("arthimetic_expression", children[0].code, children)
         else:
@@ -74,6 +73,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_boolean_expression(self, node, children):       return result("boolean_expression", node.value)  # FIX
 
     def visit_function_call(self, node, children):
+        if debug: print "function: ", children
         fn = children[0].code
         if fn == "set":
           fn = "frozenset"
@@ -82,6 +82,7 @@ class InputVisitor(PTNodeVisitor):
         return result("function_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
 
     def visit_expression(self, node, children):
+        if debug: print "expression: ", children
         return result("expression", children[0].code, children)
 
     def visit_deterministic_assignment(self, node, children):

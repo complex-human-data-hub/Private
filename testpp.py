@@ -5,9 +5,8 @@ import networkx as nx
 
 __private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "globals":globals, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "super":super, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
-__private_dependson__ = dict(zip(__private_builtins__.keys(), [None]*len(__private_builtins__)))
+__private_dependson__ = dict(zip(__private_builtins__.keys(), [set([])]*len(__private_builtins__)))
 
-print __private_dependson__
 
 class graph:
 
@@ -17,6 +16,7 @@ class graph:
      self.locals = {}
      self.stale = set() # either stale, computing or uptodate   - maybe colour red, orange, and green
      self.computing = set()
+     self.builtinsset = set(__private_builtins__.keys())
      self.uptodate = set(__private_builtins__.keys())
      self.code = {}
      self.dependson = __private_dependson__
@@ -33,9 +33,9 @@ class graph:
     changed = True
     while changed:
       changed = False
-      uptodates = list(self.uptodate)
-      for name in uptodates:
-        if ((self.dependson[name] != None) & ((name in self.stale) | (name in self.computing))):
+      variablestocheck = list(self.uptodate-self.builtinsset) # note builtins are always uptodate
+      for name in variablestocheck:
+        if (self.dependson[name] & (self.stale | self.computing)):
           self.stale.add(name)
           self.uptodate.remove(name)
           changed = True
@@ -150,7 +150,7 @@ class graph:
     res = ""
     for name in self.code.keys():
       res += name + " = "
-      res += self.getValue(name)
+      res += self.getValue(name)[0:20]
       res += "    " + self.code[name]
       if self.dependson[name] != set([]):
         res += "    " + str(list(self.dependson[name]))
