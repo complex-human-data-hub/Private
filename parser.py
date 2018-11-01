@@ -19,17 +19,21 @@ def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def identifier():               return _(r'[a-zA-Z_]+')
 def module_name():              return _(r'[a-zA-Z_]+')
+def notsym():                   return "not"
+def starsym():                  return "*"
 
-def number():                   return Optional(["+", "-"]), _(r'[0-9]+')
+def dottedidentifier():         return identifier, ZeroOrMore(".", identifier)
+
+def number():                   return _(r'[0-9]+')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
 def relation():                 return ["==" , "!=" , "<=" , ">=" , "<" , ">" , "in"]
 def atom():                     return [number, boolean, string, identifier]
 def list():                     return "[", ZeroOrMore(expression, ","), expression, "]"
-def factor():                   return [function_call, ("(", expression, ")"), ("not", factor), list, atom]
+def factor():                   return [function_call, ("(", expression, ")"), (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
-def simple_expression():        return term, ZeroOrMore(["+", "-", "and"], term)
-def function_call():            return identifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
+def function_call():            return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 def probabilistic_assignment(): return identifier, "~", expression
@@ -38,7 +42,7 @@ def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
 def short_import():             return "import", module_name
 def identifier_list():          return identifier, ZeroOrMore(",", identifier)
-def long_import():              return "from", module_name, "import", [identifier_list, "*"]
+def long_import():              return "from", module_name, "import", [identifier_list, starsym]
 def all_import():               return [short_import, long_import]
 def line():                     return [command, all_import, assignment, value, command_line_expression], EOF
 

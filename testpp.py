@@ -2,11 +2,13 @@ import thread
 import pp
 import logging as l
 import networkx as nx
+import repr as reprmodule
 
 __private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "globals":globals, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "super":super, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
 __private_dependson__ = dict(zip(__private_builtins__.keys(), [set([])]*len(__private_builtins__)))
 
+reprmodule.aRepr.maxstring= 50
 
 class graph:
 
@@ -17,10 +19,9 @@ class graph:
      self.stale = set() # either stale, computing, exception or uptodate   - maybe colour red, orange, and green
      self.computing = set()
      self.exception = set()
-     self.builtinsset = set(__private_builtins__.keys())
-     self.uptodate = set(__private_builtins__.keys())
+     self.uptodate = set()
      self.code = {}
-     self.dependson = __private_dependson__
+     self.dependson = {}
      self.jobs = {}
      self.server = pp.Server()
      self.graph = nx.DiGraph()
@@ -34,7 +35,7 @@ class graph:
     changed = True
     while changed:
       changed = False
-      variablestocheck = list(self.uptodate-self.builtinsset) # note builtins are always uptodate
+      variablestocheck = list(self.uptodate-set(self.globals.keys())) # note globals are always uptodate
       for name in variablestocheck:
         if (self.dependson[name] & (self.stale | self.computing)):
           self.stale.add(name)
@@ -142,19 +143,22 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception:
+        #res += reprmodule.repr(self.locals[name])
         res += str(self.locals[name])
       else:
+        #res += reprmodule.repr(self.locals[name])
         res += str(self.locals[name])
     else:
       raise Exception("Unknown variable " + name)
     return res
       
-  def __str__(self):
+  def __repr__(self):
     res = ""
     for name in self.code.keys():
       res += name + " = "
-      res += self.getValue(name)[0:50]
-      res += "    " + self.code[name]
+      res += self.getValue(name)
+      #res += "    " + reprmodule.repr(self.code[name])
+      res += "    " + str(self.code[name])
       if self.dependson[name] != set([]):
         res += "    " + str(list(self.dependson[name]))
       res += "\n"
@@ -164,7 +168,7 @@ class graph:
     self.lock.acquire()
     stales = list(self.stale)
     for name in stales:
-      if all([d in self.uptodate for d in self.dependson[name]]):
+      if all([(d in self.uptodate or d in self.globals) for d in self.dependson[name]]):
         self.stale.remove(name)
         self.computing.add(name)
         self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
@@ -174,7 +178,7 @@ class graph:
     self.lock.acquire()
     name, value = returnvalue
     if type(value) == Exception:
-      self.locals[name] = repr(value)
+      self.locals[name] = str(value)
       self.computing.remove(name)
       self.exception.add(name)
     else:

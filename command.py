@@ -15,18 +15,19 @@ parser = PrivateParser()
 
 input_line = raw_input("> ")
 while input_line != 'exit':
-  try:
-    parse_tree = parser.parse(input_line)
-  except Exception as e:  # didn't parse
-    print(e)
-  else:
+  if input_line != "":
     try:
-      result = PrivateSemanticAnalyser(parse_tree)
-      if result:
-        print(result)
-    except Exception as e:
+      parse_tree = parser.parse(input_line)
+    except Exception as e:  # didn't parse
       print(e)
-      traceback.print_exc(file=sys.stdout)
+    else:
+      try:
+        result = PrivateSemanticAnalyser(parse_tree)
+        if result:
+          print(result)
+      except Exception as e:
+        print(e)
+        traceback.print_exc(file=sys.stdout)
 
   input_line = raw_input("> ")
 
