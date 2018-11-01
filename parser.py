@@ -21,14 +21,14 @@ def identifier():               return _(r'[a-zA-Z_]+')
 def number():                   return Optional(["+", "-"]), _(r'[0-9]+')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
-def atom():                     return [number, identifier, string, boolean]
+def relation():                 return ["==" , "!=" , "<=" , ">=" , "<" , ">" , "in"]
+def atom():                     return [number, boolean, string, identifier]
 def list():                     return "[", ZeroOrMore(expression, ","), expression, "]"
-def factor():                   return Optional(["+","-"]), [atom, ("(", arithmetic_expression, ")")]
-def term():                     return factor, ZeroOrMore(["*","/"], factor)
-def arithmetic_expression():    return term, ZeroOrMore(["+", "-"], term)
-def boolean_expression():       return ["True", "False"]
+def factor():                   return [function_call, ("(", expression, ")"), ("not", factor), list, atom]
+def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
+def simple_expression():        return term, ZeroOrMore(["+", "-", "and"], term)
 def function_call():            return identifier, "(", ZeroOrMore(expression, ","), expression, ")"
-def expression():               return [function_call, boolean_expression, arithmetic_expression, list]
+def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 def probabilistic_assignment(): return identifier, "~", expression
 def assignment():               return [deterministic_assignment, probabilistic_assignment]

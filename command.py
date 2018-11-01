@@ -11,7 +11,7 @@ def draw_graph(graph):
     return
 
 parser = PrivateParser()
-depGraph = graph()
+#depGraph = graph()
 
 input_line = raw_input("> ")
 while input_line != 'exit':

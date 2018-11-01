@@ -44,6 +44,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_identifier(self, node, children):               return result("identifier", node.value, node.value)
     def visit_number(self, node, children):                   return result("number", node.value)
     def visit_string(self, node, children):                   return result("string", node.value)
+    def visit_boolean(self, node, children):                  return result("boolean", node.value)
     def visit_atom(self, node, children):
         if debug: print "atom: ", children
         return result("atom", children[0].code, children)
@@ -63,14 +64,14 @@ class InputVisitor(PTNodeVisitor):
         else:
           return result("term", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
         
-    def visit_arithmetic_expression(self, node, children):
-        if debug: print "arithmetic_expression: ", children
-        if len(children) == 1:
-           return result("arthimetic_expression", children[0].code, children)
-        else:
-          return result("arthimetic_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+    #def visit_arithmetic_expression(self, node, children):
+    #    if debug: print "arithmetic_expression: ", children
+    #    if len(children) == 1:
+    #       return result("arthimetic_expression", children[0].code, children)
+    #    else:
+    #      return result("arthimetic_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
 
-    def visit_boolean_expression(self, node, children):       return result("boolean_expression", node.value)  # FIX
+    #def visit_boolean_expression(self, node, children):       return result("boolean_expression", node.value)  # FIX
 
     def visit_function_call(self, node, children):
         if debug: print "function: ", children
@@ -81,9 +82,19 @@ class InputVisitor(PTNodeVisitor):
           fn = "tuple"
         return result("function_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
 
+    def visit_simple_expression(self, node, children):
+        if debug: print "simple_expression: ", children
+        if len(children) == 1:
+           return result("simple_expression", children[0].code, children)
+        else:
+          return result("simple_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+
     def visit_expression(self, node, children):
         if debug: print "expression: ", children
-        return result("expression", children[0].code, children)
+        if len(children) == 1:
+           return result("expression", children[0].code, children)
+        else:
+          return result("expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
 
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
