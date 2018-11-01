@@ -18,6 +18,8 @@ def command():                  return [draw_tree, show_variables]
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def identifier():               return _(r'[a-zA-Z_]+')
+def module_name():              return _(r'[a-zA-Z_]+')
+
 def number():                   return Optional(["+", "-"]), _(r'[0-9]+')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
@@ -33,8 +35,12 @@ def deterministic_assignment(): return identifier, "=", expression
 def probabilistic_assignment(): return identifier, "~", expression
 def assignment():               return [deterministic_assignment, probabilistic_assignment]
 def value():                    return identifier
-def command_line_expression():  return expression
-def line():                     return [command, assignment, value, command_line_expression], EOF
+def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
+def short_import():             return "import", module_name
+def identifier_list():          return identifier, ZeroOrMore(",", identifier)
+def long_import():              return "from", module_name, "import", [identifier_list, "*"]
+def all_import():               return [short_import, long_import]
+def line():                     return [command, all_import, assignment, value, command_line_expression], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))
