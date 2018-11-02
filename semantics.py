@@ -119,6 +119,7 @@ class InputVisitor(PTNodeVisitor):
         themodule = importlib.import_module("private_"+children[0])
         for k,v in themodule.__private_globals__.items():
           depGraph.globals[children[0]+"_"+k] = v
+        depGraph.compute()
 
     def visit_import_list(self, node, children):
         if debug: print "import_list: ", children
@@ -129,6 +130,7 @@ class InputVisitor(PTNodeVisitor):
         themodule = importlib.import_module("private_"+children[0])
         for k,v in themodule.__private_globals__.items():
           depGraph.globals[k] = v
+        depGraph.compute()
 
     def visit_all_import(self, node, children):
         if debug: print "all_import: ", children
