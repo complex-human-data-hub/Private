@@ -12,6 +12,10 @@ def draw_graph(graph):
 
 parser = PrivateParser()
 #depGraph = graph()
+# import distributions
+parse_tree = parser.parse("from distributions import normal")
+result = PrivateSemanticAnalyser(parse_tree)
+
 
 input_line = raw_input("> ")
 while input_line != 'exit':

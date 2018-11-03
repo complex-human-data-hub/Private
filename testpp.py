@@ -6,9 +6,9 @@ import repr as reprmodule
 
 __private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "globals":globals, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "super":super, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
-__private_dependson__ = dict(zip(__private_builtins__.keys(), [set([])]*len(__private_builtins__)))
+__private_prob_builtins__ = set(["normal"])
 
-reprmodule.aRepr.maxstring= 50
+#reprmodule.aRepr.maxstring= 50
 
 class graph:
 
@@ -20,15 +20,18 @@ class graph:
      self.computing = set()
      self.exception = set()
      self.uptodate = set()
+     self.allvars = set()
      self.code = {}
+     self.probcode = {}
      self.dependson = {}
+     self.probdependson = {}
      self.jobs = {}
      self.server = pp.Server()
      self.graph = nx.DiGraph()
 
   def updateState(self):
     '''
-    anything that is currently uptodate but depends on a stale value or a computing value should be stale
+    anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
     '''
 
     self.lock.acquire()
@@ -75,15 +78,25 @@ class graph:
           self.lock.release()
           return True, None
 
-  def define(self, name, code, dependson=None):
+  def define(self, name, code, dependson=None, prob = False):
     self.lock.acquire()
-    self.code[name] = code
     if not dependson:
       dependson = []
-    self.dependson[name] = set(dependson)
-    self.stale.add(name)
-    if name in self.uptodate:
-      self.uptodate.remove(name)
+    if prob:
+      self.probcode[name] = code
+      self.probdependson[name] = set(dependson)
+      if not name in self.dependson:
+        self.stale.add(name)
+        if name in self.uptodate:
+          self.uptodate.remove(name)
+        
+    else:
+      self.code[name] = code
+      self.dependson[name] = set(dependson)
+      self.stale.add(name)
+      if name in self.uptodate:
+        self.uptodate.remove(name)
+    self.allvars.add(name)
     # add code here to stop processes that depend on values that this define makes stale
     self.lock.release()
     self.updateState()   # this has to be outside lock
@@ -133,7 +146,7 @@ class graph:
               return True
 
   def hasVariable(self, variable):
-    return variable in self.code.keys()
+    return variable in self.code or variable in self.probcode
 
   def getValue(self, name):
     res = ""
@@ -145,9 +158,11 @@ class graph:
       elif name in self.exception:
         #res += reprmodule.repr(self.locals[name])
         res += str(self.locals[name])
-      else:
+      elif name in self.uptodate:
         #res += reprmodule.repr(self.locals[name])
         res += str(self.locals[name])
+      else:
+        raise Exception(name + " is not stale, computing, exception or uptodate.")
     else:
       raise Exception("Unknown variable " + name)
     return res
@@ -156,22 +171,78 @@ class graph:
     res = ""
     for name in self.code.keys():
       res += name + " = "
-      res += self.getValue(name)
-      #res += "    " + reprmodule.repr(self.code[name])
-      res += "    " + str(self.code[name])
-      if self.dependson[name] != set([]):
-        res += "    " + str(list(self.dependson[name]))
+      res += str(self.code[name])
+      #if self.dependson[name] != set([]):
+      #  res += "    " + str(list(self.dependson[name]))
+      res += "    " + self.getValue(name)
+      res += "\n"
+    for name in self.probcode.keys():
+      res += name + " ~ "
+      res += str(self.probcode[name])
+      res += "    " + self.getValue(name)
+      #if self.probdependson[name] != set([]):
+      #  res += "    " + str(list(self.probdependson[name]))
       res += "\n"
     return(res[0:-1])
+
+  def checkup(self, name):
+    parents = []
+    for parent in list(self.allvars):
+      if parent in self.probdependson:
+        if name in self.probdependson[parent]:
+          parents.append(parent)
+      if parent in self.dependson:
+        if name in self.dependson[parent]:
+          parents.append(parent)
+    if parents == []:
+      return False
+    for d in parents:
+      if d not in self.uptodate:
+        if not self.checkup(d):
+          return False
+    return True
+
+  def checkdown(self, name):
+    if name in self.probdependson:
+      for d in self.probdependson[name]:
+        if d not in self.uptodate and d not in self.globals and d not in __private_prob_builtins__:
+          if d not in self.allvars:
+            return False
+          if not self.checkdown(d):
+            return False
+      return True
+    else:
+      return True
+
+  #def checkprobvariable(self, name):
+  #  cu = self.checkup(name)
+  #  cd = self.checkdown(name)
+  #  return cu and cd
 
   def compute(self):
     self.lock.acquire()
     stales = list(self.stale)
-    for name in stales:
-      if all([(d in self.uptodate or d in self.globals) for d in self.dependson[name]]):
-        self.stale.remove(name)
-        self.computing.add(name)
-        self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
+
+    # do deterministic variables
+
+    for name in self.dependson.keys():
+      if name in self.stale:
+        if all([(d in self.uptodate or d in self.globals) for d in self.dependson[name]]):
+          self.stale.remove(name)
+          self.computing.add(name)
+          self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
+
+    # check to see if it is ok to run sampler
+    # that is, all necessary dependencies for all probabilistic variables have been defined or computed
+
+    result = True
+    for name in self.probdependson.keys():
+      # print name, "checkdown", self.checkdown(name)
+      result = result and self.checkdown(name)
+      if not name in self.uptodate:
+        # print name, "checkup", self.checkup(name)
+        result = result and self.checkup(name)
+
     self.lock.release()
 
   def callback(self, returnvalue):

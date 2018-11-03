@@ -104,10 +104,10 @@ class InputVisitor(PTNodeVisitor):
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
         depGraph.compute()
-        return None
 
     def visit_probabilistic_assignment(self, node, children): 
-        return 
+        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True)
+        depGraph.compute()
 
     def visit_assignment(self, node, children):               return 
     def visit_command(self, node, children):                  return 
