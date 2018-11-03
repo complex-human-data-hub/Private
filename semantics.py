@@ -19,10 +19,11 @@ debug = False
 
 class result:
 
-  def __init__(self, result_type, code = None, depend = None):
+  def __init__(self, result_type, code = None, depend = None, pyMC3code = None):
     #print "create ", result_type, code, depend
     self.result_type = result_type
     self.code = code
+    self.pyMC3code = pyMC3code
     self.depend = None
     if depend:
       if type(depend) == SemanticActionResults:
@@ -105,14 +106,30 @@ class InputVisitor(PTNodeVisitor):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
         depGraph.compute()
 
+    def visit_distribution_call(self, node, children):
+        if debug: print "distribution_call: ", children
+        fn = children[0].code
+        private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
+        if fn == "normal":
+          fn = "Normal"
+        elif fn == "halfnormal":
+          fn = "HalfNormal"
+        else:
+          raise Exception("Unknown distribution: " + fn)
+        pyMC3_code = "pm." + fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
+        return result("distribution_call", private_code, children, pyMC3_code)
+ 
     def visit_probabilistic_assignment(self, node, children): 
-        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True)
+        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code)
         depGraph.compute()
 
     def visit_assignment(self, node, children):               return 
     def visit_command(self, node, children):                  return 
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           print str(depGraph)
+    def visit_show_dependencies(self, node, children):
+        depGraph.show_dependencies()
+    def visit_show_mccode(self, node, children):              depGraph.show_mccode()
       
     def visit_short_import(self, node, children):
         if debug: print "short_import: ", children

@@ -6,22 +6,10 @@ from parser import PrivateParser
 from semantics import PrivateSemanticAnalyser
 from testpp import graph
 
-def draw_graph(graph):
-    write_dot(graph, "test.dot")
-    return
-
-parser = PrivateParser()
-#depGraph = graph()
-# import distributions
-parse_tree = parser.parse("from distributions import normal")
-result = PrivateSemanticAnalyser(parse_tree)
-
-
-input_line = raw_input("> ")
-while input_line != 'exit':
-  if input_line != "":
+def execute(line):
+  if line != "":
     try:
-      parse_tree = parser.parse(input_line)
+      parse_tree = parser.parse(line)
     except Exception as e:  # didn't parse
       print(e)
     else:
@@ -32,6 +20,20 @@ while input_line != 'exit':
       except Exception as e:
         print(e)
         traceback.print_exc(file=sys.stdout)
+
+def load_code(filename):
+  f = open(filename, "r").readlines()
+  for line in f:
+    print line[0:-1]
+    execute(line[0:-1])
+    
+parser = PrivateParser()
+load_code("privaterc")
+
+input_line = raw_input("> ")
+while input_line != 'exit':
+  if input_line != "":
+    execute(input_line)
 
   input_line = raw_input("> ")
 

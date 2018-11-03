@@ -4,7 +4,7 @@ import logging as l
 import networkx as nx
 import repr as reprmodule
 
-__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "globals":globals, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "super":super, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
 __private_prob_builtins__ = set(["normal"])
 
@@ -23,6 +23,7 @@ class graph:
      self.allvars = set()
      self.code = {}
      self.probcode = {}
+     self.pyMC3code = {}
      self.dependson = {}
      self.probdependson = {}
      self.jobs = {}
@@ -78,12 +79,13 @@ class graph:
           self.lock.release()
           return True, None
 
-  def define(self, name, code, dependson=None, prob = False):
+  def define(self, name, code, dependson=None, prob = False, pyMC3code = None):
     self.lock.acquire()
     if not dependson:
       dependson = []
     if prob:
       self.probcode[name] = code
+      self.pyMC3code[name] = pyMC3code
       self.probdependson[name] = set(dependson)
       if not name in self.dependson:
         self.stale.add(name)
@@ -184,6 +186,29 @@ class graph:
       #  res += "    " + str(list(self.probdependson[name]))
       res += "\n"
     return(res[0:-1])
+
+  def show_mccode(self):
+    res = ""
+    for name in self.probcode.keys():
+      res += str(self.pyMC3code[name])
+      res += "\n"
+    print res[0:-1]
+
+  def show_dependencies(self):
+    res = ""
+    for name in self.code.keys():
+      res += name + " = "
+      res += str(self.code[name])
+      if self.dependson[name] != set([]):
+        res += "    " + str(list(self.dependson[name]))
+      res += "\n"
+    for name in self.probcode.keys():
+      res += name + " ~ "
+      res += str(self.probcode[name])
+      if self.probdependson[name] != set([]):
+        res += "    " + str(list(self.probdependson[name]))
+      res += "\n"
+    print res[0:-1]
 
   def checkup(self, name):
     parents = []
