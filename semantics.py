@@ -116,20 +116,29 @@ class InputVisitor(PTNodeVisitor):
           fn = "HalfNormal"
         else:
           raise Exception("Unknown distribution: " + fn)
-        pyMC3_code = "pm." + fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
+        pyMC3_code = "pm." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3_code)
  
     def visit_probabilistic_assignment(self, node, children): 
-        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code)
+        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
         depGraph.compute()
 
     def visit_assignment(self, node, children):               return 
     def visit_command(self, node, children):                  return 
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           print str(depGraph)
-    def visit_show_dependencies(self, node, children):
-        depGraph.show_dependencies()
-    def visit_show_mccode(self, node, children):              depGraph.show_mccode()
+    def visit_show_dependencies(self, node, children):        depGraph.show_dependencies()
+    def visit_show_mccode(self, node, children):              print depGraph.constructPyMC3code()[1]
+    def visit_show_sampler_status(self, node, children):      depGraph.canRunSampler(verbose=True)
+    def visit_help(self, node, children):
+        print """
+dt: draw variable dependency tree
+sv: show variables
+sd: show dependencies
+sm: show pyMC3 code
+sss: show sampler status
+help: this message
+"""
       
     def visit_short_import(self, node, children):
         if debug: print "short_import: ", children

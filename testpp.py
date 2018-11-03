@@ -2,13 +2,15 @@ import thread
 import pp
 import logging as l
 import networkx as nx
-import repr as reprmodule
+import reprlib 
+import numpy
 
-__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "locals":locals, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
-__private_prob_builtins__ = set(["normal"])
+__private_prob_builtins__ = set(["normal", "halfnormal"])
 
-#reprmodule.aRepr.maxstring= 50
+#reprlib.maxstring = 50
+numpy.set_printoptions(precision=3)
 
 class graph:
 
@@ -158,11 +160,13 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception:
-        #res += reprmodule.repr(self.locals[name])
-        res += str(self.locals[name])
+        res += str(self.globals[name])
       elif name in self.uptodate:
-        #res += reprmodule.repr(self.locals[name])
-        res += str(self.locals[name])
+        if type(self.globals[name]) == numpy.ndarray:
+          s = self.globals[name].shape
+          res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
+        else:
+          res += reprlib.repr(self.globals[name])
       else:
         raise Exception(name + " is not stale, computing, exception or uptodate.")
     else:
@@ -171,28 +175,19 @@ class graph:
       
   def __repr__(self):
     res = ""
+    codebits = []
     for name in self.code.keys():
-      res += name + " = "
-      res += str(self.code[name])
-      #if self.dependson[name] != set([]):
-      #  res += "    " + str(list(self.dependson[name]))
-      res += "    " + self.getValue(name)
-      res += "\n"
+      codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      res += name + " ~ "
-      res += str(self.probcode[name])
-      res += "    " + self.getValue(name)
-      #if self.probdependson[name] != set([]):
-      #  res += "    " + str(list(self.probdependson[name]))
-      res += "\n"
-    return(res[0:-1])
-
-  def show_mccode(self):
-    res = ""
+      codebits.append(name + " = " + str(self.probcode[name]))
+    m = max(len(line) for line in codebits)
+    newcodebits = [line.ljust(m, " ") for line in codebits]
+    valuebits = []
+    for name in self.code.keys():
+      valuebits.append(self.getValue(name))
     for name in self.probcode.keys():
-      res += str(self.pyMC3code[name])
-      res += "\n"
-    print res[0:-1]
+      valuebits.append(self.getValue(name))
+    return "\n".join("  ".join([codebit, valuebit]) for codebit, valuebit in zip(newcodebits, valuebits))
 
   def show_dependencies(self):
     res = ""
@@ -239,10 +234,45 @@ class graph:
     else:
       return True
 
-  #def checkprobvariable(self, name):
-  #  cu = self.checkup(name)
-  #  cd = self.checkdown(name)
-  #  return cu and cd
+  def constructPyMC3code(self):
+    locals = {}
+    code = """
+import pymc3 as pm
+basic_model = pm.Model()
+
+with basic_model:
+
+    print "starting model definition"
+"""
+    # Examples
+    # mu = alpha + beta[0]*X1 + beta[1]*X2
+    # sigma = pm.HalfNormal('sigma', sd=1)
+    # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+
+    unobserved_names = list(set(self.probdependson.keys()) - set(self.dependson.keys()))
+    for name in unobserved_names:
+        code += "    " + self.pyMC3code[name] % ""+ "\n"
+    observed_names = list(set(self.probdependson.keys()) & set(self.dependson.keys()))
+    for name in observed_names:
+      obsname = "__private_%s_observed" % name
+      code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
+      locals[obsname] = self.globals[name]
+
+    code += """
+    print "model defined"
+    __private_result__ = pm.sample(500)
+"""
+    return locals, code
+
+  def canRunSampler(self, verbose=False):
+    result = True
+    for name in self.probdependson.keys():
+      if verbose: print name, "checkdown", self.checkdown(name)
+      result = result and self.checkdown(name)
+      if not name in self.uptodate:
+        if verbose: print name, "checkup", self.checkup(name)
+        result = result and self.checkup(name)
+    return result
 
   def compute(self):
     self.lock.acquire()
@@ -257,16 +287,14 @@ class graph:
           self.computing.add(name)
           self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
 
-    # check to see if it is ok to run sampler
-    # that is, all necessary dependencies for all probabilistic variables have been defined or computed
-
-    result = True
-    for name in self.probdependson.keys():
-      # print name, "checkdown", self.checkdown(name)
-      result = result and self.checkdown(name)
-      if not name in self.uptodate:
-        # print name, "checkup", self.checkup(name)
-        result = result and self.checkup(name)
+    unobserved_names = list(set(self.probdependson.keys()) - set(self.dependson.keys()))
+    if len(unobserved_names) > 0:  # there are some probabilistic variables to calculate
+      if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
+        locals, sampler_code =  self.constructPyMC3code()
+        for name in unobserved_names:
+            self.stale.remove(name)
+            self.computing.add(name)
+        self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (unobserved_names, sampler_code, self.globals, locals), callback=self.samplercallback)
 
     self.lock.release()
 
@@ -274,15 +302,35 @@ class graph:
     self.lock.acquire()
     name, value = returnvalue
     if type(value) == Exception:
-      self.locals[name] = str(value)
+      self.globals[name] = str(value)
       self.computing.remove(name)
       self.exception.add(name)
     else:
-      self.locals[name] = value
-      del self.jobs[name]
+      self.globals[name] = value
       self.computing.remove(name)
       self.uptodate.add(name)
+    del self.jobs[name]
 
+    self.lock.release()
+    self.compute()
+
+  def samplercallback(self, returnvalue):   # work on this
+    self.lock.acquire()
+    names, value = returnvalue
+    print "samplercallback ", names, returnvalue
+    if type(value) == Exception:
+      for name in names:
+        self.globals[name] = str(value)
+        self.computing.remove(name)
+        self.exception.add(name)
+    else: # successful sampler return
+      for name in names:
+        self.globals[name] = value[name]
+        print value[name].shape
+        self.computing.remove(name)
+        self.uptodate.add(name)
+
+    del self.jobs["__private_sampler__"]
     self.lock.release()
     self.compute()
 
@@ -292,6 +340,14 @@ def job(name, code, globals, locals):
     return((name, value))
   except Exception as e:
     return((name, e))
+
+def samplerjob(names, code, globals, locals):
+  print "samplerjob code = ", code
+  try:
+    exec(code, globals, locals)
+    return (names, locals["__private_result__"])
+  except Exception as e:
+    return (names, e)
 
 def setup():
   g = graph()
