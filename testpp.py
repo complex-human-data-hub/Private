@@ -6,7 +6,7 @@ import reprlib
 import numpy
 import logging
 _log = logging.getLogger("Private")
-logging.basicConfig(filename='private.log',level=logging.DEBUG)
+logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 
 __private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "mean": numpy.mean, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
@@ -25,6 +25,7 @@ class graph:
      self.computing = set()
      self.exception = set()
      self.uptodate = set()
+     self.private = set()
      self.allvars = set()
      self.code = {}
      self.probcode = {}
@@ -96,7 +97,7 @@ class graph:
           self.lock.release()
           return True, None
 
-  def define(self, name, code, dependson=None, prob = False, pyMC3code = None):
+  def define(self, name, code, dependson=None, prob = False, pyMC3code = None, private=False):
     _log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.lock.acquire()
     if not dependson:
@@ -112,6 +113,8 @@ class graph:
         
     else:
       self.code[name] = code
+      if private:
+        self.private.add(name)
       self.dependson[name] = set(dependson)
       self.stale.add(name)
       if name in self.uptodate:
@@ -175,7 +178,9 @@ class graph:
   def getValue(self, name):
     res = ""
     if self.hasVariable(name):
-      if name in self.stale:
+      if name in self.private:
+        res += "Private"
+      elif name in self.stale:
         res += "Stale"
       elif name in self.computing:
         res += "Computing"
@@ -383,3 +388,5 @@ def setup():
   g.define("b", "2")
   g.define("c", "4")
   return(g)
+
+depGraph = graph()

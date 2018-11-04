@@ -1,6 +1,5 @@
-from distributions import normal
+from latitudes import latitudes
 
-a ~ normal(m, s)
-a = normal(5,1,100)
+latitudes ~ normal(m, s)
 
 s ~ halfnormal(10)

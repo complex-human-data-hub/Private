@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-plt.style.use('seaborn-darkgrid')
+#import matplotlib.pyplot as plt
+#plt.style.use('seaborn-darkgrid')
 
 import warnings
 #warnings.filterwarnings("ignore")
@@ -48,6 +48,6 @@ with basic_model:
     trace = pm.sample(500, progressbar=False, verbose=False)
     print "here2"
 
-    pm.traceplot(trace)
+    #pm.traceplot(trace)
 
-plt.show()
+#plt.show()

@@ -178,4 +178,3 @@ help: this message
 def PrivateSemanticAnalyser(parse_tree):
     return visit_parse_tree(parse_tree, InputVisitor())
  
-depGraph = graph()
