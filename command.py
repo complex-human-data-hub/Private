@@ -1,6 +1,11 @@
 import sys
 import io
 import traceback
+import logging
+
+_log = logging.getLogger("Private")
+logging.basicConfig(filename='private.log',level=logging.DEBUG)
+_log.debug("============================= Starting new interpreter ======================================")
 
 from parser import PrivateParser
 from semantics import PrivateSemanticAnalyser

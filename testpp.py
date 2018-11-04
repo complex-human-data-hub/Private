@@ -4,13 +4,16 @@ import logging as l
 import networkx as nx
 import reprlib 
 import numpy
+import logging
+_log = logging.getLogger("Private")
+logging.basicConfig(filename='private.log',level=logging.DEBUG)
+
 
 __private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "mean": numpy.mean, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
 __private_prob_builtins__ = set(["normal", "halfnormal"])
 
 numpy.set_printoptions(precision=3)
-debug = False
 
 class graph:
 
@@ -36,12 +39,14 @@ class graph:
     '''
     anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
     '''
-    if debug: print "Entering updateState"
-    self.lock.acquire()
+    _log.debug("Entering updateState")
+    #self.lock.acquire()
     changed = True
     while changed:
       changed = False
-      variablestocheck = list(self.uptodate-set(self.globals.keys())) # note globals are always uptodate
+      variablestocheck = list(self.uptodate & set(self.dependson.keys())-set(self.globals.keys())) # note globals are always uptodate
+      _log.debug("updateState: " + str(variablestocheck))
+      _log.debug("updateState: " + str(self.locals))
       for name in variablestocheck:
         if (self.dependson[name] & (self.stale | self.computing)):
           self.stale.add(name)
@@ -50,17 +55,17 @@ class graph:
 
     # add code here to stop jobs that are computing but that are no longer needed
 
-    self.lock.release()
-    if debug: print "Leaving updateState"
+    #self.lock.release()
+    _log.debug("Leaving updateState")
 
   def makeProbabilisticOnlyVariablesStale(self):
-    self.lock.acquire()
+    #self.lock.acquire()
     for name in self.probdependson:
       if name not in self.dependson:
         if name in self.uptodate:
           self.uptodate.remove(name)
         self.stale.add(name)
-    self.lock.release()
+    #self.lock.release()
         
   def updateGraph(self, name, dependson=[]):
       self.lock.acquire()
@@ -92,7 +97,7 @@ class graph:
           return True, None
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None):
-    if debug: print "Entering define"
+    _log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.lock.acquire()
     if not dependson:
       dependson = []
@@ -113,11 +118,12 @@ class graph:
         self.uptodate.remove(name)
     self.allvars.add(name)
     # add code here to stop processes that depend on values that this define makes stale
-    self.lock.release()
     if name in self.probdependson:
       self.makeProbabilisticOnlyVariablesStale()
     self.updateState()   # this has to be outside lock
-    if debug: print "Leaving define"
+    self.lock.release()
+    _log.debug("define: " + str(self))
+    _log.debug("Leaving define")
 
   def delete(self, name):
       self.lock.acquire()
@@ -138,8 +144,8 @@ class graph:
       except NetworkXError:
           l.warning("NetworkX error?")
           pass
-      self.lock.release()
       self.updateState()
+      self.lock.release()
 
   def has_descendants(self, name):
       # Checks if a node given by 'name' has any descendants
@@ -174,13 +180,13 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception:
-        res += str(self.globals[name])
+        res += str(self.locals[name])
       elif name in self.uptodate:
-        if type(self.globals[name]) == numpy.ndarray:
-          s = self.globals[name].shape
-          res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
+        if type(self.locals[name]) == numpy.ndarray:
+          s = self.locals[name].shape
+          res += "[" * len(s) + "%f" % self.locals[name].ravel()[0] + " ... " + "%f" % self.locals[name].ravel()[-1] + "]" * len(s)
         else:
-          res += reprlib.repr(self.globals[name])
+          res += reprlib.repr(self.locals[name])
       else:
         raise Exception(name + " is not stale, computing, exception or uptodate.")
     else:
@@ -193,7 +199,7 @@ class graph:
     for name in self.code.keys():
       codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      codebits.append(name + " = " + str(self.probcode[name]))
+      codebits.append(name + " ~ " + str(self.probcode[name]))
     m = max(len(line) for line in codebits)
     newcodebits = [line.ljust(m, " ") for line in codebits]
     valuebits = []
@@ -225,9 +231,9 @@ class graph:
       if parent in self.probdependson:
         if name in self.probdependson[parent]:
           parents.append(parent)
-      if parent in self.dependson:
-        if name in self.dependson[parent]:
-          parents.append(parent)
+      #if parent in self.dependson:
+      #  if name in self.dependson[parent]:
+      #    parents.append(parent)
     if parents == []:
       return False
     for d in parents:
@@ -239,7 +245,7 @@ class graph:
   def checkdown(self, name):
     if name in self.probdependson:
       for d in self.probdependson[name]:
-        if d not in self.uptodate and d not in self.globals and d not in __private_prob_builtins__:
+        if d not in self.uptodate and d not in self.locals and d not in __private_prob_builtins__:
           if d not in self.allvars:
             return False
           if not self.checkdown(d):
@@ -273,7 +279,7 @@ with basic_model:
     for name in observed_names:
       obsname = "__private_%s_observed" % name
       code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-      locals[obsname] = self.globals[name]
+      locals[obsname] = self.locals[name]
 
     code += """
     __private_result__ = pm.sample(500)
@@ -281,7 +287,7 @@ with basic_model:
     return locals, code
 
   def canRunSampler(self, verbose=False):
-    if debug: print "Entering canRunSampler"
+    _log.debug("Entering canRunSampler")
     result = True
     for name in self.probdependson.keys():
       if verbose: print name, "checkdown", self.checkdown(name)
@@ -289,11 +295,11 @@ with basic_model:
       if not name in self.uptodate:
         if verbose: print name, "checkup", self.checkup(name)
         result = result and self.checkup(name)
-    if debug: print "Leaving canRunSampler", result
+    _log.debug("Leaving canRunSampler: "+ str(result))
     return result
 
   def compute(self):
-    if debug: print "Entering compute"
+    _log.debug("Entering compute")
     self.lock.acquire()
     stales = list(self.stale)
 
@@ -306,7 +312,7 @@ with basic_model:
           self.computing.add(name)
           self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
 
-    if debug: print "compute: Done deterministic variables"
+    _log.debug("compute: Done deterministic variables")
 
     # do probabilistic variables
 
@@ -321,17 +327,17 @@ with basic_model:
         self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (unobserved_names, sampler_code, self.globals, locals), callback=self.samplercallback)
 
     self.lock.release()
-    if debug: print "Leaving compute"
+    _log.debug("Leaving compute")
 
   def callback(self, returnvalue):
     self.lock.acquire()
     name, value = returnvalue
     if type(value) == Exception:
-      self.globals[name] = str(value)
+      self.locals[name] = str(value)
       self.computing.remove(name)
       self.exception.add(name)
     else:
-      self.globals[name] = value
+      self.locals[name] = value
       self.computing.remove(name)
       self.uptodate.add(name)
     del self.jobs[name]
@@ -344,12 +350,12 @@ with basic_model:
     names, value = returnvalue
     if type(value) == Exception:
       for name in names:
-        self.globals[name] = str(value)
+        self.locals[name] = str(value)
         self.computing.remove(name)
         self.exception.add(name)
     else: # successful sampler return
       for name in names:
-        self.globals[name] = value[name]
+        self.locals[name] = value[name]
         self.computing.remove(name)
         self.uptodate.add(name)
 
