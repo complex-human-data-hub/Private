@@ -2,6 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-darkgrid')
 
+import warnings
+#warnings.filterwarnings("ignore")
+
+import logging
+logger = logging.getLogger("pymc3")
+logging.disable(100)
+
 # Initialize random number generator
 np.random.seed(123)
 
@@ -20,9 +27,10 @@ X2 = np.random.randn(size) * 0.2
 Y = alpha + beta[0]*X1 + beta[1]*X2 + np.random.randn(size)*sigma
 
 import pymc3 as pm
-print('Running on PyMC3 v{}'.format(pm.__version__))
-basic_model = pm.Model()
 
+print('Running on PyMC3 v{}'.format(pm.__version__))
+
+basic_model = pm.Model()
 with basic_model:
 
     # Priors for unknown model parameters
@@ -36,7 +44,9 @@ with basic_model:
     # Likelihood (sampling distribution) of observations
     Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    trace = pm.sample(500)
+    print "here"
+    trace = pm.sample(500, progressbar=False, verbose=False)
+    print "here2"
 
     pm.traceplot(trace)
 

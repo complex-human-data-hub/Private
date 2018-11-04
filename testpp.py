@@ -5,12 +5,12 @@ import networkx as nx
 import reprlib 
 import numpy
 
-__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "mean": numpy.mean, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
 __private_prob_builtins__ = set(["normal", "halfnormal"])
 
-#reprlib.maxstring = 50
 numpy.set_printoptions(precision=3)
+debug = False
 
 class graph:
 
@@ -36,7 +36,7 @@ class graph:
     '''
     anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
     '''
-
+    if debug: print "Entering updateState"
     self.lock.acquire()
     changed = True
     while changed:
@@ -51,7 +51,17 @@ class graph:
     # add code here to stop jobs that are computing but that are no longer needed
 
     self.lock.release()
+    if debug: print "Leaving updateState"
 
+  def makeProbabilisticOnlyVariablesStale(self):
+    self.lock.acquire()
+    for name in self.probdependson:
+      if name not in self.dependson:
+        if name in self.uptodate:
+          self.uptodate.remove(name)
+        self.stale.add(name)
+    self.lock.release()
+        
   def updateGraph(self, name, dependson=[]):
       self.lock.acquire()
       # save a version of the current graph before making changes
@@ -82,6 +92,7 @@ class graph:
           return True, None
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None):
+    if debug: print "Entering define"
     self.lock.acquire()
     if not dependson:
       dependson = []
@@ -103,7 +114,10 @@ class graph:
     self.allvars.add(name)
     # add code here to stop processes that depend on values that this define makes stale
     self.lock.release()
+    if name in self.probdependson:
+      self.makeProbabilisticOnlyVariablesStale()
     self.updateState()   # this has to be outside lock
+    if debug: print "Leaving define"
 
   def delete(self, name):
       self.lock.acquire()
@@ -238,11 +252,14 @@ class graph:
     locals = {}
     code = """
 import pymc3 as pm
+import logging
+logger = logging.getLogger("pymc3")
+logging.disable(100)
+
 basic_model = pm.Model()
 
 with basic_model:
 
-    print "starting model definition"
 """
     # Examples
     # mu = alpha + beta[0]*X1 + beta[1]*X2
@@ -259,12 +276,12 @@ with basic_model:
       locals[obsname] = self.globals[name]
 
     code += """
-    print "model defined"
     __private_result__ = pm.sample(500)
 """
     return locals, code
 
   def canRunSampler(self, verbose=False):
+    if debug: print "Entering canRunSampler"
     result = True
     for name in self.probdependson.keys():
       if verbose: print name, "checkdown", self.checkdown(name)
@@ -272,9 +289,11 @@ with basic_model:
       if not name in self.uptodate:
         if verbose: print name, "checkup", self.checkup(name)
         result = result and self.checkup(name)
+    if debug: print "Leaving canRunSampler", result
     return result
 
   def compute(self):
+    if debug: print "Entering compute"
     self.lock.acquire()
     stales = list(self.stale)
 
@@ -287,8 +306,13 @@ with basic_model:
           self.computing.add(name)
           self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
 
+    if debug: print "compute: Done deterministic variables"
+
+    # do probabilistic variables
+
     unobserved_names = list(set(self.probdependson.keys()) - set(self.dependson.keys()))
-    if len(unobserved_names) > 0:  # there are some probabilistic variables to calculate
+    uncalculated_unobserved_names = set(unobserved_names) & self.stale
+    if len(uncalculated_unobserved_names) > 0:  # there are some probabilistic variables to calculate
       if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
         locals, sampler_code =  self.constructPyMC3code()
         for name in unobserved_names:
@@ -297,6 +321,7 @@ with basic_model:
         self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (unobserved_names, sampler_code, self.globals, locals), callback=self.samplercallback)
 
     self.lock.release()
+    if debug: print "Leaving compute"
 
   def callback(self, returnvalue):
     self.lock.acquire()
@@ -317,7 +342,6 @@ with basic_model:
   def samplercallback(self, returnvalue):   # work on this
     self.lock.acquire()
     names, value = returnvalue
-    print "samplercallback ", names, returnvalue
     if type(value) == Exception:
       for name in names:
         self.globals[name] = str(value)
@@ -326,7 +350,6 @@ with basic_model:
     else: # successful sampler return
       for name in names:
         self.globals[name] = value[name]
-        print value[name].shape
         self.computing.remove(name)
         self.uptodate.add(name)
 
@@ -342,7 +365,6 @@ def job(name, code, globals, locals):
     return((name, e))
 
 def samplerjob(names, code, globals, locals):
-  print "samplerjob code = ", code
   try:
     exec(code, globals, locals)
     return (names, locals["__private_result__"])
