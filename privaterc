@@ -1,0 +1,6 @@
+from distributions import normal
+
+a ~ normal(m, s)
+a = normal(5,1,100)
+
+s ~ halfnormal(10)
