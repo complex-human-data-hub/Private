@@ -27,6 +27,7 @@ class graph:
 
     self.deterministic = set()
     self.probabilistic = set()
+    self.builtin = set(__private_builtins__.keys()) or __private_prob_builtins__
 
     # each variable should be in one of stale, computing, exception or uptodate
 
@@ -97,7 +98,7 @@ class graph:
     anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
     '''
     _log.debug("Entering updateState")
-    #self.lock.acquire()
+    self.lock.acquire()
     changed = True
     while changed:
       changed = False
@@ -110,7 +111,7 @@ class graph:
 
     # add code here to stop jobs that are computing but that are no longer needed
 
-    #self.lock.release()
+    self.lock.release()
     _log.debug("Leaving updateState")
 
   def makeProbabilisticOnlyVariablesStale(self):
@@ -170,8 +171,8 @@ class graph:
       self.changeState(name, "stale")
     #self.allvars.add(name)
     # add code here to stop processes that depend on values that this define makes stale
-    self.updateState() 
     self.lock.release()
+    self.updateState() 
     _log.debug("Leaving define")
 
   def delete(self, name):
@@ -193,8 +194,8 @@ class graph:
       except NetworkXError:
           l.warning("NetworkX error?")
           pass
-      self.updateState()
       self.lock.release()
+      self.updateState()
 
   def has_descendants(self, name):
       # Checks if a node given by 'name' has any descendants
@@ -365,7 +366,7 @@ except Exception as e:
     _log.debug("compute: Do deterministic variables")
     for name in self.dependson.keys():
       if name in self.stale:
-        if all([(d in self.uptodate or d in self.globals) for d in self.dependson[name]]):
+        if all([(d in self.uptodate or d in self.builtin) for d in self.dependson[name]]):
           self.changeState(name, "computing")
           self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
 
@@ -382,8 +383,8 @@ except Exception as e:
           self.changeState(name, "computing")
         self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (unobserved_names, sampler_code, self.globals, locals), callback=self.samplercallback)
 
-    self.updateState()
     self.lock.release()
+    self.updateState()
     _log.debug("Leaving compute")
 
   def callback(self, returnvalue):
