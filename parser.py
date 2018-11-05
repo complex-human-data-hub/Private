@@ -14,12 +14,13 @@ from arpeggio import RegExMatch as _
 # - Can't pick up dependency between a and b where a = b[c]
 # - Dependencies in list comprehensions?
 
-def command():                  return [draw_tree, show_variables, show_dependencies, show_mccode, show_sampler_status, help]
+def command():                  return [draw_tree, show_variables, show_dependencies, show_mccode, show_sampler_status, show_sets, help]
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def show_dependencies():        return "sd"
 def show_mccode():              return "sm"
 def show_sampler_status():      return "sss"
+def show_sets():                return "ss"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_]+')

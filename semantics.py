@@ -11,7 +11,7 @@ import logging
 import importlib
 
 from networkx.drawing.nx_pydot import write_dot
-from testpp import *
+from graph import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
@@ -130,6 +130,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_dependencies(self, node, children):        depGraph.show_dependencies()
     def visit_show_mccode(self, node, children):              print depGraph.constructPyMC3code()[1]
     def visit_show_sampler_status(self, node, children):      depGraph.canRunSampler(verbose=True)
+    def visit_show_sets(self, node, children):                depGraph.show_sets()
+
     def visit_help(self, node, children):
         print """
 dt: draw variable dependency tree

@@ -9,7 +9,6 @@ _log.debug("============================= Starting new interpreter =============
 
 from parser import PrivateParser
 from semantics import PrivateSemanticAnalyser
-from testpp import graph
 
 def execute(line):
   if line != "":
