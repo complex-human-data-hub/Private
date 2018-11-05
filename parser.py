@@ -14,7 +14,7 @@ from arpeggio import RegExMatch as _
 # - Can't pick up dependency between a and b where a = b[c]
 # - Dependencies in list comprehensions?
 
-def command():                  return [draw_tree, show_variables, show_dependencies, show_mccode, show_sampler_status, show_sets, help]
+def command():                  return [comment, draw_tree, show_variables, show_dependencies, show_mccode, show_sampler_status, show_sets, help]
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def show_dependencies():        return "sd"
@@ -24,6 +24,7 @@ def show_sets():                return "ss"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_]+')
+def comment_string():           return _(r'#[a-zA-Z_ ]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
 def starsym():                  return "*"
@@ -45,13 +46,14 @@ def deterministic_assignment(): return identifier, "=", expression
 
 def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
 def probabilistic_assignment(): return identifier, "~", distribution_call
-def assignment():               return [deterministic_assignment, probabilistic_assignment]
+def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
 def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
 def short_import():             return "import", module_name
 def identifier_list():          return identifier, ZeroOrMore(",", identifier)
 def long_import():              return "from", module_name, "import", [identifier_list, starsym]
 def all_import():               return [short_import, long_import]
+def comment():                  return identifier, comment_string
 def line():                     return [command, all_import, assignment, value, command_line_expression], EOF
 
 def PrivateParser():

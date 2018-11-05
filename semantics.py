@@ -14,6 +14,10 @@ from networkx.drawing.nx_pydot import write_dot
 from graph import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
+import logging
+_log = logging.getLogger("Private")
+logging.basicConfig(filename='private.log',level=logging.WARNING)
+
 
 debug = False
 
@@ -53,6 +57,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_number(self, node, children):                   return result("number", node.value)
     def visit_string(self, node, children):                   return result("string", node.value)
+    def visit_comment_string(self, node, children):           return result("comment_string", node.value)
     def visit_boolean(self, node, children):                  return result("boolean", node.value)
     def visit_notsym(self, node, children):
         if debug: print "notsym: ", children
@@ -104,7 +109,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
-        depGraph.compute()
+        return result("deterministic_assignment", children[0].code)
 
     def visit_distribution_call(self, node, children):
         if debug: print "distribution_call: ", children
@@ -121,9 +126,12 @@ class InputVisitor(PTNodeVisitor):
  
     def visit_probabilistic_assignment(self, node, children): 
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
-        depGraph.compute()
+        return result("probabilistic_assignment", children[0].code)
 
-    def visit_assignment(self, node, children):               return 
+    def visit_assignment(self, node, children):
+        if len(children) > 1:
+          depGraph.add_comment(children[0].code, children[1].code)
+        depGraph.compute()
     def visit_command(self, node, children):                  return 
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           print str(depGraph)
@@ -162,6 +170,10 @@ help: this message
 
     def visit_all_import(self, node, children):
         if debug: print "all_import: ", children
+
+    def visit_comment(self, node, children):
+        _log.debug("comment: " + str(children))
+        depGraph.add_comment(children[0].code, children[1].code)
 
     def visit_line(self, node, children):
       if len(children) > 0:

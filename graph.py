@@ -56,6 +56,12 @@ class graph:
     self.dependson = {} # deterministic dependencies
     self.probdependson = {} # probabilistic dependencies
 
+    # comments
+
+    self.comment = {}
+
+    # auxiliary variables
+
     self.jobs = {}
     self.server = pp.Server()
     self.nxgraph = nx.DiGraph()
@@ -63,6 +69,7 @@ class graph:
   def show_sets(self):
     print "deterministic: ", self.deterministic
     print "probabilistic: ", self.probabilistic
+    print "builtins: ", self.builtins
     print "uptodate: ", self.uptodate
     print "computing: ", self.computing
     print "exception: ", self.exception
@@ -148,6 +155,9 @@ class graph:
 #      except:
 #          self.lock.release()
 #          return True, None
+
+  def add_comment(self, name, the_comment):
+    self.comment[name] = the_comment
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None, private=False):
     _log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
@@ -256,7 +266,12 @@ class graph:
         valuebits.append(self.getValue(name))
       for name in self.probcode.keys():
         valuebits.append(self.getValue(name))
-      return "\n".join("  ".join([codebit, valuebit]) for codebit, valuebit in zip(newcodebits, valuebits))
+      commentbits = []
+      for name in self.code.keys():
+        commentbits.append(self.comment.get(name, ""))
+      for name in self.probcode.keys():
+        commentbits.append(self.comment.get(name, ""))
+      return "\n".join("  ".join([codebit, valuebit, commentbit]) for codebit, valuebit, commentbit in zip(newcodebits, valuebits, commentbits))
     else:
       return ""
 
