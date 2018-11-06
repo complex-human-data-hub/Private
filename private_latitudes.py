@@ -9,3 +9,4 @@ __private_globals__ = {"latitudes": latitudes}
 
 depGraph.uptodate.add("latitudes")
 depGraph.deterministic.add("latitudes")
+depGraph.private.add("latitudes")

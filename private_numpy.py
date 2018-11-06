@@ -6,4 +6,7 @@ def zeros(n):
 def ones(n):
   return(numpy.ones(n))
 
-__private_globals__ = {"zeros": zeros, "ones": ones}
+def array(n):
+  return(numpy.array(n))
+
+__private_globals__ = {"zeros": zeros, "ones": ones, "array": array}

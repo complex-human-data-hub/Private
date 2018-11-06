@@ -15,6 +15,10 @@ __private_prob_builtins__ = set(["normal", "halfnormal"])
 
 numpy.set_printoptions(precision=3)
 
+def ppset(s):
+  s = list(s)
+  return " ".join(s)
+
 class graph:
 
   def __init__(self):
@@ -23,11 +27,12 @@ class graph:
     self.locals = {}
 
 
-    # each variable should be either deterministic or probablistic or both
+    # each current program variable should be either deterministic or probablistic or both
 
     self.deterministic = set()
     self.probabilistic = set()
     self.builtin = set(__private_builtins__.keys()) or __private_prob_builtins__
+    self.imports = set()
 
     # each variable should be in one of stale, computing, exception or uptodate
 
@@ -67,18 +72,22 @@ class graph:
     self.nxgraph = nx.DiGraph()
 
   def show_sets(self):
-    print "deterministic: ", self.deterministic
-    print "probabilistic: ", self.probabilistic
-    print "builtins: ", self.builtins
-    print "uptodate: ", self.uptodate
-    print "computing: ", self.computing
-    print "exception: ", self.exception
-    print "stale: ", self.stale
-    print "private: ", self.private
-    print "releasable: ", self.releasable
-    print "privacy_unknown: ", self.privacy_unknown
-    print "locals: ", self.locals.keys()
-    print "globals: ", self.globals.keys()
+    print "deterministic: ", ppset(self.deterministic)
+    print "probabilistic: ", ppset(self.probabilistic)
+    print "builtin: ", ppset(self.builtin)
+    print "imports: ", ppset(self.imports)
+    print
+    print "uptodate: ", ppset(self.uptodate)
+    print "computing: ", ppset(self.computing)
+    print "exception: ", ppset(self.exception)
+    print "stale: ", ppset(self.stale)
+    print
+    print "private: ", ppset(self.private)
+    print "releasable: ", ppset(self.releasable)
+    print "privacy_unknown: ", ppset(self.privacy_unknown)
+    print
+    print "locals: ", ppset(self.locals.keys())
+    print "globals: ", ppset(self.globals.keys())
 
   def changeState(self, name, newstate):
     if name in self.uptodate:
@@ -179,8 +188,11 @@ class graph:
         self.private.add(name)
       self.dependson[name] = set(dependson)
       self.changeState(name, "stale")
-    #self.allvars.add(name)
+      if set(dependson) & self.private != set():
+        self.private.add(name)
     # add code here to stop processes that depend on values that this define makes stale
+
+    
     self.lock.release()
     self.updateState() 
     _log.debug("Leaving define")
@@ -381,7 +393,7 @@ except Exception as e:
     _log.debug("compute: Do deterministic variables")
     for name in self.dependson.keys():
       if name in self.stale:
-        if all([(d in self.uptodate or d in self.builtin) for d in self.dependson[name]]):
+        if all([(d in self.uptodate or d in self.imports or d in self.builtin) for d in self.dependson[name]]):
           self.changeState(name, "computing")
           self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
 
