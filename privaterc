@@ -1,5 +1,13 @@
-from latitudes import latitudes
+from distributions import normal
 
-latitudes ~ normal(m, s)
+real_alpha = 1
 
-s ~ halfnormal(10)
+real_beta0 = 1
+real_beta1 = 2.5
+noise = normal(0,1, 100)
+X1 = normal(0,1,100)
+X2 = normal(0,1,100)
+sigma = 1
+
+Y = real_alpha + real_beta0*X1 + real_beta1*X2 + noise*sigma
+
