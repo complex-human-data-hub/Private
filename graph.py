@@ -16,6 +16,9 @@ __private_prob_builtins__ = set(["normal", "halfnormal"])
 numpy.set_printoptions(precision=3)
 
 def ppset(s):
+  """
+  Pretty print a set.
+  """
   s = list(s)
   return " ".join(s)
 
@@ -309,9 +312,6 @@ class graph:
       if parent in self.probdependson:
         if name in self.probdependson[parent]:
           parents.append(parent)
-      #if parent in self.dependson:
-      #  if name in self.dependson[parent]:
-      #    parents.append(parent)
     if parents == []:
       return False
     for d in parents:
@@ -322,14 +322,14 @@ class graph:
 
   def checkdown(self, name):
     if name in self.probdependson:
+      result = True
       for d in self.probdependson[name]:
-        #if d not in self.uptodate and d not in self.globals and d not in __private_prob_builtins__:
         if d not in self.uptodate and d not in __private_prob_builtins__:
           if d not in self.probdependson:
             return False
           else:
-            return self.checkdown(d)
-      return True
+            result = result and self.checkdown(d)
+      return result
     else:
       return True
 
@@ -414,10 +414,13 @@ except Exception as e:
     self.updateState()
     _log.debug("Leaving compute")
 
+  def isException(self, v):
+    return type(v) in [SyntaxError, ValueError, NameError, TypeError]
+
   def callback(self, returnvalue):
     self.lock.acquire()
     name, value = returnvalue
-    if type(value) == Exception:
+    if self.isException(value):
       self.globals[name] = str(value)
       self.changeState(name, "exception")
     else:
@@ -431,7 +434,7 @@ except Exception as e:
   def samplercallback(self, returnvalue):   # work on this
     self.lock.acquire()
     names, value = returnvalue
-    if type(value) == Exception:
+    if self.isException(value):
       for name in names:
         self.globals[name] = str(value)
         self.changeState(name, "exception")

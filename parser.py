@@ -23,7 +23,7 @@ def show_sampler_status():      return "sss"
 def show_sets():                return "ss"
 def help():                     return "help"
 
-def identifier():               return _(r'[a-zA-Z_]+')
+def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')
 def comment_string():           return _(r'#[a-zA-Z_ ]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
@@ -37,15 +37,16 @@ def boolean():                  return ["True", "False"]
 def relation():                 return ["==" , "!=" , "<=" , ">=" , "<" , ">" , "in"]
 def atom():                     return [number, boolean, string, identifier]
 def list():                     return "[", ZeroOrMore(expression, ","), expression, "]"
-def factor():                   return [function_call, ("(", expression, ")"), (notsym, factor), list, atom]
+def bracketed_expression():     return "(", expression, ")"
+def factor():                   return [function_call, bracketed_expression, (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
 def function_call():            return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 
-def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
-def probabilistic_assignment(): return identifier, "~", distribution_call
+#def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
+def probabilistic_assignment(): return identifier, "~", expression
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
 def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.

@@ -70,19 +70,22 @@ class InputVisitor(PTNodeVisitor):
         return result("atom", children[0].code, children)
     def visit_list(self, node, children):
         return result("list", "[" + ", ".join([c.code for c in children]) + "]", children)
+    def visit_bracketed_expression(self, node, children):
+        return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+
     def visit_factor(self, node, children):                   
         if debug: print "factor: ", children
         if len(children) == 1:
            return result("factor", children[0].code, children)
         else:
-          return result("factor", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+          return result("factor", " ".join(c if type(c) == unicode else c.code for c in children), children)
 
     def visit_term(self, node, children):
         if debug: print "term: ", children
         if len(children) == 1:
            return result("term", children[0].code, children)
         else:
-          return result("term", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+          return result("term", " ".join(c if type(c) == unicode else c.code for c in children), children)
         
     def visit_function_call(self, node, children):
         if debug: print "function: ", children
@@ -98,14 +101,14 @@ class InputVisitor(PTNodeVisitor):
         if len(children) == 1:
            return result("simple_expression", children[0].code, children)
         else:
-          return result("simple_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+          return result("simple_expression", " ".join(c if type(c) == unicode else c.code for c in children), children)
 
     def visit_expression(self, node, children):
         if debug: print "expression: ", children
         if len(children) == 1:
            return result("expression", children[0].code, children)
         else:
-          return result("expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+          return result("expression", " ".join(c if type(c) == unicode else c.code for c in children), children)
 
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend)
