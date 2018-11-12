@@ -45,8 +45,8 @@ def function_call():            return dottedidentifier, "(", ZeroOrMore(express
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 
-#def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
-def probabilistic_assignment(): return identifier, "~", expression
+def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
+def probabilistic_assignment(): return identifier, "~", distribution_call
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
 def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.

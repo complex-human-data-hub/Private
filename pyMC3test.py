@@ -45,9 +45,11 @@ with basic_model:
     Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
     print "here"
-    trace = pm.sample(500, progressbar=False, verbose=False)
+    trace = pm.sample(500, progressbar=False, verbose=False, trace=["sigma", "alpha"])
     print "here2"
 
     #pm.traceplot(trace)
 
 #plt.show()
+
+print trace.varnames
