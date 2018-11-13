@@ -8,9 +8,4 @@ Y = A*X + N
 
 
 a ~ normal(0,10)
-meana = mean(a)
-s ~ halfnormal(1)
-
-m = a*X
-Y ~ normal(m, s)
 

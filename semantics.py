@@ -141,7 +141,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_dependencies(self, node, children):        depGraph.show_dependencies()
     def visit_show_mccode(self, node, children):              print depGraph.constructPyMC3code()[1]
     def visit_show_sampler_status(self, node, children):      depGraph.canRunSampler(verbose=True)
-    def visit_show_sets(self, node, children):                depGraph.show_sets()
+    def visit_show_sets(self, node, children):                print depGraph.show_sets()
     def visit_variables_to_calculate(self, node, children):   print depGraph.variablesToBeCalculated()
     def visit_variables_to_sample(self, node, children):      print depGraph.variablesToBeSampled()
 

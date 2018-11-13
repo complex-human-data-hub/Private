@@ -1,12 +1,11 @@
 import thread
 import pp
-import logging as l
+#import logging as l
 import networkx as nx
 import reprlib 
 import numpy
 from collections import OrderedDict
 import logging
-_log = logging.getLogger("Private")
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 
@@ -26,6 +25,7 @@ def ppset(s):
 class graph:
 
   def __init__(self):
+
     self.lock = thread.allocate_lock()
     self.globals = __private_builtins__
     self.locals = {}
@@ -52,8 +52,6 @@ class graph:
     self.privacy_unknown = set()
 
 
-    # self.allvars = set()
-
     # code associated with variables
 
     self.code = OrderedDict()   # private code for deterministic variables
@@ -73,27 +71,31 @@ class graph:
 
     self.jobs = {}
     self.server = pp.Server()
-    self.nxgraph = nx.DiGraph()
+    self.log = logging.getLogger("Private")
+    #self.nxgraph = nx.DiGraph()
 
   def show_sets(self):
-    print "deterministic: ", ppset(self.deterministic)
-    print "probabilistic: ", ppset(self.probabilistic)
-    print "builtin: ", ppset(self.builtin)
-    print "imports: ", ppset(self.imports)
-    print
-    print "uptodate: ", ppset(self.uptodate)
-    print "computing: ", ppset(self.computing)
-    print "exception: ", ppset(self.exception)
-    print "stale: ", ppset(self.stale)
-    print
-    print "private: ", ppset(self.private)
-    print "releasable: ", ppset(self.releasable)
-    print "privacy_unknown: ", ppset(self.privacy_unknown)
-    print
-    print "locals: ", ppset(self.locals.keys())
-    print "globals: ", ppset(self.globals.keys())
+    result = ""
+    result += "deterministic: "+ ppset(self.deterministic) + "\n"
+    result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
+    result += "builtin: "+ ppset(self.builtin) + "\n"
+    result += "imports: "+ ppset(self.imports) + "\n"
+    result += "\n"
+    result += "uptodate: "+ ppset(self.uptodate) + "\n"
+    result += "computing: "+ ppset(self.computing) + "\n"
+    result += "exception: "+ ppset(self.exception) + "\n"
+    result += "stale: "+ ppset(self.stale) + "\n"
+    result += "\n"
+    result += "private: "+ ppset(self.private) + "\n"
+    result += "releasable: "+ ppset(self.releasable) + "\n"
+    result += "privacy_unknown: "+ ppset(self.privacy_unknown) + "\n"
+    result += "\n"
+    result += "locals: "+ ppset(self.locals.keys()) + "\n"
+    result += "globals: "+ ppset(self.globals.keys()) + "\n"
+    return result
 
   def changeState(self, name, newstate):
+    self.log.debug("Change state of %s to %s." % (name, newstate))
     if name in self.uptodate:
       self.uptodate.remove(name)
     if name in self.computing:
@@ -117,7 +119,6 @@ class graph:
     '''
     anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
     '''
-    #_log.debug("Entering updateState")
     self.lock.acquire()
     changed = True
     while changed:
@@ -132,7 +133,6 @@ class graph:
     # add code here to stop jobs that are computing but that are no longer needed
 
     self.lock.release()
-    #_log.debug("Leaving updateState")
 
   def makeProbabilisticOnlyVariablesStale(self):
     #self.lock.acquire()
@@ -173,7 +173,7 @@ class graph:
     self.comment[name] = the_comment
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None, private=False):
-    _log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
+    self.log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.lock.acquire()
     if not dependson:
       dependson = []
@@ -200,7 +200,7 @@ class graph:
 
     self.lock.release()
     self.updateState() 
-    _log.debug("Leaving define")
+    self.log.debug("Leaving define")
 
   def delete(self, name):
       self.lock.acquire()
@@ -321,7 +321,11 @@ class graph:
 '''
 
   def checkup(self, name):
-    return self.getAncestors(name) - self.uptodate - (self.deterministic - self.probabilistic) == set([])
+    if name not in self.probabilistic:
+      raise Exception("checkup: %s is not probabilistic")
+    if self.getAncestors(name) == set([]):
+      return False
+    return self.getAncestors(name) - self.uptodate - (self.deterministic & self.probabilistic) == set([])
     '''
     parents = self.getParents(name)
     if parents == []:
@@ -335,6 +339,8 @@ class graph:
 
   def checkdown(self, name):
 
+    if name not in self.probabilistic:
+      raise Exception("checkdown: %s is not probabilistic")
     return self.getDescendants(name) - self.uptodate - __private_prob_builtins__ == set([])
     '''
     if name not in self.probdependson and name not in self.dependson:
@@ -433,7 +439,7 @@ class graph:
     locals = {}
     loggingcode = """
 import logging
-_log = logging.getLogger("pymc3")
+_log = logging.getLogger("Private")
 logging.disable(100)
 """
 
@@ -477,14 +483,12 @@ except Exception as e:
     return locals, code
 
   def canRunSampler(self, verbose=False):
-    #_log.debug("Entering canRunSampler")
     result = True
     for name in self.variablesToBeSampled():
       if verbose: print name, "checkdown", self.checkdown(name)
       result = result and self.checkdown(name)
       if verbose: print name, "checkup", self.checkup(name)
       result = result and self.checkup(name)
-    #_log.debug("Leaving canRunSampler: "+ str(result))
     return result
 
   def variablesToBeSampled(self):
@@ -506,35 +510,32 @@ except Exception as e:
     
   def compute(self):
 
-    #_log.debug("Entering compute")
     self.lock.acquire()
 
     for name in self.variablesToBeCalculated():
-      _log.debug("Starting " + name)
       self.changeState(name, "computing")
+      self.log.debug("Calculate: " + name + " " + self.code[name] + " " + str(self.globals) + " " + str(self.locals))
       self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
       
     
     sampler_names = self.variablesToBeSampled()
     if sampler_names & self.stale != set([]):
+      pass
       if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
         locals, sampler_code =  self.constructPyMC3code()
         for name in sampler_names:
           self.changeState(name, "computing")
+        self.log.debug("sampler_names: " + str(sampler_names) + " " + self.show_sets())
         self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
 
 
     self.lock.release()
     self.updateState()
-    #_log.debug("Leaving compute")
-
-  def isException(self, v):
-    return type(v) in [SyntaxError, ValueError, NameError, TypeError]
 
   def callback(self, returnvalue):
     self.lock.acquire()
     name, value = returnvalue
-    if self.isException(value):
+    if isinstance(value, Exception):
       self.globals[name] = str(value)
       self.changeState(name, "exception")
     else:
@@ -548,7 +549,7 @@ except Exception as e:
   def samplercallback(self, returnvalue):   # work on this
     self.lock.acquire()
     names, value = returnvalue
-    if self.isException(value):
+    if isinstance(value, Exception):
       for name in names:
         self.globals[name] = str(value)
         self.changeState(name, "exception")

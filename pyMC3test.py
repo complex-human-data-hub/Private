@@ -5,9 +5,9 @@ import numpy as np
 import warnings
 #warnings.filterwarnings("ignore")
 
-import logging
-logger = logging.getLogger("pymc3")
-logging.disable(100)
+#import logging
+#logger = logging.getLogger("pymc3")
+#logging.disable(100)
 
 # Initialize random number generator
 np.random.seed(123)
@@ -41,15 +41,17 @@ with basic_model:
     # Expected value of outcome
     mu = alpha + beta[0]*X1 + beta[1]*X2
 
+    meana = mean(alpha)
+
     # Likelihood (sampling distribution) of observations
-    Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+    #Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
     print "here"
-    trace = pm.sample(500, progressbar=False, verbose=False, trace=["sigma", "alpha"])
+    trace = pm.sample(500, progressbar=False, verbose=False)
     print "here2"
 
     #pm.traceplot(trace)
 
 #plt.show()
 
-print trace.varnames
+print trace["alpha"]
