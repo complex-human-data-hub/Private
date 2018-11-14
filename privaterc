@@ -1,4 +1,5 @@
 from distributions import normal, halfnormal
+from numpy import mean, std
 
 A = 2.5
 N = normal(0,2, 100)
@@ -6,6 +7,15 @@ X = normal(0,1,100)
 
 Y = A*X + N
 
-
 a ~ normal(0,10)
+
+m ~ a * X
+Y ~ normal(m,s)
+
+s ~ halfnormal(3)
+
+
+meana = mean(a)
+means = mean(s)
+meann = mean(N)
 

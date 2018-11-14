@@ -127,8 +127,15 @@ class InputVisitor(PTNodeVisitor):
         pyMC3_code = "pm." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3_code)
  
-    def visit_probabilistic_assignment(self, node, children): 
+    def visit_distribution_assignment(self, node, children): 
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+        return result("distribution_assignment", children[0].code)
+
+    def visit_expression_assignment(self, node, children): 
+        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
+        return result("expression_assignment", children[0].code)
+
+    def visit_probabilistic_assignment(self, node, children): 
         return result("probabilistic_assignment", children[0].code)
 
     def visit_assignment(self, node, children):
@@ -144,6 +151,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_sets(self, node, children):                print depGraph.show_sets()
     def visit_variables_to_calculate(self, node, children):   print depGraph.variablesToBeCalculated()
     def visit_variables_to_sample(self, node, children):      print depGraph.variablesToBeSampled()
+    def visit_delete(self, node, children):                   depGraph.delete(children[0].code)
 
     def visit_help(self, node, children):
         print """
@@ -155,6 +163,7 @@ sss: show sampler status
 ss: show sets
 vc: variables to calculate
 vs: variables to sample
+del <name>: delete variable
 help: this message
 """
       

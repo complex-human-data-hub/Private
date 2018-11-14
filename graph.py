@@ -1,4 +1,5 @@
 import thread
+import multiprocessing
 import pp
 #import logging as l
 import networkx as nx
@@ -9,7 +10,7 @@ import logging
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 
-__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "mean": numpy.mean, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
 __private_prob_builtins__ = set(["normal", "halfnormal"])
 
@@ -26,7 +27,8 @@ class graph:
 
   def __init__(self):
 
-    self.lock = thread.allocate_lock()
+    #self.lock = thread.allocate_lock()
+    self.lock = multiprocessing.Lock()
     self.globals = __private_builtins__
     self.locals = {}
 
@@ -112,68 +114,24 @@ class graph:
       self.exception.add(name)
     elif newstate == "stale":
       self.stale.add(name)
+      # check dependencies to see if other variables need to be made stale
+      for parent in self.deterministicParents(name): # parents via deterministic links
+        if parent not in self.stale:
+          self.changeState(parent, "stale")
+      for child in self.probabilisticChildren(name): # children via probabilistic links
+        if child not in self.stale and child not in self.builtin and child not in self.imports:
+          self.changeState(child, "stale")
+ 
+        
+        
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
-
-  def updateState(self):
-    '''
-    anything that is currently uptodate but depends deterministically on a stale value or a computing value should be stale
-    '''
-    self.lock.acquire()
-    changed = True
-    while changed:
-      changed = False
-      variablestocheck = list(self.uptodate & self.deterministic) 
-      for name in variablestocheck:
-        if name in self.dependson:
-          if (self.dependson[name] & (self.stale | self.computing)):
-            self.changeState(name, "stale")
-            changed = True
-
-    # add code here to stop jobs that are computing but that are no longer needed
-
-    self.lock.release()
-
-  def makeProbabilisticOnlyVariablesStale(self):
-    #self.lock.acquire()
-    for name in self.probabilistic - self.deterministic:
-      self.changeState(name, "stale")
-    #self.lock.release()
-        
-#  def updateGraph(self, name, dependson=[]):
-#      self.lock.acquire()
-#      # save a version of the current graph before making changes
-#      save = self.graph.copy()
-#
-#      # Add variables and edges to graph data structure
-#      vars = [name] + dependson
-#      for var in vars:
-#          if var not in self.graph:
-#              self.graph.add_node(var)
-#          if var != name:
-#              self.graph.add_edge(var, name)
-#
-#      # Remove edges to old predecessors
-#      preds = self.graph.predecessors(name)
-#      for pred in preds:
-#          if pred not in dependson:
-#              self.graph.remove_edge(pred, name)
-#
-#      # Check for cycles
-#      try:
-#          cycles = nx.find_cycle(self.graph)
-#          self.graph = save
-#          self.lock.release()
-#          return False, cycles
-#      except:
-#          self.lock.release()
-#          return True, None
 
   def add_comment(self, name, the_comment):
     self.comment[name] = the_comment
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None, private=False):
-    self.log.debug("Entering define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
+    self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.lock.acquire()
     if not dependson:
       dependson = []
@@ -183,9 +141,8 @@ class graph:
       self.pyMC3code[name] = pyMC3code
       if dependson != []:
         self.probdependson[name] = set(dependson)
-      self.makeProbabilisticOnlyVariablesStale()
-      #if not name in self.uptodate:
-      #  self.stale.add(name)
+      for name in self.probabilistic - self.deterministic:
+        self.changeState(name, "stale")
     else:
       self.deterministic.add(name)
       self.code[name] = code
@@ -196,55 +153,72 @@ class graph:
       self.changeState(name, "stale")
       if set(dependson) & self.private != set():
         self.private.add(name)
-    # add code here to stop processes that depend on values that this define makes stale
-
     self.lock.release()
-    self.updateState() 
-    self.log.debug("Leaving define")
 
   def delete(self, name):
-      self.lock.acquire()
-      try:
-          if not self.has_descendants(name):
-              self.graph.remove_node(name)
-              if name in self.computing:
-                  # Add code here to end job
-                  pass
-                  #self.computing.remove(name)
-                  #self.computing[name]
-              if name in self.uptodate:
-                  self.uptodate.remove(name)
-              if name in self.stale:
-                  self.stale.remove(name)
-          else:
-              l.warning("You cannot delete a variable with descendants")
-      except NetworkXError:
-          l.warning("NetworkX error?")
-          pass
-      self.lock.release()
-      self.updateState()
+    self.lock.acquire()
+    self.changeState(name, "stale")
 
-  def has_descendants(self, name):
-      # Checks if a node given by 'name' has any descendants
-      for var in self.dependson.keys():
-          if name in self.dependson[var]:
-              return True
-      return False
+    self.globals.pop(name, None)
+    self.deterministic.discard(name)
+    self.probabilistic.discard(name)
+    self.stale.discard(name)
+    self.private.discard(name)
+    self.releasable.discard(name)
+    self.privacy_unknown.discard(name)
 
-  def check_cycles(self, name, dependson):
-      # Checks to see if a new 'define' command will create a cycle in the graph
-      existing_vars = self.dependson.keys()
-      if name in dependson:
-          return True
-      elif name not in existing_vars:
-          return False
-      else:
-          deps = [dep for dep in dependson if dep in existing_vars]
-          if (len(deps) == 0):
-              return False
-          else:
-              # Incomplete
-              return True
+    self.code.pop(name, None)
+    self.probcode.pop(name, None)
+    self.pyMC3code.pop(name, None)
+
+    self.dependson.pop(name, None)
+    self.probdependson.pop(name, None)
+    self.comment.pop(name, None)
+    self.lock.release()
+  
+#  def delete(self, name):
+#      self.lock.acquire()
+#      try:
+#          if not self.has_descendants(name):
+#              self.graph.remove_node(name)
+#              if name in self.computing:
+#                  # Add code here to end job
+#                  pass
+#                  #self.computing.remove(name)
+#                  #self.computing[name]
+#              if name in self.uptodate:
+#                  self.uptodate.remove(name)
+#              if name in self.stale:
+#                  self.stale.remove(name)
+#          else:
+#              l.warning("You cannot delete a variable with descendants")
+#      except NetworkXError:
+#          l.warning("NetworkX error?")
+#          pass
+#      self.lock.release()
+#      #self.updateState()
+
+#  def has_descendants(self, name):
+#      # Checks if a node given by 'name' has any descendants
+#      for var in self.dependson.keys():
+#          if name in self.dependson[var]:
+#              return True
+#      return False
+
+#  def check_cycles(self, name, dependson):
+#      # Checks to see if a new 'define' command will create a cycle in the graph
+#      existing_vars = self.dependson.keys()
+#      if name in dependson:
+#          return True
+#      elif name not in existing_vars:
+#          return False
+#      else:
+#          deps = [dep for dep in dependson if dep in existing_vars]
+#          if (len(deps) == 0):
+#              return False
+#          else:
+#              # Incomplete
+#              return True
 
   def getValue(self, name):
     res = ""
@@ -256,7 +230,7 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception:
-        res += str(self.globals[name])
+        res += "Exception: " + str(self.globals[name])
       elif name in self.uptodate:
         if type(self.globals[name]) == numpy.ndarray:
           s = self.globals[name].shape
@@ -294,38 +268,28 @@ class graph:
 
   def show_dependencies(self):
     res = ""
-    for name in self.probabilistic | self.deterministic:
-      res += name
-      res += " ancestors = " + ppset(self.getAncestors(name))
-      res += " parents = " + ppset( self.getParents(name))
-      res += " children = " + ppset( self.getChildren(name))
-      res += " descendants = " + ppset( self.getDescendants(name))
-      res += "\n"
-    res += "variables to be sampled = " + ppset(self.variablesToBeSampled()) + "\n"
-    res += "variables to be calculated = " + ppset(self.variablesToBeCalculated()) + "\n"
-    print res[0:-1]
-    '''
     for name in self.code.keys():
       res += name + " = "
       res += str(self.code[name])
-      if self.dependson[name] != set([]):
-        res += "    " + str(list(self.dependson[name]))
+      if name in self.dependson:
+        if self.dependson[name] != set([]):
+          res += "    " + str(list(self.dependson[name]))
       res += "\n"
     for name in self.probcode.keys():
       res += name + " ~ "
       res += str(self.probcode[name])
-      if self.probdependson[name] != set([]):
-        res += "    " + str(list(self.probdependson[name]))
+      if name in self.probdependson:
+        if self.probdependson[name] != set([]):
+          res += "    " + str(list(self.probdependson[name]))
       res += "\n"
     print res[0:-1]
-'''
 
   def checkup(self, name):
-    if name not in self.probabilistic:
-      raise Exception("checkup: %s is not probabilistic")
-    if self.getAncestors(name) == set([]):
-      return False
-    return self.getAncestors(name) - self.uptodate - (self.deterministic & self.probabilistic) == set([])
+    nonuptodateparents = self.getParents(name) & self.probabilistic - self.uptodate
+    if nonuptodateparents == set([]):
+      return True
+    else:
+      return all(self.checkup(p) for p in nonuptodateparents)
     '''
     parents = self.getParents(name)
     if parents == []:
@@ -338,10 +302,14 @@ class graph:
 '''
 
   def checkdown(self, name):
+    if name not in self.dependson and name not in self.probdependson:
+      return False
 
-    if name not in self.probabilistic:
-      raise Exception("checkdown: %s is not probabilistic")
-    return self.getDescendants(name) - self.uptodate - __private_prob_builtins__ == set([])
+    nonuptodatechildren = self.getChildren(name) - self.uptodate - __private_prob_builtins__
+    if nonuptodatechildren == set([]):
+      return True
+    else:
+      return all(self.checkdown(p) for p in nonuptodatechildren)
     '''
     if name not in self.probdependson and name not in self.dependson:
       return False
@@ -372,68 +340,34 @@ class graph:
           parents.add(parent)
     return(parents)
 
-  def getAncestors(self, name):
-    parents = self.getParents(name)
-    result = parents
-    for name in parents:
-      result = result | self.getAncestors(name)
-    return result
+  def deterministicParents(self, name):
+    parents = set([])
+    for parent in self.deterministic:
+      if parent in self.dependson:
+        if name in self.dependson[parent]:
+          parents.add(parent)
+    return(parents)
+
+  #def getAncestors(self, name):
+  #  parents = self.getParents(name)
+  #  result = parents
+  #  for name in parents:
+  #    result = result | self.getAncestors(name)
+  #  return result
 
   def getChildren(self, name):
-    return self.dependson.get(name, set([])) or self.probdependson.get(name, set([]))
+    return self.dependson.get(name, set([])) | self.probdependson.get(name, set([]))
 
-  def getDescendants(self, name):
-    children = self.getChildren(name)
-    result = children
-    for name in children:
-      result = result | self.getDescendants(name)
-    return result
+  def probabilisticChildren(self, name):
+    return self.probdependson.get(name, set([]))
+
+  #def getDescendants(self, name):
+  #  children = self.getChildren(name)
+  #  result = children
+  #  for name in children:
+  #    result = result | self.getDescendants(name)
+  #  return result
       
-
-  def probabove(self, name):
-    '''
-    Is there a probabilistic link anywhere above name.
-    '''
-
-    return self.getAncestors(name) & self.probabilistic != set([])
-
-    pass
-    parents = self.getParents(name)
-    if parents == set([]):
-      return False
-    if self.probabilistic & parents != set([]):
-      return True
-    return any(self.probabove(parent) for parent in parents - self.probabilistic)
-
-  def probbelow(self, name):
-    '''
-    Is there a probabilistic link anywhere below name.
-    '''
-
-    return self.getDescendants(name) & self.probabilistic != set([])
-
-    pass
-    if name in self.probabilistic:
-      return True
-    if name not in self.probdependson.keys() and name not in self.dependson.keys():
-      return False
-
-    # check dependencies
-
-    result = True
-    if name in self.probdependson:
-      for d in self.probdependson[name]:
-        if d in self.probabilistic:
-          return True
-        else:
-          result = result and self.checkdown(d)
-    if name in self.dependson:
-      for d in self.dependson[name]:
-        if d in self.probabilistic:
-          return True
-        else:
-          result = result and self.checkdown(d)
-    return result
 
   def constructPyMC3code(self):
     locals = {}
@@ -463,10 +397,6 @@ try:
     for name in probabilsitic_only_names:
       code += "    " + self.pyMC3code[name] % ""+ "\n"
 
-    deterministic_not_uptodate = list(self.deterministic - self.uptodate)
-    for name in deterministic_not_uptodate:
-      code += "    " + name + " = " + self.code[name]+ "\n"
-
     observed_names = list(self.probabilistic & self.deterministic)
     for name in observed_names:
       obsname = "__private_%s_observed" % name
@@ -484,7 +414,7 @@ except Exception as e:
 
   def canRunSampler(self, verbose=False):
     result = True
-    for name in self.variablesToBeSampled():
+    for name in self.probabilistic:
       if verbose: print name, "checkdown", self.checkdown(name)
       result = result and self.checkdown(name)
       if verbose: print name, "checkup", self.checkup(name)
@@ -494,16 +424,12 @@ except Exception as e:
   def variablesToBeSampled(self):
 
     names = self.probabilistic - self.deterministic
-    for name in self.deterministic:
-      if name in self.dependson:
-        if any(self.probbelow(d) for d in self.dependson[name]) and self.probabove(name):
-          names = names | set([name])
     return names
 
   def variablesToBeCalculated(self):
     names = set([])
     for name in self.deterministic & self.stale:
-      if self.getChildren(name) - self.uptodate - self.builtin - self.imports == set([]):
+      if self.dependson.get(name, set([])) - self.uptodate - self.builtin - self.imports == set([]):
         names.add(name)
     return(names)
 
@@ -513,24 +439,24 @@ except Exception as e:
     self.lock.acquire()
 
     for name in self.variablesToBeCalculated():
-      self.changeState(name, "computing")
-      self.log.debug("Calculate: " + name + " " + self.code[name] + " " + str(self.globals) + " " + str(self.locals))
-      self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
+      if name not in self.jobs:
+        self.changeState(name, "computing")
+        self.log.debug("Calculate: " + name + " " + self.code[name])
+        self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
       
     
-    sampler_names = self.variablesToBeSampled()
-    if sampler_names & self.stale != set([]):
-      pass
-      if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
-        locals, sampler_code =  self.constructPyMC3code()
-        for name in sampler_names:
-          self.changeState(name, "computing")
-        self.log.debug("sampler_names: " + str(sampler_names) + " " + self.show_sets())
-        self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
+    if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
+      sampler_names = self.variablesToBeSampled()
+      if sampler_names & self.stale != set([]):
+        if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
+          locals, sampler_code =  self.constructPyMC3code()
+          for name in sampler_names:
+            self.changeState(name, "computing")
+          self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
+        
 
 
     self.lock.release()
-    self.updateState()
 
   def callback(self, returnvalue):
     self.lock.acquire()

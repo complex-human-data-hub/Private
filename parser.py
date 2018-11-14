@@ -14,7 +14,9 @@ from arpeggio import RegExMatch as _
 # - Can't pick up dependency between a and b where a = b[c]
 # - Dependencies in list comprehensions?
 
-def command():                  return [comment, \
+def command():                  return [delete, \
+                                        comment, \
+                                        comment_string, \
                                         draw_tree, \
                                         show_variables, \
                                         show_dependencies, \
@@ -35,7 +37,7 @@ def variables_to_sample():      return "vs"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')
-def comment_string():           return _(r'#[a-zA-Z_ ]*')
+def comment_string():           return _(r'#[a-zA-Z0-9_ ~=(),*]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
 def starsym():                  return "*"
@@ -57,7 +59,9 @@ def expression():               return simple_expression, Optional(relation, sim
 def deterministic_assignment(): return identifier, "=", expression
 
 def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
-def probabilistic_assignment(): return identifier, "~", distribution_call
+def distribution_assignment():  return identifier, "~", distribution_call
+def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
+def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
 def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
@@ -66,7 +70,8 @@ def identifier_list():          return identifier, ZeroOrMore(",", identifier)
 def long_import():              return "from", module_name, "import", [identifier_list, starsym]
 def all_import():               return [short_import, long_import]
 def comment():                  return identifier, comment_string
-def line():                     return [command, all_import, assignment, value, command_line_expression], EOF
+def delete():                   return "del", identifier
+def line():                     return [command, all_import, assignment, value, command_line_expression, comment_string], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))
