@@ -7,12 +7,15 @@ import reprlib
 import numpy
 from collections import OrderedDict
 import logging
+from private_builtins import __private_builtins__, __private_prob_builtins__
+
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 
-__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
+#__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
 
-__private_prob_builtins__ = set(["normal", "halfnormal"])
+#__private_prob_builtins__ = set(["normal", "halfnormal", "uniform", "skewnormal", "beta", "kumaraswamy", "exponential", "laplace", "studentt", "halfstudentt", "cauchy", "halfcauchy", "gamma", "weibull", "lognormal", "chisquared", "wald", "pareto", "inversegamma", "exgaussian", "vonmises", "triangular", "gumbel", "logistic", "logitnormal"]) # continuous distributions
+#__private_prob_builtins__ = __private_prob_bultins__ | set(["binomial", "zeroinflatedbinomial", "bernoulli", "poisson", "zeroinflatedpoisson", "negativebinomial", "zeroinflatednegativebinomial", "discreteuniform", "geometric", "categorical", "discreteweibull", "constant", "orderedlogistic"]) # discrete distributions
 
 numpy.set_printoptions(precision=3)
 

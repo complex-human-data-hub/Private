@@ -7,12 +7,12 @@ X = normal(0,1,100)
 
 Y = A*X + N
 
-a ~ normal(0,10)
+a ~ Normal(0,10)
 
 m ~ a * X
-Y ~ normal(m,s)
+Y ~ Normal(m,s)
 
-s ~ halfnormal(3)
+s ~ HalfNormal(3)
 
 
 meana = mean(a)

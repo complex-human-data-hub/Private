@@ -9,6 +9,7 @@ import pydot
 import graphviz
 import logging
 import importlib
+from private_builtins import __private_prob_builtins__
 
 from networkx.drawing.nx_pydot import write_dot
 from graph import *
@@ -118,11 +119,7 @@ class InputVisitor(PTNodeVisitor):
         if debug: print "distribution_call: ", children
         fn = children[0].code
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
-        if fn == "normal":
-          fn = "Normal"
-        elif fn == "halfnormal":
-          fn = "HalfNormal"
-        else:
+        if fn not in __private_prob_builtins__:
           raise Exception("Unknown distribution: " + fn)
         pyMC3_code = "pm." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3_code)
