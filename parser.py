@@ -55,14 +55,15 @@ def list_comprehension():       return "[", expression, "for", identifier_list, 
 def enumerated_list():          return "[", ZeroOrMore(expression, ","), expression, "]"
 def list():                     return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
-def factor():                   return [function_call, bracketed_expression, (notsym, factor), list, atom]
+def factor():                   return [function_call, method_call, bracketed_expression, (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
 def function_call():            return identifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 
-def distribution_call():        return dottedidentifier, "(", ZeroOrMore(atom, ","), atom, ")"
+def distribution_call():        return identifier, "(", ZeroOrMore(atom, ","), atom, ")"
 def distribution_assignment():  return identifier, "~", distribution_call
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]

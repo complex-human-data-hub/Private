@@ -52,10 +52,10 @@ class graph:
     self.exception = set()
     self.uptodate = set(__private_builtins__.keys()) or __private_prob_builtins__
 
-    # each variable should be in private, releasable, privacy_unknown
+    # each variable should be in private, public, privacy_unknown
 
     self.private = set()
-    self.releasable = set()
+    self.public = set()
     self.privacy_unknown = set()
 
 
@@ -94,7 +94,7 @@ class graph:
     result += "stale: "+ ppset(self.stale) + "\n"
     result += "\n"
     result += "private: "+ ppset(self.private) + "\n"
-    result += "releasable: "+ ppset(self.releasable) + "\n"
+    result += "public: "+ ppset(self.public) + "\n"
     result += "privacy_unknown: "+ ppset(self.privacy_unknown) + "\n"
     result += "\n"
     result += "locals: "+ ppset(self.locals.keys()) + "\n"
@@ -103,14 +103,10 @@ class graph:
 
   def changeState(self, name, newstate):
     self.log.debug("Change state of %s to %s." % (name, newstate))
-    if name in self.uptodate:
-      self.uptodate.remove(name)
-    if name in self.computing:
-      self.computing.remove(name)
-    if name in self.exception:
-      self.exception.remove(name)
-    if name in self.stale:
-      self.stale.remove(name)
+    self.uptodate.discard(name)
+    self.computing.discard(name)
+    self.exception.discard(name)
+    self.stale.discard(name)
     if newstate == "uptodate":
       self.uptodate.add(name)
     elif newstate == "computing":
@@ -121,45 +117,69 @@ class graph:
       self.stale.add(name)
       # check dependencies to see if other variables need to be made stale
       for parent in self.deterministicParents(name): # parents via deterministic links
-        print name, " det ", self.deterministicParents(name)
+        #print name, " det ", self.deterministicParents(name)
         if parent not in self.stale:
           self.changeState(parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links
-        print name, " prob ", self.deterministicParents(name)
+        #print name, " prob ", self.deterministicParents(name)
         if child not in self.stale and child not in self.builtin and child not in self.imports:
           self.changeState(child, "stale")
- 
-        
-        
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
+
+  def changePrivacy(self, name, privacy):
+    self.private.discard(name)
+    self.public.discard(name)
+    self.privacy_unknown.discard(name)
+      
+    if privacy == "private":
+      self.private.add(name)
+    elif privacy == "public":
+      self.public.add(name)
+    else:
+      if name in self.deterministic:
+        # first look at deterministic children to see if you can deduce the privacy value
+        if name in self.dependson:
+          if all(child in self.public for child in self.dependson[name] - self.builtin):
+            self.public.add(name)
+          elif any(child in self.private for child in self.dependson[name]- self.builtin):
+            self.private.add(name)
+          else:
+            self.privacy_unknown.add(name)
+        else: # there are no determinsitic dependancies
+          self.public.add(name)
+      else: # probabilsitic
+        print name, " is probabilistic"
+        self.privacy_unknown.add(name)
+
+    # propagate privacy to parents
+    for parent in self.getParents(name):
+      self.changePrivacy(parent, "privacy_unknown")
+    
+      
 
   def add_comment(self, name, the_comment):
     self.comment[name] = the_comment
 
-  def define(self, name, code, dependson=None, prob = False, pyMC3code = None, private=False):
+  def define(self, name, code, dependson=None, prob = False, pyMC3code = None, privacy="privacy_unknown"):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.lock.acquire()
     if not dependson:
       dependson = []
     if prob:
-      self.probabilistic.add(name)
-      self.probcode[name] = code
-      self.pyMC3code[name] = pyMC3code
-      if dependson != []:
-        self.probdependson[name] = set(dependson)
-      for name in self.probabilistic - self.deterministic:
-        self.changeState(name, "stale")
+        self.probabilistic.add(name)
+        self.probcode[name] = code
+        self.pyMC3code[name] = pyMC3code
+        if dependson != []:
+          self.probdependson[name] = set(dependson)
+        for n in self.probabilistic - self.deterministic:
+          self.changeState(n, "stale")
     else:
       self.deterministic.add(name)
       self.code[name] = code
-      if private:
-        self.private.add(name)
-      if dependson != []:
-        self.dependson[name] = set(dependson)
+      self.dependson[name] = set(dependson)
       self.changeState(name, "stale")
-      if set(dependson) & self.private != set():
-        self.private.add(name)
+    self.changePrivacy(name, privacy)
     self.lock.release()
 
   def delete(self, name):
@@ -171,7 +191,7 @@ class graph:
     self.probabilistic.discard(name)
     self.stale.discard(name)
     self.private.discard(name)
-    self.releasable.discard(name)
+    self.public.discard(name)
     self.privacy_unknown.discard(name)
 
     self.code.pop(name, None)
@@ -230,14 +250,16 @@ class graph:
   def getValue(self, name):
     res = ""
     if name in self.deterministic | self.probabilistic:
-      if name in self.private:
-        res += "Private"
-      elif name in self.stale:
+      if name in self.stale:
         res += "Stale"
       elif name in self.computing:
         res += "Computing"
-      elif name in self.exception:
+      elif name in self.exception: # note an exception might reveal information about the value so might only be able to show this if the variable is public
         res += "Exception: " + str(self.globals[name])
+      elif name in self.private:
+        res += "Private"
+      elif name in self.privacy_unknown:
+        res += "Privacy Unknown"
       elif name in self.uptodate:
         if type(self.globals[name]) == numpy.ndarray:
           s = self.globals[name].shape
@@ -253,15 +275,9 @@ class graph:
   def __repr__(self):
     codebits = []
     for name in self.code.keys():
-      if name in self.private:
-        codebits.append(name + " = Private")
-      else:
-        codebits.append(name + " = " + str(self.code[name]))
+      codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      if name in self.private:
-        codebits.append(name + " = Private")
-      else:
-        codebits.append(name + " ~ " + str(self.probcode[name]))
+      codebits.append(name + " ~ " + str(self.probcode[name]))
     if len(codebits) > 0:
       m = max(len(line) for line in codebits)
       m = min(m, 60)
@@ -284,17 +300,23 @@ class graph:
     res = ""
     for name in self.code.keys():
       res += name + " = "
-      res += str(self.code[name])
+      if name not in self.private:
+        res += self.code[name][0:60]
+      else:
+        res += "Private"
       if name in self.dependson:
-        if self.dependson[name] != set([]):
-          res += "    " + str(list(self.dependson[name]))
+          if self.dependson[name] != set([]):
+            res += "    " + repr(list(self.dependson[name]))
       res += "\n"
     for name in self.probcode.keys():
       res += name + " ~ "
-      res += str(self.probcode[name])
+      if name not in self.private:
+        res += self.probcode[name][0:60]
+      else:
+        res += "Private"
       if name in self.probdependson:
-        if self.probdependson[name] != set([]):
-          res += "    " + str(list(self.probdependson[name]))
+          if self.probdependson[name] != set([]):
+            res += "    " + repr(list(self.probdependson[name]))
       res += "\n"
     print res[0:-1]
 
@@ -443,6 +465,7 @@ except Exception as e:
   def variablesToBeCalculated(self):
     names = set([])
     for name in self.deterministic & self.stale:
+      #print name, self.dependson.get(name, set([])) , self.uptodate , self.builtin , self.imports 
       if self.dependson.get(name, set([])) - self.uptodate - self.builtin - self.imports == set([]):
         names.add(name)
     return(names)

@@ -110,8 +110,13 @@ class InputVisitor(PTNodeVisitor):
         else:
           return result("term", " ".join(c if type(c) == unicode else c.code for c in children), children)
         
+    def visit_method_call(self, node, children):
+        if debug: print "method_call: ", children
+        fn = children[0].code
+        return result("method_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
+
     def visit_function_call(self, node, children):
-        if debug: print "function: ", children
+        if debug: print "function_call: ", children
         fn = children[0].code
         if fn == "set":
           fn = "frozenset"

@@ -1,21 +1,9 @@
-from distributions import normal, halfnormal
-from numpy import mean, std
-
-A = 2.5
-N = normal(0,2, 100)
-X = normal(0,1,100)
-
-Y = A*X + N
-
-a ~ Normal(0,10)
-
-m ~ a * X
-Y ~ Normal(m,s)
-
-s ~ HalfNormal(3)
-
-
-meana = mean(a)
+l = [e.latitude for e in PublicEvents if e.hasField("latitude")]
+meanm = mean(m)
 means = mean(s)
-meann = mean(N)
+meanl = mean(l)
+stdl = std(l)
+l ~ Normal(m, s)
+m ~ Normal(0, 100)
+s ~ HalfNormal(100)
 
