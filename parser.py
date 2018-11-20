@@ -44,7 +44,8 @@ def starsym():                  return "*"
 
 def dottedidentifier():         return identifier, ZeroOrMore(".", identifier)
 
-def number():                   return _(r'[+-]?[0-9]+(\.[0-9]+)?')
+#def number():                   return _(r'[+-]?[0-9]+(\.[0-9]+)?')
+def number():                   return _(r'[+-]?((\d+(\.\d*)?)|(\.\d+))')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
 def relation():                 return ["==" , "!=" , "<=" , ">=" , "<" , ">" , "in"]
