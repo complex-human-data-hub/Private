@@ -1,5 +1,3 @@
-from graph import depGraph
-import datetime
 
 data = [{ 'EndDateTime': '2015-02-13',\
   'StartDateTime': '2015-02-13',\
@@ -3263,5 +3261,12 @@ data = [{ 'EndDateTime': '2015-02-13',\
 
 
 code = "[Event(d) for d in %s]" % str(data)
-depGraph.define("DemoEvents", code, private=False)
-depGraph.define("DemoEventsPrivate", code, private=True)
+
+#from private_builtins import Event
+#f = eval(code)
+#print f[0]
+#print [e.latitude for e in f if e.hasField("latitude")]
+
+def define_demo_events(graph):
+  graph.define("Events", code, private=True)
+  graph.define("ReleasableEvents", code, private=False)

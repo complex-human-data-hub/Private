@@ -7,7 +7,9 @@ import reprlib
 import numpy
 from collections import OrderedDict
 import logging
+
 from private_builtins import __private_builtins__, __private_prob_builtins__
+from private_demo_events import define_demo_events
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -119,9 +121,11 @@ class graph:
       self.stale.add(name)
       # check dependencies to see if other variables need to be made stale
       for parent in self.deterministicParents(name): # parents via deterministic links
+        print name, " det ", self.deterministicParents(name)
         if parent not in self.stale:
           self.changeState(parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links
+        print name, " prob ", self.deterministicParents(name)
         if child not in self.stale and child not in self.builtin and child not in self.imports:
           self.changeState(child, "stale")
  
@@ -249,17 +253,24 @@ class graph:
   def __repr__(self):
     codebits = []
     for name in self.code.keys():
-      codebits.append(name + " = " + str(self.code[name]))
+      if name in self.private:
+        codebits.append(name + " = Private")
+      else:
+        codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      codebits.append(name + " ~ " + str(self.probcode[name]))
+      if name in self.private:
+        codebits.append(name + " = Private")
+      else:
+        codebits.append(name + " ~ " + str(self.probcode[name]))
     if len(codebits) > 0:
       m = max(len(line) for line in codebits)
-      newcodebits = [line.ljust(m, " ") for line in codebits]
+      m = min(m, 60)
+      newcodebits = [line[0:60].ljust(m, " ") for line in codebits]
       valuebits = []
       for name in self.code.keys():
-        valuebits.append(self.getValue(name))
+        valuebits.append(self.getValue(name)[0:80])
       for name in self.probcode.keys():
-        valuebits.append(self.getValue(name))
+        valuebits.append(self.getValue(name)[0:80])
       commentbits = []
       for name in self.code.keys():
         commentbits.append(self.comment.get(name, ""))
@@ -380,7 +391,7 @@ _log = logging.getLogger("Private")
 logging.disable(100)
 """
 
-    code = """
+    code = loggingcode + """
 import pymc3 as pm
 
 
@@ -510,3 +521,4 @@ def samplerjob(names, code, globals, locals):
     return (names, e)
 
 depGraph = graph()
+define_demo_events(depGraph)

@@ -48,13 +48,16 @@ def number():                   return _(r'[+-]?[0-9]+(\.[0-9]+)?')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
 def relation():                 return ["==" , "!=" , "<=" , ">=" , "<" , ">" , "in"]
-def atom():                     return [number, boolean, string, identifier]
-def list():                     return "[", ZeroOrMore(expression, ","), expression, "]"
+def atom():                     return [number, boolean, string, dottedidentifier]
+def identifier_list():          return identifier, ZeroOrMore(",", identifier)
+def list_comprehension():       return "[", expression, "for", identifier_list, "in", expression, Optional("if", expression), "]"
+def enumerated_list():          return "[", ZeroOrMore(expression, ","), expression, "]"
+def list():                     return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
 def factor():                   return [function_call, bracketed_expression, (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
-def function_call():            return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def function_call():            return identifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 

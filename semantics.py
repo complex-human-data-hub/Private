@@ -42,6 +42,9 @@ class result:
       else:
         raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string: " + str(depend) + " is a " + str(type(depend)))
 
+  def remove_dependencies(self, dependenciesToRemove):
+    self.depend = list(set(self.depend) - set(dependenciesToRemove)) 
+
   def __repr__(self):
     return "type: " + self.result_type + " code: " + self.code + "  depend: " + str(self.depend)
 
@@ -53,8 +56,10 @@ class InputVisitor(PTNodeVisitor):
         return result("identifier", node.value, node.value)
     def visit_dottedidentifier(self, node, children):
         if debug: print "dottedidentifier: ", children
-        n = "_".join(c if type(c) == unicode else c.code for c in children)
-        return result("dottedidentifier", n, n)
+        n = ".".join(c if type(c) == unicode else c.code for c in children)
+        # any dotted identifiers reduce to ther first identifier as a dependency
+        #depend = children[0] if type(children[0]) == unicode else children[0].code
+        return result("dottedidentifier", n, children[0].code)
 
     def visit_number(self, node, children):                   return result("number", node.value)
     def visit_string(self, node, children):                   return result("string", node.value)
@@ -69,8 +74,25 @@ class InputVisitor(PTNodeVisitor):
     def visit_atom(self, node, children):
         if debug: print "atom: ", children
         return result("atom", children[0].code, children)
+    def visit_identifier_list(self, node, children):
+        if debug: print "identifier_list: ", children
+        if len(children) == 1:
+           return result("identifier_list", children[0].code, children)
+        else:
+          return result("identifier_list", ", ".join(c if type(c) == unicode else c.code for c in children), children)
+    def visit_enumerated_list(self, node, children):
+        return result("enumerated_list", "[" + ", ".join([c.code for c in children]) + "]", children)
+    def visit_list_comprehension(self, node, children):
+        if len(children) == 3:
+          res = result("list_comprehension", "[" + children[0].code + " for " + children[1].code + " in " + children[2].code + "]", children)
+        else:
+          res = result("list_comprehension", "[" + children[0].code + " for " + children[1].code + " in " + children[2].code + " if " + children[3].code + "]", children)
+        res.remove_dependencies(children[1].depend)
+        return res
     def visit_list(self, node, children):
-        return result("list", "[" + ", ".join([c.code for c in children]) + "]", children)
+        if debug: print "list: ", children
+        return result("list", children[0].code, children)
+    
     def visit_bracketed_expression(self, node, children):
         return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
 
@@ -167,9 +189,9 @@ help: this message
     def visit_short_import(self, node, children):
         if debug: print "short_import: ", children
         themodule = importlib.import_module("private_"+children[0])
-        for k,v in themodule.__private_globals__.items():
-          depGraph.globals[children[0]+"_"+k] = v
-          depGraph.imports.add(children[0]+"_"+k)
+        #for k,v in themodule.__private_globals__.items():
+        #  depGraph.globals[children[0]+"_"+k] = v
+        #  depGraph.imports.add(children[0]+"_"+k)
         depGraph.compute()
 
     def visit_import_list(self, node, children):
@@ -179,9 +201,9 @@ help: this message
     def visit_long_import(self, node, children):
         if debug: print "long_import: ", children
         themodule = importlib.import_module("private_"+children[0])
-        for k,v in themodule.__private_globals__.items():
-          depGraph.globals[k] = v
-          depGraph.imports.add(k)
+        #for k,v in themodule.__private_globals__.items():
+        #  depGraph.globals[k] = v
+        #  depGraph.imports.add(k)
         depGraph.compute()
 
     def visit_all_import(self, node, children):
