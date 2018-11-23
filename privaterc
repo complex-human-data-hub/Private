@@ -1,9 +1,3 @@
-l = [e.latitude for e in PublicEvents if e.hasField("latitude")]
-meanm = mean(m)
-means = mean(s)
-meanl = mean(l)
-stdl = std(l)
-l ~ Normal(m, s)
-m ~ Normal(0, 100)
-s ~ HalfNormal(100)
-
+l = [0,1,1]
+l ~ Binomial(t)
+t ~ Uniform(0,1)

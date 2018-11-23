@@ -70,13 +70,13 @@ def probabilistic_assignment(): return [distribution_assignment, expression_assi
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
 def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
-def short_import():             return "import", module_name
-def identifier_list():          return identifier, ZeroOrMore(",", identifier)
-def long_import():              return "from", module_name, "import", [identifier_list, starsym]
-def all_import():               return [short_import, long_import]
+#def short_import():             return "import", module_name
+#def identifier_list():          return identifier, ZeroOrMore(",", identifier)
+#def long_import():              return "from", module_name, "import", [identifier_list, starsym]
+#def all_import():               return [short_import, long_import]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
-def line():                     return [command, all_import, assignment, value, command_line_expression, comment_string], EOF
+def line():                     return [command, assignment, value, command_line_expression, comment_string], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))

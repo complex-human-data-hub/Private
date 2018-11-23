@@ -7,17 +7,9 @@ import reprlib
 import numpy
 from collections import OrderedDict
 import logging
-
-from private_builtins import __private_builtins__, __private_prob_builtins__
-from private_demo_events import define_demo_events
+from builtins import builtins, prob_builtins, setPrivacy
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
-
-
-#__private_builtins__ = {"abs": abs, "all": all, "any":any, "bin":bin, "bool":bool, "chr":chr, "cmp":cmp, "complex":complex, "dict":dict, "dir":dir, "divmod":divmod, "enumerate":enumerate, "filter":filter, "float":float, "format":format, "frozenset":frozenset, "getattr":getattr, "hasattr":hasattr, "hex":hex, "int":int, "isinstance":isinstance, "issubclass":issubclass, "iter":iter, "len":len, "list":tuple, "long":long, "map":map, "min":min, "max":max, "object":object, "oct":oct, "ord":ord, "pow":pow, "property":property, "range":range, "reduce":reduce, "repr":repr, "reversed":reversed, "round":round, "set": frozenset, "slice":slice, "sorted":sorted, "str":str, "sum":sum, "tuple":tuple, "type":type, "unichr":unichr, "unicode":unicode, "vars":vars, "xrange":xrange, "zip":zip}
-
-#__private_prob_builtins__ = set(["normal", "halfnormal", "uniform", "skewnormal", "beta", "kumaraswamy", "exponential", "laplace", "studentt", "halfstudentt", "cauchy", "halfcauchy", "gamma", "weibull", "lognormal", "chisquared", "wald", "pareto", "inversegamma", "exgaussian", "vonmises", "triangular", "gumbel", "logistic", "logitnormal"]) # continuous distributions
-#__private_prob_builtins__ = __private_prob_bultins__ | set(["binomial", "zeroinflatedbinomial", "bernoulli", "poisson", "zeroinflatedpoisson", "negativebinomial", "zeroinflatednegativebinomial", "discreteuniform", "geometric", "categorical", "discreteweibull", "constant", "orderedlogistic"]) # discrete distributions
 
 numpy.set_printoptions(precision=3)
 
@@ -34,7 +26,7 @@ class graph:
 
     #self.lock = thread.allocate_lock()
     self.lock = multiprocessing.Lock()
-    self.globals = __private_builtins__
+    self.globals = builtins
     self.locals = {}
 
 
@@ -42,15 +34,15 @@ class graph:
 
     self.deterministic = set()
     self.probabilistic = set()
-    self.builtin = set(__private_builtins__.keys()) or __private_prob_builtins__
-    self.imports = set()
+    self.builtin = set(builtins.keys()) or prob_builtins
+    #self.imports = set()
 
     # each variable should be in one of stale, computing, exception or uptodate
 
     self.stale = set() 
     self.computing = set()
     self.exception = set()
-    self.uptodate = set(__private_builtins__.keys()) or __private_prob_builtins__
+    self.uptodate = set(builtins.keys()) or prob_builtins
 
     # each variable should be in private, public, privacy_unknown
 
@@ -86,7 +78,7 @@ class graph:
     result += "deterministic: "+ ppset(self.deterministic) + "\n"
     result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
     result += "builtin: "+ ppset(self.builtin) + "\n"
-    result += "imports: "+ ppset(self.imports) + "\n"
+    #result += "imports: "+ ppset(self.imports) + "\n"
     result += "\n"
     result += "uptodate: "+ ppset(self.uptodate) + "\n"
     result += "computing: "+ ppset(self.computing) + "\n"
@@ -122,7 +114,7 @@ class graph:
           self.changeState(parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links
         #print name, " prob ", self.deterministicParents(name)
-        if child not in self.stale and child not in self.builtin and child not in self.imports:
+        if child not in self.stale and child not in self.builtin:
           self.changeState(child, "stale")
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
@@ -140,23 +132,25 @@ class graph:
       if name in self.deterministic:
         # first look at deterministic children to see if you can deduce the privacy value
         if name in self.dependson:
-          if all(child in self.public for child in self.dependson[name] - self.builtin):
+          if all(child in self.public for child in self.dependson[name]):
             self.public.add(name)
-          elif any(child in self.private for child in self.dependson[name]- self.builtin):
+          elif any(child in self.private for child in self.dependson[name]):
             self.private.add(name)
           else:
             self.privacy_unknown.add(name)
         else: # there are no determinsitic dependancies
           self.public.add(name)
-      else: # probabilsitic
-        print name, " is probabilistic"
-        self.privacy_unknown.add(name)
+      else: # probabilistic
+        if all(parent in self.public for parent in self.getParents(name)) and all(child in self.public for child in self.getChildren(name)):
+          self.public.add(name)
+        elif any(parent in self.private for parent in self.getParents(name)) or any(child in self.public for child in self.getChildren(name)):
+          self.private.add(name)
+        else:
+          self.privacy_unknown.add(name)
 
     # propagate privacy to parents
     for parent in self.getParents(name):
       self.changePrivacy(parent, "privacy_unknown")
-    
-      
 
   def add_comment(self, name, the_comment):
     self.comment[name] = the_comment
@@ -341,7 +335,7 @@ class graph:
     if name not in self.dependson and name not in self.probdependson:
       return False
 
-    nonuptodatechildren = self.getChildren(name) - self.uptodate - __private_prob_builtins__
+    nonuptodatechildren = self.getChildren(name) - self.uptodate - prob_builtins
     if nonuptodatechildren == set([]):
       return True
     else:
@@ -355,11 +349,11 @@ class graph:
     result = True
     if name in self.probdependson:
       for d in self.probdependson[name]:
-        if d not in self.uptodate and d not in __private_prob_builtins__:
+        if d not in self.uptodate and d not in prob_builtins:
           result = result and self.checkdown(d)
     if name in self.dependson:
       for d in self.dependson[name]:
-        if d not in self.uptodate and d not in __private_prob_builtins__:
+        if d not in self.uptodate and d not in prob_builtins:
           result = result and self.checkdown(d)
     return result
 '''
@@ -423,6 +417,7 @@ try:
 
   with basic_model:
 
+    exception_variable = None
 """
     # Examples
     # mu = alpha + beta[0]*X1 + beta[1]*X2
@@ -431,10 +426,12 @@ try:
 
     probabilsitic_only_names = list(self.probabilistic - self.deterministic)
     for name in probabilsitic_only_names:
+      code += '    exception_variable = "%s"\n' % name
       code += "    " + self.pyMC3code[name] % ""+ "\n"
 
     observed_names = list(self.probabilistic & self.deterministic)
     for name in observed_names:
+      code += '    exception_variable = "%s"\n' % name
       obsname = "__private_%s_observed" % name
       code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
       locals[obsname] = self.globals[name]
@@ -443,6 +440,15 @@ try:
     __private_result__ = pm.sample(500, progressbar = False)
 
 except Exception as e:
+  # remove stuff after the : as that sometimes reveals private information
+  ind = e.args[0].find(":")
+  if ind != -1:
+    estring = e.args[0][0:ind]
+  else:
+    estring = e.args[0]
+    
+  newErrorString = "Problem with %s: %s" % (exception_variable, estring)
+  e.args = (newErrorString,)
   __private_result__ = e
 
 """
@@ -465,8 +471,8 @@ except Exception as e:
   def variablesToBeCalculated(self):
     names = set([])
     for name in self.deterministic & self.stale:
-      #print name, self.dependson.get(name, set([])) , self.uptodate , self.builtin , self.imports 
-      if self.dependson.get(name, set([])) - self.uptodate - self.builtin - self.imports == set([]):
+      #print name, self.dependson.get(name, set([])) , self.uptodate , self.builtin
+      if self.dependson.get(name, set([])) - self.uptodate - self.builtin == set([]):
         names.add(name)
     return(names)
 
@@ -544,4 +550,4 @@ def samplerjob(names, code, globals, locals):
     return (names, e)
 
 depGraph = graph()
-define_demo_events(depGraph)
+setPrivacy(depGraph)
