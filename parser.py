@@ -25,6 +25,8 @@ def command():                  return [delete, \
                                         show_sets, \
                                         variables_to_calculate, \
                                         variables_to_sample, \
+                                        show_builtins, \
+                                        show_prob_builtins, \
                                         help]
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
@@ -34,6 +36,8 @@ def show_sampler_status():      return "sss"
 def show_sets():                return "ss"
 def variables_to_calculate():   return "vc"
 def variables_to_sample():      return "vs"
+def show_builtins():            return "sb"
+def show_prob_builtins():       return "spb"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')

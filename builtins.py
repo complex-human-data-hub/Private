@@ -18,3 +18,26 @@ def setPrivacy(graph):
     graph.changePrivacy(name, "public")
  
   graph.changePrivacy("Events", "private")
+
+def showNames(names, width=80):
+  res = ""
+  names.sort()
+  columnWidth = max(len(s) for s in names)+2
+  numColumns = width / columnWidth
+  
+  numRows = len(names) / numColumns
+  rows = [""] * numRows
+  for i, name in enumerate(names):
+    rows[i%numRows] += name.ljust(columnWidth)
+  return "\n".join(rows)
+
+def showBuiltins():
+  print "Builtins\n"
+  print showNames(builtins.keys())
+  print
+
+def showProbBuiltins():
+  print "Probabilistic Builtins\n"
+  print showNames(list(prob_builtins))
+  print
+
