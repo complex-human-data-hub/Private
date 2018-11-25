@@ -3262,4 +3262,5 @@ data = [{ 'EndDateTime': '2015-02-13',\
 
 
 Events = [Event(d) for d in data]
+DemoEvents = Events
 

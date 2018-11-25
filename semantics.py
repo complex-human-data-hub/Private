@@ -177,6 +177,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_variables_to_sample(self, node, children):      print depGraph.variablesToBeSampled()
     def visit_show_builtins(self, node, children):            showBuiltins()
     def visit_show_prob_builtins(self, node, children):       showProbBuiltins()
+    def visit_show_ncpus(self, node, children):               print depGraph.server.get_ncpus()
+    def visit_show_cluster_stats(self, node, children):       depGraph.server.print_stats()
     def visit_delete(self, node, children):                   depGraph.delete(children[0].code)
 
     def visit_help(self, node, children):

@@ -27,6 +27,8 @@ def command():                  return [delete, \
                                         variables_to_sample, \
                                         show_builtins, \
                                         show_prob_builtins, \
+                                        show_ncpus, \
+                                        show_cluster_stats, \
                                         help]
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
@@ -38,6 +40,8 @@ def variables_to_calculate():   return "vc"
 def variables_to_sample():      return "vs"
 def show_builtins():            return "sb"
 def show_prob_builtins():       return "spb"
+def show_ncpus():               return "sncpus"
+def show_cluster_stats():       return "scs"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')

@@ -2,12 +2,15 @@ import thread
 import multiprocessing
 import pp
 #import logging as l
-import networkx as nx
+#import networkx as nx
 import reprlib 
 import numpy
 from collections import OrderedDict
 import logging
 from builtins import builtins, prob_builtins, setPrivacy
+import copy
+import traceback
+from manifoldprivacy import distManifold
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -26,7 +29,7 @@ class graph:
 
     #self.lock = thread.allocate_lock()
     self.lock = multiprocessing.Lock()
-    self.globals = builtins
+    self.globals = copy.copy(builtins)
     self.locals = {}
 
 
@@ -34,7 +37,7 @@ class graph:
 
     self.deterministic = set()
     self.probabilistic = set()
-    self.builtin = set(builtins.keys()) or prob_builtins
+    self.builtins = set(builtins.keys()) or prob_builtins
     #self.imports = set()
 
     # each variable should be in one of stale, computing, exception or uptodate
@@ -69,6 +72,7 @@ class graph:
     # auxiliary variables
 
     self.jobs = {}
+    self.sampler_chains = {}
     self.server = pp.Server()
     self.log = logging.getLogger("Private")
     #self.nxgraph = nx.DiGraph()
@@ -77,7 +81,7 @@ class graph:
     result = ""
     result += "deterministic: "+ ppset(self.deterministic) + "\n"
     result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
-    result += "builtin: "+ ppset(self.builtin) + "\n"
+    result += "builtin: "+ ppset(self.builtins) + "\n"
     #result += "imports: "+ ppset(self.imports) + "\n"
     result += "\n"
     result += "uptodate: "+ ppset(self.uptodate) + "\n"
@@ -114,7 +118,7 @@ class graph:
           self.changeState(parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links
         #print name, " prob ", self.deterministicParents(name)
-        if child not in self.stale and child not in self.builtin:
+        if child not in self.stale and child not in self.builtins:
           self.changeState(child, "stale")
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
@@ -143,8 +147,6 @@ class graph:
       else: # probabilistic
         if all(parent in self.public for parent in self.getParents(name)) and all(child in self.public for child in self.getChildren(name)):
           self.public.add(name)
-        elif any(parent in self.private for parent in self.getParents(name)) or any(child in self.public for child in self.getChildren(name)):
-          self.private.add(name)
         else:
           self.privacy_unknown.add(name)
 
@@ -249,7 +251,7 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception: # note an exception might reveal information about the value so might only be able to show this if the variable is public
-        res += "Exception: " + str(self.globals[name])
+        res += str(self.globals[name])
       elif name in self.private:
         res += "Private"
       elif name in self.privacy_unknown:
@@ -268,19 +270,21 @@ class graph:
       
   def __repr__(self):
     codebits = []
+    codewidth = 80
+    valuewidth = 80
     for name in self.code.keys():
       codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
       codebits.append(name + " ~ " + str(self.probcode[name]))
     if len(codebits) > 0:
       m = max(len(line) for line in codebits)
-      m = min(m, 60)
-      newcodebits = [line[0:60].ljust(m, " ") for line in codebits]
+      m = min(m, codewidth)
+      newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
       valuebits = []
       for name in self.code.keys():
-        valuebits.append(self.getValue(name)[0:80])
+        valuebits.append(self.getValue(name)[0:codewidth])
       for name in self.probcode.keys():
-        valuebits.append(self.getValue(name)[0:80])
+        valuebits.append(self.getValue(name)[0:codewidth])
       commentbits = []
       for name in self.code.keys():
         commentbits.append(self.comment.get(name, ""))
@@ -437,7 +441,7 @@ try:
       locals[obsname] = self.globals[name]
 
     code += """
-    __private_result__ = pm.sample(500, progressbar = False)
+    __private_result__ = pm.sample({NumberOfSamples}, progressbar = False)
 
 except Exception as e:
   # remove stuff after the : as that sometimes reveals private information
@@ -451,7 +455,7 @@ except Exception as e:
   e.args = (newErrorString,)
   __private_result__ = e
 
-"""
+""".format(NumberOfSamples=self.globals["NumberOfSamples"])
     return locals, code
 
   def canRunSampler(self, verbose=False):
@@ -471,8 +475,8 @@ except Exception as e:
   def variablesToBeCalculated(self):
     names = set([])
     for name in self.deterministic & self.stale:
-      #print name, self.dependson.get(name, set([])) , self.uptodate , self.builtin
-      if self.dependson.get(name, set([])) - self.uptodate - self.builtin == set([]):
+      #print name, self.dependson.get(name, set([])) , self.uptodate , self.builtins
+      if self.dependson.get(name, set([])) - self.uptodate - self.builtins == set([]):
         names.add(name)
     return(names)
 
@@ -495,10 +499,20 @@ except Exception as e:
           locals, sampler_code =  self.constructPyMC3code()
           for name in sampler_names:
             self.changeState(name, "computing")
-          self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
-        
-
-
+          myname = "__private_sampler__"
+          self.sampler_chains[myname] = None
+          self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
+          if len(self.privacy_unknown) != 0:
+            #print "privacy to be figured", self.privacy_unknown
+            AllEvents = self.globals["Events"]
+            users = set([e.UserId for e in AllEvents])
+            for user in users:
+              #print "remove " + user
+              self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
+              myname = "__private_sampler__ " + user
+              self.sampler_chains[myname] = None
+              self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
+            self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
     self.lock.release()
 
   def callback(self, returnvalue):
@@ -515,14 +529,21 @@ except Exception as e:
     self.lock.release()
     self.compute()
 
-  def samplercallback(self, returnvalue):   # work on this
+  def samplercallback(self, returnvalue):  
     self.lock.acquire()
-    names, value = returnvalue
+    myname, names, value = returnvalue
+    #print "samplercallback: ", myname
     if isinstance(value, Exception):
       for name in names:
         self.globals[name] = str(value)
         self.changeState(name, "exception")
     else: # successful sampler return
+      tochecknames = list(self.privacy_unknown & set(names))
+      samples = value[tochecknames[0]]
+      for i in xrange(1,len(tochecknames)):
+        samples.concatenate(value[tochecknames[i]])
+      self.sampler_chains[myname] = samples
+      #self.show_sampler_chains()
       for name in names:
         if name in value.varnames:
           self.globals[name] = value[name]
@@ -535,6 +556,63 @@ except Exception as e:
     self.lock.release()
     self.compute()
 
+  def show_sampler_chains(self):
+    print(str(len(self.sampler_chains)) + " chains")
+    try:
+      for k,v in self.sampler_chains.items():
+        if type(v) == str:
+          print( k+ " " + str(v))
+        elif type(v) == numpy.ndarray:
+          print( k+ " array")
+        elif v == None:
+          print( k+ " None")
+        else:
+          print "Unknown value type"
+    except Exception as e:
+        print "here", e
+        traceback.print_exc()
+
+  def privacysamplercallback(self, returnvalue):  
+    self.lock.acquire()
+    myname, names, value = returnvalue
+    #print "privacysamplercallback: ", myname
+    tochecknames = list(self.privacy_unknown & set(names))
+    samples = value[tochecknames[0]]
+    for i in xrange(1,len(tochecknames)):
+      samples.concatenate(value[tochecknames[i]])
+    self.sampler_chains[myname] = samples
+    if type(self.sampler_chains["__private_sampler__"]) == numpy.ndarray:
+      for usertest in self.sampler_chains.keys():
+        #print "Check " + usertest
+        if usertest != "__private_sampler__":
+          if type(self.sampler_chains[usertest]) == numpy.ndarray:
+            #print "Calculating distManifold " + usertest
+            #print self.sampler_chains[usertest]
+            #print self.sampler_chains["__private_sampler__"]
+            try:
+              d = distManifold(self.sampler_chains[usertest], self.sampler_chains["__private_sampler__"]) * 100.
+            except Exception as e:
+              print e
+            #print d
+            if d < 4.:
+              self.sampler_chains[usertest] = "public"
+              #print "public"
+            else:
+              self.sampler_chains[usertest] = "private"
+              #print "private"
+ 
+    if all(False if type(v) == numpy.ndarray else v == "public" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
+      for name in tochecknames:
+        self.changePrivacy(name, "public")
+    elif any(False if type(v) == numpy.ndarray else v == "private" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
+      for name in tochecknames:
+        self.changePrivacy(name, "private")
+
+    #self.show_sampler_chains()
+    del self.jobs[myname]
+    self.lock.release()
+    self.compute()
+
 def job(name, code, globals, locals):
   try:
     value = eval(code, globals, locals)
@@ -542,12 +620,12 @@ def job(name, code, globals, locals):
   except Exception as e:
     return((name, e))
 
-def samplerjob(names, code, globals, locals):
+def samplerjob(myname, names, code, globals, locals):
   try:
     exec(code, globals, locals)
-    return (names, locals["__private_result__"])
+    return (myname, names, locals["__private_result__"])
   except Exception as e:
-    return (names, e)
+    return (myname, names, e)
 
 depGraph = graph()
-setPrivacy(depGraph)
+setPrivacy(depGraph) # set privacy of builtins
