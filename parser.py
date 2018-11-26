@@ -20,6 +20,7 @@ def command():                  return [delete, \
                                         draw_tree, \
                                         show_variables, \
                                         show_dependencies, \
+                                        show_code, \
                                         show_mccode, \
                                         show_sampler_status, \
                                         show_sets, \
@@ -33,6 +34,7 @@ def command():                  return [delete, \
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def show_dependencies():        return "sd"
+def show_code():                return "sc"
 def show_mccode():              return "sm"
 def show_sampler_status():      return "sss"
 def show_sets():                return "ss"

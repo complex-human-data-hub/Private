@@ -243,14 +243,14 @@ class graph:
 #              # Incomplete
 #              return True
 
-  def getValue(self, name):
+  def getValue(self, name, longFormat = False):
     res = ""
     if name in self.deterministic | self.probabilistic:
       if name in self.stale:
         res += "Stale"
       elif name in self.computing:
         res += "Computing"
-      elif name in self.exception: # note an exception might reveal information about the value so might only be able to show this if the variable is public
+      elif name in self.exception: 
         res += str(self.globals[name])
       elif name in self.private:
         res += "Private"
@@ -258,15 +258,24 @@ class graph:
         res += "Privacy Unknown"
       elif name in self.uptodate:
         if type(self.globals[name]) == numpy.ndarray:
-          s = self.globals[name].shape
-          res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
+          if longFormat:
+            res += str(self.globals[name])
+          else:
+            s = self.globals[name].shape
+            res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
         else:
-          res += reprlib.repr(self.globals[name])
+          if longFormat:
+            res += str(self.globals[name])
+          else:
+            res += reprlib.repr(self.globals[name])
       else:
         raise Exception(name + " is not stale, computing, exception or uptodate.")
     elif name in self.builtins:
       if name in self.public:
-        res += reprlib.repr(self.globals[name])
+        if longFormat:
+          res += str(self.globals[name])
+        else:
+          res += reprlib.repr(self.globals[name])
       else:
         res += "Private"
     else:
@@ -296,6 +305,22 @@ class graph:
       for name in self.probcode.keys():
         commentbits.append(self.comment.get(name, ""))
       return "\n".join("  ".join([codebit, valuebit, commentbit]) for codebit, valuebit, commentbit in zip(newcodebits, valuebits, commentbits))
+    else:
+      return ""
+
+  def show_code(self):
+    codebits = []
+    for name in self.code.keys():
+      codebits.append(name + " = " + str(self.code[name]))
+    for name in self.probcode.keys():
+      codebits.append(name + " ~ " + str(self.probcode[name]))
+    if len(codebits) > 0:
+      commentbits = []
+      for name in self.code.keys():
+        commentbits.append(self.comment.get(name, ""))
+      for name in self.probcode.keys():
+        commentbits.append(self.comment.get(name, ""))
+      return "\n".join("  ".join([codebit, commentbit]) for codebit, commentbit in zip(codebits, commentbits))
     else:
       return ""
 
@@ -508,7 +533,7 @@ except Exception as e:
           self.sampler_chains[myname] = None
           self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
           if len(self.privacy_unknown) != 0:
-            print "privacy to be figured", self.privacy_unknown
+            #print "privacy to be figured", self.privacy_unknown
             AllEvents = self.globals["Events"]
             users = set([e.UserId for e in AllEvents])
             for user in users:

@@ -170,6 +170,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           print str(depGraph)
     def visit_show_dependencies(self, node, children):        depGraph.show_dependencies()
+    def visit_show_code(self, node, children):                print depGraph.show_code()
     def visit_show_mccode(self, node, children):              print depGraph.constructPyMC3code()[1]
     def visit_show_sampler_status(self, node, children):      depGraph.canRunSampler(verbose=True)
     def visit_show_sets(self, node, children):                print depGraph.show_sets()
@@ -231,7 +232,7 @@ help: this message
         return
 
     def visit_value(self, node, children):
-      print depGraph.getValue(node.value)
+      print depGraph.getValue(node.value, longFormat=True)
          
     def visit_command_line_expression(self, node, children):
       print "Because expressions may take a long time to compute you must assign them to a variable"
