@@ -11,6 +11,8 @@ from builtins import builtins, prob_builtins, setPrivacy
 import copy
 import traceback
 from manifoldprivacy import distManifold
+import shutil
+import io
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -554,6 +556,10 @@ except Exception as e:
     else:
       self.globals[name] = value
       self.changeState(name, "uptodate")
+      if type(value) == io.BytesIO:   # write image to file 
+        value.seek(0)
+        with open(name+'.png', 'wb') as f:
+          shutil.copyfileobj(value, f)
     del self.jobs[name]
 
     self.lock.release()
