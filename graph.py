@@ -446,7 +446,7 @@ try:
       locals[obsname] = self.globals[name]
 
     code += """
-    __private_result__ = pm.sample({NumberOfSamples}, progressbar = False)
+    __private_result__ = pm.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False)
 
 except Exception as e:
   # remove stuff after the : as that sometimes reveals private information
@@ -460,7 +460,7 @@ except Exception as e:
   e.args = (newErrorString,)
   __private_result__ = e
 
-""".format(NumberOfSamples=self.globals["NumberOfSamples"])
+""".format(NumberOfSamples=self.globals["NumberOfSamples"], NumberOfChains=self.globals["NumberOfChains"], NumberOfTuningSamples=self.globals["NumberOfTuningSamples"])
     return locals, code
 
   def canRunSampler(self, verbose=False):
