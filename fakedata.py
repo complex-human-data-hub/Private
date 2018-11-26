@@ -20,7 +20,7 @@ class FakeEvent:
   def setLocale(cls, locale):
     FakeEvent.fake = Faker(locale)
 
-  def __init__(self, eventType = None, UserId = None):
+  def __init__(self, eventType = None, UserId = None, Latitude = None, Longitude = None):
     if not eventType:
       eventType = choice(FakeEvent.eventTypes)
     self.type = eventType
@@ -51,8 +51,14 @@ class FakeEvent:
       if randint(0, 10) != 0: # add a few events that don't have location information
         self.Kilometers = expovariate(1.)
         self.LocationCount = randint(1,12)
-        self.latitude = float(FakeEvent.fake.latitude())
-        self.longitude = float(FakeEvent.fake.longitude())
+        if Latitude:
+          self.latitude = Latitude + gauss(0,1)
+        else:
+          self.latitude = float(FakeEvent.fake.latitude())
+        if Longitude:
+          self.longitude = Longitude + gauss(0,1)
+        else:
+          self.longitude = float(FakeEvent.fake.longitude())
         self.address = FakeEvent.fake.address()
         self.MoonIllumination = uniform(0., 1.)
         self.MoonAge = uniform(0.0, 30.0)
@@ -121,8 +127,14 @@ class FakeEvent:
       self.keywords.append(FakeEvent.fake.year())
       self.keywords.append(choice(FakeEvent.buttonType))
       if randint(0, 10) != 0: # add a few events that don't have location information
-        self.latitude = float(FakeEvent.fake.latitude())
-        self.longitude = float(FakeEvent.fake.longitude())
+        if Latitude:
+          self.latitude = Latitude + gauss(0,1)
+        else:
+          self.latitude = float(FakeEvent.fake.latitude())
+        if Longitude:
+          self.longitude = Longitude + gauss(0,1)
+        else:
+          self.longitude = float(FakeEvent.fake.longitude())
 
   def __repr__(self):
     return(FakeEvent.pp.pformat(self.__dict__))
@@ -151,11 +163,11 @@ if __name__ == "__main__":
   # generate many events for a small set of users
 
   events = []
-  for user in xrange(20):
-    i = randint(10,25)
+  for user in xrange(5):
+    i = randint(10,15)
     ev = FakeEvent()
     userid = ev.UserId
-    events.extend([FakeEvent(UserId=userid) for _ in xrange(i)])
+    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9) for _ in xrange(i)])
   print events
  
 

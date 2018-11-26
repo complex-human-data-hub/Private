@@ -264,6 +264,11 @@ class graph:
           res += reprlib.repr(self.globals[name])
       else:
         raise Exception(name + " is not stale, computing, exception or uptodate.")
+    elif name in self.builtins:
+      if name in self.public:
+        res += reprlib.repr(self.globals[name])
+      else:
+        res += "Private"
     else:
       raise Exception("Unknown variable " + name)
     return res
@@ -503,7 +508,7 @@ except Exception as e:
           self.sampler_chains[myname] = None
           self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
           if len(self.privacy_unknown) != 0:
-            #print "privacy to be figured", self.privacy_unknown
+            print "privacy to be figured", self.privacy_unknown
             AllEvents = self.globals["Events"]
             users = set([e.UserId for e in AllEvents])
             for user in users:
@@ -530,6 +535,7 @@ except Exception as e:
     self.compute()
 
   def samplercallback(self, returnvalue):  
+    self.log.debug("samplercallback")
     self.lock.acquire()
     myname, names, value = returnvalue
     #print "samplercallback: ", myname
@@ -538,12 +544,16 @@ except Exception as e:
         self.globals[name] = str(value)
         self.changeState(name, "exception")
     else: # successful sampler return
-      tochecknames = list(self.privacy_unknown & set(names))
-      samples = value[tochecknames[0]]
-      for i in xrange(1,len(tochecknames)):
-        samples.concatenate(value[tochecknames[i]])
-      self.sampler_chains[myname] = samples
-      #self.show_sampler_chains()
+      tochecknames = list(self.privacy_unknown & set(names))   # names to check for privacy
+      self.log.debug(str(tochecknames))
+      if len(tochecknames) > 0:
+        samples = value[tochecknames[0]]
+        self.log.debug(str(samples))
+        for i in xrange(1,len(tochecknames)):
+          samples.concatenate(value[tochecknames[i]])
+        self.sampler_chains[myname] = samples
+        #self.show_sampler_chains()
+
       for name in names:
         if name in value.varnames:
           self.globals[name] = value[name]
