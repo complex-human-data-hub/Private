@@ -13,6 +13,7 @@ import traceback
 from manifoldprivacy import distManifold
 import shutil
 import io
+import re
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -48,6 +49,7 @@ class graph:
     self.computing = set()
     self.exception = set()
     self.uptodate = set(builtins.keys()) or prob_builtins
+    self.samplerexception = {}
 
     # each variable should be in private, public, privacy_unknown
 
@@ -302,7 +304,10 @@ class graph:
       for name in self.code.keys():
         valuebits.append(self.getValue(name)[0:codewidth])
       for name in self.probcode.keys():
-        valuebits.append(self.getValue(name)[0:codewidth])
+        if name in self.samplerexception:
+          valuebits.append(self.samplerexception[name])
+        else:
+          valuebits.append(self.getValue(name)[0:codewidth])
       commentbits = []
       for name in self.code.keys():
         commentbits.append(self.comment.get(name, ""))
@@ -475,7 +480,7 @@ try:
       locals[obsname] = self.globals[name]
 
     code += """
-    __private_result__ = pm.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False)
+    __private_result__ = (pm.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
 
 except Exception as e:
   # remove stuff after the : as that sometimes reveals private information
@@ -485,9 +490,10 @@ except Exception as e:
   else:
     estring = e.args[0]
     
-  newErrorString = "Problem with %s: %s" % (exception_variable, estring)
+  #newErrorString = "Problem with %s: %s" % (exception_variable, estring)
+  newErrorString = estring
   e.args = (newErrorString,)
-  __private_result__ = e
+  __private_result__ = (e, exception_variable)
 
 """.format(NumberOfSamples=self.globals["NumberOfSamples"], NumberOfChains=self.globals["NumberOfChains"], NumberOfTuningSamples=self.globals["NumberOfTuningSamples"])
     return locals, code
@@ -535,6 +541,7 @@ except Exception as e:
             self.changeState(name, "computing")
           myname = "__private_sampler__"
           self.sampler_chains[myname] = None
+          self.samplerexception = {}
           self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
           if len(self.privacy_unknown) != 0:
             #print "privacy to be figured", self.privacy_unknown
@@ -570,12 +577,17 @@ except Exception as e:
   def samplercallback(self, returnvalue):  
     self.log.debug("samplercallback")
     self.lock.acquire()
-    myname, names, value = returnvalue
+    myname, names, value, exception_variable = returnvalue
     #print "samplercallback: ", myname
     if isinstance(value, Exception):
       for name in names:
-        self.globals[name] = str(value)
+        self.globals[name] = ""
         self.changeState(name, "exception")
+      if exception_variable != "No Exception Variable":
+        m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
+        if m:
+          value = str(int(m.group(1))-1) + " arguments required."
+        self.samplerexception[exception_variable] = str(value)
     else: # successful sampler return
       tochecknames = list(self.privacy_unknown & set(names))   # names to check for privacy
       self.log.debug(str(tochecknames))
@@ -666,9 +678,10 @@ def job(name, code, globals, locals):
 def samplerjob(myname, names, code, globals, locals):
   try:
     exec(code, globals, locals)
-    return (myname, names, locals["__private_result__"])
+    value, exception_variable = locals["__private_result__"]
+    return (myname, names, value, exception_variable)
   except Exception as e:
-    return (myname, names, e)
+    return (myname, names, e, "No Exception Variable")
 
 depGraph = graph()
 setPrivacy(depGraph) # set privacy of builtins
