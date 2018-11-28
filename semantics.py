@@ -187,13 +187,16 @@ class InputVisitor(PTNodeVisitor):
 dt: draw variable dependency tree
 sv: show variables
 sd: show dependencies
-sm: show pyMC3 code
+scode: show code
+smccode: show pyMC3 code
 sss: show sampler status
 ss: show sets
 vc: variables to calculate
 vs: variables to sample
 sb: show builtins
 spb: show probabilistic builtins
+scs: show cluster statistics
+sncpus: show number of cpus
 del <name>: delete variable
 help: this message
 """

@@ -265,6 +265,8 @@ class graph:
           else:
             s = self.globals[name].shape
             res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
+        elif type(self.globals[name]) == float: # always display floats in full
+          res += str(self.globals[name])
         else:
           if longFormat:
             res += str(self.globals[name])
