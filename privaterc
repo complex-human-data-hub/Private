@@ -1,3 +1,3 @@
 l = [0,1,1]
-l ~ Binomial(t)
+l ~ Binomial(10, t)
 t ~ Uniform(0,1)
