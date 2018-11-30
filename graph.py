@@ -32,6 +32,7 @@ class graph:
 
     #self.lock = thread.allocate_lock()
     self.lock = multiprocessing.Lock()
+    self.whohaslock = None
     self.globals = copy.copy(builtins)
     self.locals = {}
 
@@ -81,6 +82,18 @@ class graph:
     self.log = logging.getLogger("Private")
     #self.nxgraph = nx.DiGraph()
 
+  def acquire(self, who):
+    self.lock.acquire()
+    self.whohaslock = who
+    self.log.debug(who + " just got lock")
+
+  def release(self):
+    self.log.debug(self.whohaslock + " just released lock")
+    self.whohaslock = None
+    self.lock.release()
+
+    
+    
   def show_sets(self):
     result = ""
     result += "deterministic: "+ ppset(self.deterministic) + "\n"
@@ -163,7 +176,7 @@ class graph:
 
   def define(self, name, code, dependson=None, prob = False, pyMC3code = None, privacy="privacy_unknown"):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-    self.lock.acquire()
+    self.acquire("define " + name)
     if not dependson:
       dependson = []
     if prob:
@@ -180,10 +193,10 @@ class graph:
       self.dependson[name] = set(dependson)
       self.changeState(name, "stale")
     self.changePrivacy(name, privacy)
-    self.lock.release()
+    self.release()
 
   def delete(self, name):
-    self.lock.acquire()
+    self.acquire("delete "+name)
     self.changeState(name, "stale")
 
     self.globals.pop(name, None)
@@ -201,7 +214,7 @@ class graph:
     self.dependson.pop(name, None)
     self.probdependson.pop(name, None)
     self.comment.pop(name, None)
-    self.lock.release()
+    self.release()
   
 #  def delete(self, name):
 #      self.lock.acquire()
@@ -222,7 +235,7 @@ class graph:
 #      except NetworkXError:
 #          l.warning("NetworkX error?")
 #          pass
-#      self.lock.release()
+#      self.release()
 #      #self.updateState()
 
 #  def has_descendants(self, name):
@@ -523,7 +536,7 @@ except Exception as e:
     
   def compute(self):
 
-    self.lock.acquire()
+    self.acquire("compute")
 
     for name in self.variablesToBeCalculated():
       if name not in self.jobs:
@@ -548,16 +561,15 @@ except Exception as e:
             AllEvents = self.globals["Events"]
             users = set([e.UserId for e in AllEvents])
             for user in users:
-              #print "remove " + user
               self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
               myname = "__private_sampler__ " + user
               self.sampler_chains[myname] = None
               self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
             self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
-    self.lock.release()
+    self.release()
 
   def callback(self, returnvalue):
-    self.lock.acquire()
+    self.acquire("callback")
     name, value = returnvalue
     if isinstance(value, Exception):
       self.globals[name] = str(value)
@@ -571,14 +583,12 @@ except Exception as e:
           shutil.copyfileobj(value, f)
     del self.jobs[name]
 
-    self.lock.release()
+    self.release()
     self.compute()
 
   def samplercallback(self, returnvalue):  
-    self.log.debug("samplercallback")
-    self.lock.acquire()
+    self.acquire("samplercallback")
     myname, names, value, exception_variable = returnvalue
-    #print "samplercallback: ", myname
     if isinstance(value, Exception):
       for name in names:
         self.globals[name] = ""
@@ -590,14 +600,14 @@ except Exception as e:
         self.samplerexception[exception_variable] = str(value)
     else: # successful sampler return
       tochecknames = list(self.privacy_unknown & set(names))   # names to check for privacy
-      self.log.debug(str(tochecknames))
+      #self.log.debug(str(tochecknames))
       if len(tochecknames) > 0:
         samples = value[tochecknames[0]]
-        self.log.debug(str(samples))
+        #self.log.debug(str(samples))
         for i in xrange(1,len(tochecknames)):
           samples.concatenate(value[tochecknames[i]])
         self.sampler_chains[myname] = samples
-        #self.show_sampler_chains()
+        #self.log.debug(self.show_sampler_chains())
 
       for name in names:
         if name in value.varnames:
@@ -608,29 +618,29 @@ except Exception as e:
         self.changeState(name, "uptodate")
 
     del self.jobs["__private_sampler__"]
-    self.lock.release()
+    self.release()
     self.compute()
 
   def show_sampler_chains(self):
-    print(str(len(self.sampler_chains)) + " chains")
+    res = str(len(self.sampler_chains)) + " chains\n"
     try:
       for k,v in self.sampler_chains.items():
         if type(v) == str:
-          print( k+ " " + str(v))
+          res += k+ " " + str(v) + "\n"
         elif type(v) == numpy.ndarray:
-          print( k+ " array")
+          res += k+ " array\n"
         elif v == None:
-          print( k+ " None")
+          res += k+ " None\n"
         else:
-          print "Unknown value type"
+          res += "Unknown value type\n"
     except Exception as e:
-        print "here", e
-        traceback.print_exc()
+        res += "here" + str(e)
+        #traceback.print_exc()
+    return res
 
   def privacysamplercallback(self, returnvalue):  
-    self.lock.acquire()
-    myname, names, value = returnvalue
-    #print "privacysamplercallback: ", myname
+    self.acquire("privacysamplercallback")
+    myname, names, value, exception_variable = returnvalue
     tochecknames = list(self.privacy_unknown & set(names))
     samples = value[tochecknames[0]]
     for i in xrange(1,len(tochecknames)):
@@ -638,10 +648,10 @@ except Exception as e:
     self.sampler_chains[myname] = samples
     if type(self.sampler_chains["__private_sampler__"]) == numpy.ndarray:
       for usertest in self.sampler_chains.keys():
-        #print "Check " + usertest
+        #self.log.debug("Check " + usertest)
         if usertest != "__private_sampler__":
           if type(self.sampler_chains[usertest]) == numpy.ndarray:
-            #print "Calculating distManifold " + usertest
+            #self.log.debug("Calculating distManifold " + usertest)
             #print self.sampler_chains[usertest]
             #print self.sampler_chains["__private_sampler__"]
             try:
@@ -663,9 +673,9 @@ except Exception as e:
       for name in tochecknames:
         self.changePrivacy(name, "private")
 
-    #self.show_sampler_chains()
+    #self.log.debug(self.show_sampler_chains())
     del self.jobs[myname]
-    self.lock.release()
+    self.release()
     self.compute()
 
 def job(name, code, globals, locals):
@@ -679,6 +689,7 @@ def samplerjob(myname, names, code, globals, locals):
   try:
     exec(code, globals, locals)
     value, exception_variable = locals["__private_result__"]
+    
     return (myname, names, value, exception_variable)
   except Exception as e:
     return (myname, names, e, "No Exception Variable")
