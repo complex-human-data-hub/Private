@@ -42,7 +42,6 @@ class Private:
             else:
                 try:
                     result = PrivateSemanticAnalyser(parse_tree)
-                    print "result: {}".format(result)
                     if result:
                         return(result)
                 except Exception as e:
