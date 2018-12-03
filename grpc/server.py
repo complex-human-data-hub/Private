@@ -1,11 +1,13 @@
 PROJECT_UID = 12345
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     import os,sys,inspect
     currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     parentdir = os.path.dirname(currentdir)
     sys.path.insert(0,parentdir)
+    from parser import PrivateParser
+    from semantics import PrivateSemanticAnalyser
 else:
     from Private.parser import PrivateParser
     from Private.semantics import PrivateSemanticAnalyser
@@ -45,8 +47,7 @@ class Private:
             else:
                 try:
                     result = PrivateSemanticAnalyser(parse_tree)
-                    if result:
-                        return(result)
+                    return(result)
                 except Exception as e:
                     self._log.debug(e)
                     traceback.print_exc(file=sys.stdout)
@@ -56,22 +57,21 @@ class Private:
 class ServerServicer(service_pb2_grpc.ServerServicer):
     project_uid = PROJECT_UID
     def __init__(self):
-        self.private = Private(project_id)
+        self.private = Private(self.project_uid)
 
     def Foo(self, request, context):
         return service_pb2.Empty()
 
     def Private(self, request, context):
         try:
-            if request.project_uid != self.project_id:
+            if str(request.project_uid) != str(self.project_uid):
                 raise Exception("Incorrect project ID")
             req = json.loads(request.json)
-            print req
             res = self.private.execute(str(req.get('cmd')))
             ret = {'status': 'success', 'response': res}
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
         except Exception as err:
-            ret = {'status': 'failed', 'error': err}
+            ret = {'status': 'failed'}
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)
 
 def main():
