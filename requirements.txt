@@ -17,7 +17,6 @@ pandas==0.23.4
 patsy==0.5.1
 pp==1.6.5
 pydot==1.2.4
-pyjags==1.2.2
 pymc3==3.5
 pyparsing==2.3.0
 python-dateutil==2.7.5
@@ -31,3 +30,7 @@ subprocess32==3.5.3
 text-unidecode==1.2
 Theano==1.0.3
 tqdm==4.28.1
+googleapis-common-protos
+grpcio
+grpcio-tools
+protobuf

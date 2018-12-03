@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+message Empty {
+}
+
+service Server {
+  rpc Foo (Empty) returns (Empty) {}
+  rpc Private (PrivateParcel) returns (PrivateParcel) {}
+}
+
+// The request message containing the user's name.
+message PrivateParcel {
+    string project_uid = 1;
+    string json = 2;
+}
+
