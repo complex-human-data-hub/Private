@@ -63,6 +63,7 @@ class graph:
 
     self.code = OrderedDict()   # private code for deterministic variables
     self.probcode = OrderedDict() # private code of probabilistic variables
+    self.evalcode = OrderedDict() # python code for determinitisitc variables
     self.pyMC3code = OrderedDict() # pyMC3 code for probabilistic variables
 
     # dependencies
@@ -174,7 +175,7 @@ class graph:
   def add_comment(self, name, the_comment):
     self.comment[name] = the_comment
 
-  def define(self, name, code, dependson=None, prob = False, pyMC3code = None, privacy="privacy_unknown"):
+  def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None, privacy="privacy_unknown"):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.acquire("define " + name)
     if not dependson:
@@ -190,6 +191,7 @@ class graph:
     else:
       self.deterministic.add(name)
       self.code[name] = code
+      self.evalcode[name] = evalcode
       self.dependson[name] = set(dependson)
       self.changeState(name, "stale")
     self.changePrivacy(name, privacy)
@@ -346,6 +348,22 @@ class graph:
     else:
       return ""
 
+  def show_eval_code(self):
+    codebits = []
+    for name in self.code.keys():
+      codebits.append(name + " = " + str(self.evalcode[name]))
+    for name in self.probcode.keys():
+      codebits.append(name + " ~ " + str(self.pyMC3code[name]))
+    if len(codebits) > 0:
+      commentbits = []
+      for name in self.code.keys():
+        commentbits.append(self.comment.get(name, ""))
+      for name in self.probcode.keys():
+        commentbits.append(self.comment.get(name, ""))
+      return "\n".join("  ".join([codebit, commentbit]) for codebit, commentbit in zip(codebits, commentbits))
+    else:
+      return ""
+
   def show_dependencies(self):
     res = ""
     for name in self.code.keys():
@@ -368,7 +386,7 @@ class graph:
           if self.probdependson[name] != set([]):
             res += "    " + repr(list(self.probdependson[name]))
       res += "\n"
-    print res[0:-1]
+    return res[0:-1]
 
   def checkup(self, name):
     nonuptodateparents = self.getParents(name) & self.probabilistic - self.uptodate
@@ -513,12 +531,17 @@ except Exception as e:
 
   def canRunSampler(self, verbose=False):
     result = True
+    if verbose:
+      output = ""
     for name in self.probabilistic:
-      if verbose: print name, "checkdown", self.checkdown(name)
+      if verbose: output += name + " checkdown " + str(self.checkdown(name))
       result = result and self.checkdown(name)
-      if verbose: print name, "checkup", self.checkup(name)
+      if verbose: output += name + " checkup " + str(self.checkup(name))
       result = result and self.checkup(name)
-    return result
+    if verbose:
+      return output
+    else:
+      return result
 
   def variablesToBeSampled(self):
 
@@ -542,7 +565,7 @@ except Exception as e:
       if name not in self.jobs:
         self.changeState(name, "computing")
         self.log.debug("Calculate: " + name + " " + self.code[name])
-        self.jobs[name] = self.server.submit(job, (name, self.code[name], self.globals, self.locals), callback=self.callback)
+        self.jobs[name] = self.server.submit(job, (name, self.evalcode[name], self.globals, self.locals), callback=self.callback)
       
     
     if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished

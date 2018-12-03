@@ -9,158 +9,163 @@ import pymc3 as pm
 
 # Deterministic Continuous Distribution Definitions
 
-def Normal(mu, sd, size):
+def Uniform(argnames, lower, upper, size):
+  y = pm.Uniform.dist(lower, upper)
+  return y.random(size=size)
+
+def Normal(argnames, mu, sd, size):
   y = pm.Normal.dist(mu, sd)
   return y.random(size=size)
 
-def HalfNormal(sd, size):
+def HalfNormal(argnames, sd, size):
   y = pm.HalfNormal.dist(sd)
   return y.random(size=size)
 
-def SkewNormal(mu, sd, alpha, size):
+def SkewNormal(argnames, mu, sd, alpha, size):
   y = pm.SkewNormal.dist(mu=mu, sd=sd, alpha=alpha)
   return y.random(size=size)
 
-def Beta(mu, sd, size):
+def Beta(argnames, mu, sd, size):
   y = pm.Beta.dist(mu=mu, sd=sd)
   return y.random(size=size)
 
-def Kumaraswamy(a, b, size):
+def Kumaraswamy(argnames, a, b, size):
   y = pm.Kumaraswamy.dist(a, b)
   return y.random(size=size)
 
-def Exponential(lam, size):
+def Exponential(argnames, lam, size):
   y = pm.Exponential.dist(lam)
   return y.random(size=size)
 
-def Laplace(mu, b, size):
+def Laplace(argnames, mu, b, size):
   y = pm.Laplace.dist(mu, b)
   return y.random(size=size)
 
-def StudentT(nu, size):
+def StudentT(argnames, nu, size):
   y = pm.StudentT.dist(nu)
   return y.random(size=size)
 
-def HalfStudentT(nu, size):
+def HalfStudentT(argnames, nu, size):
   y = pm.HalfStudentT.dist(nu)
   return y.random(size=size)
 
-def Cauchy(alpha, beta, size):
+def Cauchy(argnames, alpha, beta, size):
   y = pm.Cauchy.dist(alpha, beta)
   return y.random(size=size)
 
-def HalfCauchy(beta, size):
+def HalfCauchy(argnames, beta, size):
   y = pm.HalfCauchy.dist(beta)
   return y.random(size=size)
 
-def Gamma(mu, sd, size):
+def Gamma(argnames, mu, sd, size):
   y = pm.Gamma.dist(mu, sd)
   return y.random(size=size)
 
-def Weibull(alpha, beta, size):
+def Weibull(argnames, alpha, beta, size):
   y = pm.Weibull.dist(alpha, beta)
   return y.random(size=size)
 
-def LogNormal(mu, sd, size):
+def LogNormal(argnames, mu, sd, size):
   y = pm.Lognormal.dist(mu=mu, sd=sd)
   return y.random(size=size)
 
-def ChiSquared(nu, size):
+def ChiSquared(argnames, nu, size):
   y = pm.ChiSquared.dist(nu)
   return y.random(size=size)
 
-def Wald(mu, lam, size):
+def Wald(argnames, mu, lam, size):
   y = pm.Wald.dist(mu, lam)
   return y.random(size=size)
 
-def Pareto(alpha, m, size):
+def Pareto(argnames, alpha, m, size):
   y = pm.Pareto.dist(alpha, m)
   return y.random(size=size)
 
-def InverseGamma(mu, sd, size):
+def InverseGamma(argnames, mu, sd, size):
   y = pm.InverseGamma.dist(mu, sd)
   return y.random(size=size)
 
-def ExGaussian(mu, sd, nu, size):
+def ExGaussian(argnames, mu, sd, nu, size):
   y = pm.ExGaussian.dist(mu, sd, nu)
   return y.random(size=size)
 
-def Triangular(lower, upper, c, size):
+def Triangular(argnames, lower, upper, c, size):
   y = pm.Triangular.dist(lower, upper, c)
   return y.random(size=size)
 
-def Gumbel(mu, beta, size):
+def Gumbel(argnames, mu, beta, size):
   y = pm.Gumbel.dist(mu, beta)
   return y.random(size=size)
 
-def Logistic(mu, s, size):
+def Logistic(argnames, mu, s, size):
   y = pm.Logistic.dist(mu, s)
   return y.random(size=size)
 
-def LogitNormal(mu, sd, size):
+def LogitNormal(argnames, mu, sd, size):
   y = pm.LogitNormal.dist(mu, sd)
   return y.random(size=size)
 
 # Deterministic Discrete  Distribution Definitions
 
-def Binomial(n, p, size):
+def Binomial(argnames, n, p, size):
   y = pm.Binomial.dist(n, p)
   return y.random(size=size)
 
-def ZeroInflatedBinomial(psi, n, p, size):
+def ZeroInflatedBinomial(argnames, psi, n, p, size):
   y = pm.ZeroInflatedBinomial.dist(psi, n, p)
   return y.random(size=size)
 
-def BetaBinomial(alpha, beta, n, size):
+def BetaBinomial(argnames, alpha, beta, n, size):
   y = pm.BetaBinomial.dist(alpha, beta, n)
   return y.random(size=size)
 
-def Bernoulli(p, size):
+def Bernoulli(argnames, p, size):
   y = pm.Bernoulli.dist(p)
   return y.random(size=size)
 
-def Poisson(mu, size):
+def Poisson(argnames, mu, size):
   y = pm.Poisson.dist(mu)
   return y.random(size=size)
 
-def ZeroInflatedPoisson(psi, mu, size):
+def ZeroInflatedPoisson(argnames, psi, mu, size):
   y = pm.ZeroInflatedPoisson.dist(psi, mu)
   return y.random(size=size)
 
-def NegativeBinomial(mu, alpha, size):
+def NegativeBinomial(argnames, mu, alpha, size):
   y = pm.NegativeBinomial.dist(mu, alpha)
   return y.random(size=size)
 
-def ZeroInflatedNegativeBinomial(psi, mu, alpha, size):
+def ZeroInflatedNegativeBinomial(argnames, psi, mu, alpha, size):
   y = pm.ZeroInflatedNegativeBinomial.dist(psi, mu, alpha)
   return y.random(size=size)
 
-def DiscreteUniform(upper, lower, size):
+def DiscreteUniform(argnames, upper, lower, size):
   y = pm.DiscreteUniform.dist(upper, lower)
   return y.random(size=size)
 
-def Geometric(p, size):
+def Geometric(argnames, p, size):
   y = pm.Geometric.dist(p)
   return y.random(size=size)
 
-def Categorical(p, size):
+def Categorical(argnames, p, size):
   y = pm.Categorical.dist(p)
   return y.random(size=size)
 
-def DiscreteWeibull(q, beta, size):
+def DiscreteWeibull(argnames, q, beta, size):
   y = pm.DiscreteWeibull.dist(q, beta)
   return y.random(size=size)
 
-def Constant(c, size):
+def Constant(argnames, c, size):
   y = pm.Constant.dist(c)
   return y.random(size=size)
 
 # Plotting Function Definitions
 
-def distplot(x):
-  seaborn.distplot(x)
+def distplot(argnames, x):
+  seaborn.distplot(x, axlabel=str(argnames[0]))
   buf = io.BytesIO()
   plt.savefig(buf, format="png")
+  plt.close()
   return buf
 
 
@@ -168,6 +173,7 @@ builtins = {\
 
             # Deterministic Continuous Distributions
 
+            "Uniform": Uniform, \
             "Normal": Normal, \
             "HalfNormal": HalfNormal, \
             "SkewNormal": SkewNormal, \
@@ -306,12 +312,12 @@ def showNames(names, width=120):
   return "\n".join(rows)
 
 def showBuiltins():
-  print "Builtins\n"
-  print showNames(builtins.keys())
-  print
+  res = "Builtins\n\n"
+  res += showNames(builtins.keys())
+  return res
 
 def showProbBuiltins():
-  print "Probabilistic Builtins\n"
-  print showNames(list(prob_builtins))
-  print
+  res = "Probabilistic Builtins\n\n"
+  res += showNames(list(prob_builtins))
+  return res
 
