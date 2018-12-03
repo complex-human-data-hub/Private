@@ -6,7 +6,7 @@ import sys
 
 def main(cmd):
     host = 'localhost'
-    port = 1337
+    port = 51134
 
     with open('server.crt', 'rb') as f:
         trusted_certs = f.read()

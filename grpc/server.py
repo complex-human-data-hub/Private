@@ -1,23 +1,21 @@
-DEBUG = True
-PROJECT_UID = '12345'
+PROJECT_UID = 12345
+DEBUG = False
 
 if DEBUG:
     import os,sys,inspect
     currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     parentdir = os.path.dirname(currentdir)
     sys.path.insert(0,parentdir)
+else:
+    from Private.parser import PrivateParser
+    from Private.semantics import PrivateSemanticAnalyser
 
 import sys
 import io
 import traceback
 import logging
 
-_log = logging.getLogger("Private {}".format(PROJECT_UID))
-logging.basicConfig(filename='/tmp/private-{}.log'.format(PROJECT_UID),level=logging.DEBUG)
 
-
-from parser import PrivateParser
-from semantics import PrivateSemanticAnalyser
 
 import signal
 from concurrent import futures
@@ -31,35 +29,41 @@ import json
 
 
 class Private:
-    expt_uid = PROJECT_UID
+    project_uid = None
     parser = PrivateParser()
+    def __init__(self, project_uid):
+        self.project_uid = project_uid
+        self._log = logging.getLogger("Private {}".format(PROJECT_UID))
+        logging.basicConfig(filename='/tmp/private-{}.log'.format(PROJECT_UID),level=logging.INFO)
+
     def execute(self, line):
         if line != "":
             try:
-                    parse_tree = self.parser.parse(line)
+                parse_tree = self.parser.parse(line)
             except Exception as e:  # didn't parse
-                print(e)
+                self._log.debug(e)
             else:
                 try:
                     result = PrivateSemanticAnalyser(parse_tree)
                     if result:
                         return(result)
                 except Exception as e:
-                    print(e)
+                    self._log.debug(e)
                     traceback.print_exc(file=sys.stdout)
     
 
 
 class ServerServicer(service_pb2_grpc.ServerServicer):
+    project_uid = PROJECT_UID
     def __init__(self):
-        self.private = Private()
+        self.private = Private(project_id)
 
     def Foo(self, request, context):
         return service_pb2.Empty()
 
     def Private(self, request, context):
         try:
-            if request.project_uid != PROJECT_UID:
+            if request.project_uid != self.project_id:
                 raise Exception("Incorrect project ID")
             req = json.loads(request.json)
             print req
@@ -71,7 +75,7 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)
 
 def main():
-    port = '1337'
+    port = '51134'
 
     with open('server.key', 'rb') as f:
         private_key = f.read()
