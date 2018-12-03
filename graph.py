@@ -130,8 +130,9 @@ class graph:
     elif newstate == "stale":
       self.stale.add(name)
       # check dependencies to see if other variables need to be made stale
+      print name, self.deterministicParents(name)
       for parent in self.deterministicParents(name): # parents via deterministic links
-        #print name, " det ", self.deterministicParents(name)
+        print name, " det ", self.deterministicParents(name)
         if parent not in self.stale:
           self.changeState(parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links

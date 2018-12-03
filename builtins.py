@@ -168,6 +168,162 @@ def distplot(argnames, x):
   plt.close()
   return buf
 
+def private_mean(argnames, x):
+  return numpy.mean(x)
+
+def private_std(argnames, x):
+  return numpy.std(x)
+
+def private_abs(argnames, x):
+  return abs(x)
+
+def private_all(argnames, x):
+  return all(x)
+
+def private_any(argnames, x):
+  return any(x)
+
+def private_bin(argnames, x):
+  return bin(x)
+
+def private_bool(argnames, x):
+  return bool(x)
+
+def private_chr(argnames, x):
+  return chr(x)
+
+def private_cmp(argnames, x):
+  return cmp(x)
+
+def private_complex(argnames, x):
+  return complex(x)
+
+def private_dict(argnames, x):
+  return dict(x)
+
+def private_divmod(argnames, x):
+  return divmod(x)
+
+def private_enumerate(argnames, x):
+  return enumerate(x)
+
+def private_filter(argnames, x):
+  return filter(x)
+
+def private_float(argnames, x):
+  return float(x)
+
+def private_format(argnames, x):
+  return format(x)
+
+def private_frozenset(argnames, x):
+  return frozenset(x)
+
+def private_getattr(argnames, x):
+  return getattr(x)
+
+def private_hasattr(argnames, x):
+  return hasattr(x)
+
+def private_hex(argnames, x):
+  return hex(x)
+
+def private_int(argnames, x):
+  return int(x)
+
+def private_isinstance(argnames, x):
+  return isinstance(x)
+
+def private_issubclass(argnames, x):
+  return issubclass(x)
+
+def private_iter(argnames, x):
+  return iter(x)
+
+def private_len(argnames, x):
+  return len(x)
+
+def private_list(argnames, x):
+  return tuple(x)
+
+def private_long(argnames, x):
+  return long(x)
+
+def private_map(argnames, x):
+  return map(x)
+
+def private_min(argnames, x):
+  return min(x)
+
+def private_max(argnames, x):
+  return max(x)
+
+def private_object(argnames, x):
+  return object(x)
+
+def private_oct(argnames, x):
+  return oct(x)
+
+def private_ord(argnames, x):
+  return ord(x)
+
+def private_pow(argnames, x):
+  return pow(x)
+
+def private_property(argnames, x):
+  return property(x)
+
+def private_range(argnames, x):
+  return range(x)
+
+def private_reduce(argnames, x):
+  return reduce(x)
+
+def private_repr(argnames, x):
+  return repr(x)
+
+def private_reversed(argnames, x):
+  return reversed(x)
+
+def private_round(argnames, x):
+  return round(x)
+
+def private_set(argnames, x):
+  return frozenset(x)
+
+def private_slice(argnames, x):
+  return slice(x)
+
+def private_sorted(argnames, x):
+  return sorted(x)
+
+def private_str(argnames, x):
+  return str(x)
+
+def private_sum(argnames, x):
+  return sum(x)
+
+def private_tuple(argnames, x):
+  return tuple(x)
+
+def private_type(argnames, x):
+  return type(x)
+
+def private_unichr(argnames, x):
+  return unichr(x)
+
+def private_unicode(argnames, x):
+  return unicode(x)
+
+def private_vars(argnames, x):
+  return vars(x)
+
+def private_xrange(argnames, x):
+  return xrange(x)
+
+def private_zip(argnames, x):
+  return zip(x)
+
 
 builtins = {\
 
@@ -232,61 +388,61 @@ builtins = {\
 
             # Summary Statistics
 
-            "mean": numpy.mean, \
-            "std":numpy.std, \
+            "mean": private_mean, \
+            "std": private_std, \
 
             # Standard python builtins that don't generate privacy problems
 
-            "abs": abs, \
-            "all": all, \
-            "any":any, \
-            "bin":bin, \
-            "bool":bool, \
-            "chr":chr, \
-            "cmp":cmp, \
-            "complex":complex, \
-            "dict":dict, \
-            "divmod":divmod, \
-            "enumerate":enumerate, \
-            "filter":filter, \
-            "float":float, \
-            "format":format, \
-            "frozenset":frozenset, \
-            "getattr":getattr, \
-            "hasattr":hasattr, \
-            "hex":hex, \
-            "int":int, \
-            "isinstance":isinstance, \
-            "issubclass":issubclass, \
-            "iter":iter, \
-            "len":len, \
-            "list":tuple, \
-            "long":long, \
-            "map":map, \
-            "min":min, \
-            "max":max, \
-            "object":object, \
-            "oct":oct, \
-            "ord":ord, \
-            "pow":pow, \
-            "property":property, \
-            "range":range, \
-            "reduce":reduce, \
-            "repr":repr, \
-            "reversed":reversed, \
-            "round":round, \
-            "set": frozenset, \
-            "slice":slice, \
-            "sorted":sorted, \
-            "str":str, \
-            "sum":sum, \
-            "tuple":tuple, \
-            "type":type, \
-            "unichr":unichr, \
-            "unicode":unicode, \
-            "vars":vars, \
-            "xrange":xrange, \
-            "zip":zip}
+            "abs": private_abs, \
+            "all": private_all, \
+            "any":private_any, \
+            "bin":private_bin, \
+            "bool":private_bool, \
+            "chr":private_chr, \
+            "cmp":private_cmp, \
+            "complex":private_complex, \
+            "dict":private_dict, \
+            "divmod":private_divmod, \
+            "enumerate":private_enumerate, \
+            "filter":private_filter, \
+            "float":private_float, \
+            "format":private_format, \
+            "frozenset":private_frozenset, \
+            "getattr":private_getattr, \
+            "hasattr":private_hasattr, \
+            "hex":private_hex, \
+            "int":private_int, \
+            "isinstance":private_isinstance, \
+            "issubclass":private_issubclass, \
+            "iter":private_iter, \
+            "len":private_len, \
+            "list":private_tuple, \
+            "long":private_long, \
+            "map":private_map, \
+            "min":private_min, \
+            "max":private_max, \
+            "object":private_object, \
+            "oct":private_oct, \
+            "ord":private_ord, \
+            "pow":private_pow, \
+            "property":private_property, \
+            "range":private_range, \
+            "reduce":private_reduce, \
+            "repr":private_repr, \
+            "reversed":private_reversed, \
+            "round":private_round, \
+            "set": private_frozenset, \
+            "slice":private_slice, \
+            "sorted":private_sorted, \
+            "str":private_str, \
+            "sum":private_sum, \
+            "tuple":private_tuple, \
+            "type":private_type, \
+            "unichr":private_unichr, \
+            "unicode":private_unicode, \
+            "vars":private_vars, \
+            "xrange":private_xrange, \
+            "zip":private_zip}
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
