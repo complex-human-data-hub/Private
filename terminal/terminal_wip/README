@@ -1,0 +1,29 @@
+#Before starting the testing server you will need to install a few libraries in your virtualenv, mine is call venv, so:
+(venv) pip install -r requirements.py
+
+#IP Address restriction
+I've restrict the IP Address that can access private.unforgettable.me, so you'll need to give me the IP Address that you intend to work from so I can add it to the whitelist. 
+
+
+#Start server
+FLASK_APP=server.py flask run
+
+#You will now be able to access the testing server on localhost:5000/
+
+* server.py 
+contains the the flask server
+
+* templates/index.html
+is a simple web page that can make a call to local server, 
+which in turn call the private on unforgettable.me and returns a response
+
+
+Between this code and your xterm code you should be able to keep working on the console. Let me know if you need help setting things up.
+
+
+
+Potential gotcha.
+=================
+When Simon tried to pip install -r requirements his mac complained that he didn't have the openssl libs install on his computer. Presumably openssl shouldn't be too hard to install with a bit of Googling. 
+
+
