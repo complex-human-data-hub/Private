@@ -16,7 +16,6 @@ from arpeggio import RegExMatch as _
 
 def command():                  return [delete, \
                                         comment, \
-                                        comment_string, \
                                         draw_tree, \
                                         show_variables, \
                                         show_dependencies, \
@@ -47,14 +46,13 @@ def show_ncpus():               return "sncpus"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')
-def comment_string():           return _(r'#[a-zA-Z0-9_ ~=(),*]*')
+def comment_string():           return _(r'#[a-zA-Z0-9_ ~=()\.,*#\[\]\///+-]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
 def starsym():                  return "*"
 
 def dottedidentifier():         return identifier, ZeroOrMore(".", identifier)
 
-#def number():                   return _(r'[+-]?[0-9]+(\.[0-9]+)?')
 def number():                   return _(r'[+-]?((\d+(\.\d*)?)|(\.\d+))')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
@@ -73,8 +71,8 @@ def function_call():            return identifier, "(", ZeroOrMore(argument, ","
 def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
-
-def distribution_call():        return identifier, "(", ZeroOrMore(atom, ","), atom, ")"
+def distribution_name():        return ["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal", "Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]
+def distribution_call():        return distribution_name, "(", ZeroOrMore(atom, ","), atom, ")"
 def distribution_assignment():  return identifier, "~", distribution_call
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
@@ -87,7 +85,8 @@ def command_line_expression():  return expression # this is here to catch when p
 #def all_import():               return [short_import, long_import]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
-def line():                     return [command, assignment, value, command_line_expression, comment_string], EOF
+def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
+def line():                     return [command, assignment, value, command_line_expression, comment_line], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))

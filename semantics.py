@@ -15,12 +15,12 @@ from networkx.drawing.nx_pydot import write_dot
 from graph import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
-import logging
-_log = logging.getLogger("Private")
-logging.basicConfig(filename='private.log',level=logging.WARNING)
+#import logging
+#_log = logging.getLogger("Private")
+#logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 
-debug = False
+#debug = False
 
 class result:
 
@@ -42,8 +42,10 @@ class result:
               self.depend.extend(child.depend)
       elif type(depend) == str:
         self.depend = [depend]
+      elif type(depend) == unicode:
+        self.depend = [depend]
       else:
-        raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string: " + str(depend) + " is a " + str(type(depend)))
+        raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a unicode: " + str(depend) + " is a " + str(type(depend)))
 
   def remove_dependencies(self, dependenciesToRemove):
     self.depend = list(set(self.depend) - set(dependenciesToRemove)) 
@@ -55,6 +57,9 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_identifier(self, node, children):
         return result("identifier", node.value, node.value)
+
+    def visit_distribution_name(self, node, children):
+        return result("distribution_name", node.value, node.value)
 
     def visit_dottedidentifier(self, node, children):
         n = ".".join(c if type(c) == unicode else c.code for c in children)
@@ -146,8 +151,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_distribution_call(self, node, children):
         fn = children[0].code
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
-        if fn not in prob_builtins:
-          raise Exception("Unknown distribution: " + fn)
+        #if fn not in prob_builtins:
+        #  raise Exception("Unknown distribution: " + fn)
         pyMC3_code = "pm." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3code=pyMC3_code)
  
@@ -165,7 +170,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_assignment(self, node, children):
         if len(children) > 1:
           depGraph.add_comment(children[0].code, children[1].code)
-        depGraph.compute()
+        #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
@@ -180,6 +185,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
     def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(depGraph.server.get_ncpus()))
+    def visit_comment_line(self, node, children):             return result("comment_line", "")
     def visit_delete(self, node, children):
       depGraph.delete(children[0].code)
       return result("show_delete", "")
@@ -204,31 +210,31 @@ help: this message
 """
         return result("help", res)
       
-    def visit_short_import(self, node, children):
-        if debug: print "short_import: ", children
-        themodule = importlib.import_module("private_"+children[0])
-        #for k,v in themodule.__private_globals__.items():
-        #  depGraph.globals[children[0]+"_"+k] = v
-        #  depGraph.imports.add(children[0]+"_"+k)
-        depGraph.compute()
+#    def visit_short_import(self, node, children):
+#        if debug: print "short_import: ", children
+#        themodule = importlib.import_module("private_"+children[0])
+#        #for k,v in themodule.__private_globals__.items():
+#        #  depGraph.globals[children[0]+"_"+k] = v
+#        #  depGraph.imports.add(children[0]+"_"+k)
+#        depGraph.compute()
 
-    def visit_import_list(self, node, children):
-        if debug: print "import_list: ", children
-        return result("import_list", " " + ", ".join(c if type(c) == unicode else c.code for c in children), children)
+#    def visit_import_list(self, node, children):
+#        if debug: print "import_list: ", children
+#        return result("import_list", " " + ", ".join(c if type(c) == unicode else c.code for c in children), children)
 
-    def visit_long_import(self, node, children):
-        if debug: print "long_import: ", children
-        themodule = importlib.import_module("private_"+children[0])
-        #for k,v in themodule.__private_globals__.items():
-        #  depGraph.globals[k] = v
-        #  depGraph.imports.add(k)
-        depGraph.compute()
+#    def visit_long_import(self, node, children):
+#        if debug: print "long_import: ", children
+#        themodule = importlib.import_module("private_"+children[0])
+#        #for k,v in themodule.__private_globals__.items():
+#        #  depGraph.globals[k] = v
+#        #  depGraph.imports.add(k)
+#        depGraph.compute()
 
-    def visit_all_import(self, node, children):
-        if debug: print "all_import: ", children
+#    def visit_all_import(self, node, children):
+#        if debug: print "all_import: ", children
 
     def visit_comment(self, node, children):
-        _log.debug("comment: " + str(children))
+        #_log.debug("comment: " + str(children))
         depGraph.add_comment(children[0].code, children[1].code)
 
     def visit_line(self, node, children):

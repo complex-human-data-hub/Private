@@ -207,6 +207,9 @@ def private_divmod(argnames, x):
 def private_enumerate(argnames, x):
   return enumerate(x)
 
+def private_exp(argnames, x):
+  return numpy.exp(x)
+
 def private_filter(argnames, x):
   return filter(x)
 
@@ -404,6 +407,7 @@ builtins = {\
             "dict":private_dict, \
             "divmod":private_divmod, \
             "enumerate":private_enumerate, \
+            "exp":private_exp, \
             "filter":private_filter, \
             "float":private_float, \
             "format":private_format, \
@@ -449,11 +453,11 @@ prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernou
 
 def setPrivacy(graph):
   for name in builtins:
-    graph.changePrivacy(name, "public")
+    graph.setPrivacy(name, "public")
   for name in prob_builtins:
-    graph.changePrivacy(name, "public")
+    graph.setPrivacy(name, "public")
  
-  graph.changePrivacy("Events", "private")
+  graph.setPrivacy("Events", "private")
 
 def showNames(names, width=120):
   res = ""

@@ -23,7 +23,7 @@ def execute(line):
           print(result)
       except Exception as e:
         print(e)
-        traceback.print_exc(file=sys.stdout)
+        #traceback.print_exc(file=sys.stdout)
 
 def load_code(filename):
   f = open(filename, "r").readlines()
