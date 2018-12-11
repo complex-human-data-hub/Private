@@ -26,36 +26,42 @@ function createTerminal() {
 
     // ---------------- Needs to send and receive data via ajax ----------------- //
 
+    // Don't really need this function
+    // as term.writeln does the same thing
+    term.write_response = function(res) {
+        term.writeln(res)
+    }
+
+    term.send_cmd = function(cmd) {
+        if (!cmd) return;
+
+        //write_cmd(cmd);
+        data = { 'cmd': cmd, 'uid': '1234567' };
+
+        $.ajax({
+            type: "POST",
+            url: 'http://localhost:5000/analyze',
+            data: data,
+            success: function(data){
+                console.log(data);
+                if(data.response){
+                    //term.write_response(data.response)
+                    term.writeln(data.response);
+                }
+            },
+            dataType: "json"
+        });
+    }
+
     term.enter = function () {
         // Enter key has been pressed
 
-        var write_response = function(res) {
-            term.writeln(res)
-        }
-        var send_cmd = function(cmd) {
-            if (!cmd) return;
-
-            //write_cmd(cmd);
-            data = { 'cmd': cmd, 'uid': '1234567' };
-
-            $.ajax({
-                type: "POST",
-                url: 'http://localhost:5000/analyze',
-                data: data,
-                success: function(data){
-                    console.log(data);
-                    if(data.response){
-                        write_response(data.response)
-                    }
-                },
-                dataType: "json"
-            });
-        }
 
         var cmd = $.trim(input);
-        send_cmd(cmd);
+        term.send_cmd(cmd);
         $("#cmd").val("");
-        callback()
+
+        callback() ;
     }
 
     callback = function() {
