@@ -1,4 +1,3 @@
-
 var serverAddress = "";
 
 createTerminal()
@@ -26,10 +25,9 @@ function createTerminal() {
 
     // ---------------- Needs to send and receive data via ajax ----------------- //
 
-    // Don't really need this function
-    // as term.writeln does the same thing
     term.write_response = function(res) {
-        term.writeln(res)
+      term.write("\r\n   ")
+      term.writeln(res.replace(/\n/g, "\r\n   "));
     }
 
     term.send_cmd = function(cmd) {
@@ -43,11 +41,13 @@ function createTerminal() {
             url: 'http://localhost:5000/analyze',
             data: data,
             success: function(data){
-                console.log(data);
                 if(data.response){
-                    //term.write_response(data.response)
-                    term.writeln(data.response);
+                    term.write_response(data.response)
                 }
+                callback();
+            },
+            fail: function(xhr, textStatus, errorThrown) {
+              callback()
             },
             dataType: "json"
         });
@@ -56,12 +56,10 @@ function createTerminal() {
     term.enter = function () {
         // Enter key has been pressed
 
-
         var cmd = $.trim(input);
         term.send_cmd(cmd);
         $("#cmd").val("");
 
-        callback() ;
     }
 
     callback = function() {
