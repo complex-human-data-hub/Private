@@ -15,6 +15,7 @@ import shutil
 import io
 import re
 import traceback
+import pprint
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -39,6 +40,7 @@ class graph:
     self.whohaslock = None
     self.globals = copy.copy(builtins)
     self.locals = {}
+    self.prettyprinter = pprint.PrettyPrinter()
 
 
     # each current program variable should be either deterministic or probablistic or both
@@ -330,7 +332,7 @@ class graph:
           res += str(self.globals[name])
         else:
           if longFormat:
-            res += str(self.globals[name])
+            res += self.prettyprinter.pprint(self.globals[name])
           else:
             res += reprlib.repr(self.globals[name])
       else:
