@@ -142,7 +142,7 @@ class graph:
   def computePrivacy(self):
     
     try:
-      if len(self.jobs) != 0 or (self.uptodate & self.privacy_unknown == set()):
+      if self.uptodate & self.privacy_unknown == set():
         return
       for name in self.deterministic:
         if all(child in self.public for child in self.dependson[name]):
@@ -151,26 +151,27 @@ class graph:
           self.setPrivacy(name, "private")
         else:
           self.setPrivacy(name, "privacy_unknown")
-      anyPrivacyUnknown = False
-      for name in self.probabilistic - self.deterministic:
-        if self.checkprivacyup(name) and self.checkprivacydown(name):
-          self.setPrivacy(name, "public")
-        else:
-          self.setPrivacy(name, "privacy_unknown")
-          anyPrivacyUnknown = True
+      if len(self.jobs) == 0:
+        anyPrivacyUnknown = False
+        for name in self.probabilistic - self.deterministic:
+          if self.checkprivacyup(name) and self.checkprivacydown(name):
+            self.setPrivacy(name, "public")
+          else:
+            self.setPrivacy(name, "privacy_unknown")
+            anyPrivacyUnknown = True
 
-      if anyPrivacyUnknown:
-        if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
-          sampler_names = self.variablesToBeSampled()
-          locals, sampler_code =  self.constructPyMC3code()
-          AllEvents = self.globals["Events"]
-          users = set([e.UserId for e in AllEvents])
-          for user in users:
-            self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
-            myname = "__private_sampler__" + user
-            self.sampler_chains[myname] = None
-            self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
-          self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
+        if anyPrivacyUnknown:
+          if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
+            sampler_names = self.variablesToBeSampled()
+            locals, sampler_code =  self.constructPyMC3code()
+            AllEvents = self.globals["Events"]
+            users = set([e.UserId for e in AllEvents])
+            for user in users:
+              self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
+              myname = "__private_sampler__" + user
+              self.sampler_chains[myname] = None
+              self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
+            self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
     except Exception as e:
       print "here: ", e
 
@@ -203,6 +204,7 @@ class graph:
           self.changeState(child, "stale")
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
+    self.computePrivacy()
 
   def setPrivacy(self, name, privacy):
     self.log.debug(name + " becomes " + privacy)
@@ -332,7 +334,7 @@ class graph:
           res += str(self.globals[name])
         else:
           if longFormat:
-            res += self.prettyprinter.pprint(self.globals[name])
+            res += self.prettyprinter.pformat(self.globals[name])
           else:
             res += reprlib.repr(self.globals[name])
       else:
@@ -346,7 +348,7 @@ class graph:
       else:
         res += "Private"
     else:
-      raise Exception("Unknown variable " + name)
+      raise Exception("Unknown variable in getValue" + name)
     return res
       
   def __repr__(self):
@@ -645,14 +647,14 @@ except Exception as e:
           value = str(int(m.group(1))-1) + " arguments required."
         self.samplerexception[exception_variable] = str(value)
     else: # successful sampler return
-      tochecknames = list(self.privacy_unknown & set(names))   # names to check for privacy
+      tochecknames = list(self.privacy_unknown & set(value.varnames))   # names to check for privacy
       self.log.debug("names to check " + str(tochecknames))
       if len(tochecknames) > 0:
         try:
           sampleslist = [value[name] for name in tochecknames]
           samples = numpy.concatenate(sampleslist)
         except Exception as e:
-          print e
+          print "in samplercallback", e
         self.sampler_chains[myname] = samples
         self.log.debug(self.show_sampler_chains())
 
@@ -661,6 +663,7 @@ except Exception as e:
           self.globals[name] = value[name]
         else:
           self.globals[name] = "Not retained."
+          self.setPrivacy(name, "public") # no problem making this public as there is nothing to see
           
         self.changeState(name, "uptodate")
 
@@ -689,37 +692,38 @@ except Exception as e:
     self.acquire("privacysamplercallback")
     try:
       myname, names, value, exception_variable = returnvalue
-      tochecknames = list(self.privacy_unknown & set(names))
-      sampleslist = [value[name] for name in tochecknames]
-      samples = numpy.concatenate(sampleslist)
-      self.sampler_chains[myname] = samples
-      if type(self.sampler_chains["__private_sampler__"]) == numpy.ndarray: # note this should always be the case 
-        for usertest in self.sampler_chains.keys():
-          if usertest != "__private_sampler__":
-            if type(self.sampler_chains[usertest]) == numpy.ndarray:
-              try:
-                d = distManifold(self.sampler_chains[usertest], self.sampler_chains["__private_sampler__"]) * 100.
-              except Exception as e:
-                print e
-              if d < PrivacyCriterion:
-                self.sampler_chains[usertest] = "public"
-              else:
-                self.sampler_chains[usertest] = "private"
+      tochecknames = list(self.privacy_unknown & set(value.varnames))
+      if len(tochecknames) > 0:
+        sampleslist = [value[name] for name in tochecknames]
+        samples = numpy.concatenate(sampleslist)
+        self.sampler_chains[myname] = samples
+        if type(self.sampler_chains["__private_sampler__"]) == numpy.ndarray: # note this should always be the case 
+          for usertest in self.sampler_chains.keys():
+            if usertest != "__private_sampler__":
+              if type(self.sampler_chains[usertest]) == numpy.ndarray:
+                try:
+                  d = distManifold(self.sampler_chains[usertest], self.sampler_chains["__private_sampler__"]) * 100.
+                except Exception as e:
+                  print e
+                if d < PrivacyCriterion:
+                  self.sampler_chains[usertest] = "public"
+                else:
+                  self.sampler_chains[usertest] = "private"
  
-        if all(False if type(v) == numpy.ndarray else v == "public" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
-          for name in tochecknames:
-            self.setPrivacy(name, "public")
-        elif any(False if type(v) == numpy.ndarray else v == "private" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
-          for name in tochecknames:
-            self.setPrivacy(name, "private")
-        self.log.debug(self.show_sampler_chains())
-      else:
-        self.log.error("The primary sampler chains should always have been calculated prior to the privacy sampler chains")
-        self.log.debug(self.show_sampler_chains())
+          if all(False if type(v) == numpy.ndarray else v == "public" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
+            for name in tochecknames:
+              self.setPrivacy(name, "public")
+          elif any(False if type(v) == numpy.ndarray else v == "private" for k,v in self.sampler_chains.items() if k != "__private_sampler__"):
+            for name in tochecknames:
+              self.setPrivacy(name, "private")
+          self.log.debug(self.show_sampler_chains())
+        else:
+          self.log.error("The primary sampler chains should always have been calculated prior to the privacy sampler chains")
+          self.log.debug(self.show_sampler_chains())
 
       del self.jobs[myname]
     except Exception as e:
-      print e
+      print "In privacysamplercallback", e
     self.release()
     self.compute()
 

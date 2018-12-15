@@ -171,6 +171,9 @@ def distplot(argnames, x):
 def private_mean(argnames, x):
   return numpy.mean(x)
 
+def private_median(argnames, x):
+  return numpy.median(x)
+
 def private_std(argnames, x):
   return numpy.std(x)
 
@@ -205,7 +208,7 @@ def private_divmod(argnames, x):
   return divmod(x)
 
 def private_enumerate(argnames, x):
-  return enumerate(x)
+  return list(enumerate(x))
 
 def private_exp(argnames, x):
   return numpy.exp(x)
@@ -392,6 +395,7 @@ builtins = {\
             # Summary Statistics
 
             "mean": private_mean, \
+            "median": private_median, \
             "std": private_std, \
 
             # Standard python builtins that don't generate privacy problems
