@@ -63,12 +63,13 @@ def list_comprehension():       return "[", expression, "for", identifier_list, 
 def enumerated_list():          return "[", ZeroOrMore(expression, ","), expression, "]"
 def list():                     return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
-def factor():                   return [function_call, method_call, bracketed_expression, (notsym, factor), list, atom]
+def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
 def argument():                 return [expression, (identifier, "=", expression)]
 def function_call():            return identifier, "(", ZeroOrMore(argument, ","), argument, ")"
 def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def indexed_variable():         return dottedidentifier, "[", ZeroOrMore(expression, ","), expression, "]"
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 def distribution_name():        return ["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal", "Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]
@@ -77,7 +78,7 @@ def distribution_assignment():  return identifier, "~", distribution_call
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
-def value():                    return identifier
+#def value():                    return identifier
 def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
 #def short_import():             return "import", module_name
 #def identifier_list():          return identifier, ZeroOrMore(",", identifier)
@@ -86,7 +87,7 @@ def command_line_expression():  return expression # this is here to catch when p
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
 def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
-def line():                     return [command, assignment, value, command_line_expression, comment_line], EOF
+def line():                     return [command, assignment, command_line_expression, comment_line], EOF
 
 def PrivateParser():
   return(ParserPython(line, debug = False))

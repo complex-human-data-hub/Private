@@ -117,15 +117,18 @@ class InputVisitor(PTNodeVisitor):
         fn = children[0].code
         return result("method_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
 
+    def visit_indexed_variable(self, node, children):
+        fn = children[0].code
+        return result("indexed_variable", fn + "[" + ", ".join(c.code for c in children[1:]) + "]", children)
+
     def visit_function_call(self, node, children):
         fn = children[0].code
         if fn == "set":
           fn = "frozenset"
         elif fn == "list":
           fn = "tuple"
-        argnames = [c.code for c in children[1:]] # keep names for plotting
         code = fn + "("+ ", ".join(c.code for c in children[1:]) + ")"
-        evalcode = fn + "(%s, " % str(argnames) + ", ".join(c.code for c in children[1:]) + ")"
+        evalcode = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
     def visit_simple_expression(self, node, children):
@@ -247,9 +250,10 @@ help: this message
       print depGraph.getValue(node.value, longFormat=True)
          
     def visit_command_line_expression(self, node, children):
-      print "Because expressions may take a long time to compute you must assign them to a variable"
-      print "and then query the variable to see the result. For example, instead of 4*b+5 type"
-      print "t = 4*b+5 and then t."
+      return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode)))
+      #print "Because expressions may take a long time to compute you must assign them to a variable"
+      #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
+      #print "t = 4*b+5 and then t."
 
 def PrivateSemanticAnalyser(parse_tree):
     return visit_parse_tree(parse_tree, InputVisitor())

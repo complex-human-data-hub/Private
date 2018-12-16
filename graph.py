@@ -139,6 +139,9 @@ class graph:
       else:
         return all(self.checkprivacydown(child) for child in children)
 
+  def eval_command_line_expression(self, code):
+    return(eval(code, self.globals, self.locals))
+
   def computePrivacy(self):
     
     try:
@@ -603,16 +606,6 @@ except Exception as e:
           self.sampler_chains[myname] = None
           self.samplerexception = {}
           self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
-          #if len(self.privacy_unknown) != 0:
-          #  print "privacy to be figured", self.privacy_unknown
-          #  AllEvents = self.globals["Events"]
-          #  users = set([e.UserId for e in AllEvents])
-          #  for user in users:
-          #    self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
-          #    myname = "__private_sampler__ " + user
-          #    self.sampler_chains[myname] = None
-          #    self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
-          #  self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
     self.computePrivacy()
     self.release()
 

@@ -9,325 +9,325 @@ import pymc3 as pm
 
 # Deterministic Continuous Distribution Definitions
 
-def Uniform(argnames, lower, upper, size):
+def Uniform(lower, upper, size):
   y = pm.Uniform.dist(lower, upper)
   return y.random(size=size)
 
-def Normal(argnames, mu, sd, size):
+def Normal(mu, sd, size):
   y = pm.Normal.dist(mu, sd)
   return y.random(size=size)
 
-def HalfNormal(argnames, sd, size):
+def HalfNormal(sd, size):
   y = pm.HalfNormal.dist(sd)
   return y.random(size=size)
 
-def SkewNormal(argnames, mu, sd, alpha, size):
+def SkewNormal(mu, sd, alpha, size):
   y = pm.SkewNormal.dist(mu=mu, sd=sd, alpha=alpha)
   return y.random(size=size)
 
-def Beta(argnames, mu, sd, size):
+def Beta(mu, sd, size):
   y = pm.Beta.dist(mu=mu, sd=sd)
   return y.random(size=size)
 
-def Kumaraswamy(argnames, a, b, size):
+def Kumaraswamy(a, b, size):
   y = pm.Kumaraswamy.dist(a, b)
   return y.random(size=size)
 
-def Exponential(argnames, lam, size):
+def Exponential(lam, size):
   y = pm.Exponential.dist(lam)
   return y.random(size=size)
 
-def Laplace(argnames, mu, b, size):
+def Laplace(mu, b, size):
   y = pm.Laplace.dist(mu, b)
   return y.random(size=size)
 
-def StudentT(argnames, nu, size):
+def StudentT(nu, size):
   y = pm.StudentT.dist(nu)
   return y.random(size=size)
 
-def HalfStudentT(argnames, nu, size):
+def HalfStudentT(nu, size):
   y = pm.HalfStudentT.dist(nu)
   return y.random(size=size)
 
-def Cauchy(argnames, alpha, beta, size):
+def Cauchy(alpha, beta, size):
   y = pm.Cauchy.dist(alpha, beta)
   return y.random(size=size)
 
-def HalfCauchy(argnames, beta, size):
+def HalfCauchy(beta, size):
   y = pm.HalfCauchy.dist(beta)
   return y.random(size=size)
 
-def Gamma(argnames, mu, sd, size):
+def Gamma(mu, sd, size):
   y = pm.Gamma.dist(mu, sd)
   return y.random(size=size)
 
-def Weibull(argnames, alpha, beta, size):
+def Weibull(alpha, beta, size):
   y = pm.Weibull.dist(alpha, beta)
   return y.random(size=size)
 
-def LogNormal(argnames, mu, sd, size):
+def LogNormal(mu, sd, size):
   y = pm.Lognormal.dist(mu=mu, sd=sd)
   return y.random(size=size)
 
-def ChiSquared(argnames, nu, size):
+def ChiSquared(nu, size):
   y = pm.ChiSquared.dist(nu)
   return y.random(size=size)
 
-def Wald(argnames, mu, lam, size):
+def Wald(mu, lam, size):
   y = pm.Wald.dist(mu, lam)
   return y.random(size=size)
 
-def Pareto(argnames, alpha, m, size):
+def Pareto(alpha, m, size):
   y = pm.Pareto.dist(alpha, m)
   return y.random(size=size)
 
-def InverseGamma(argnames, mu, sd, size):
+def InverseGamma(mu, sd, size):
   y = pm.InverseGamma.dist(mu, sd)
   return y.random(size=size)
 
-def ExGaussian(argnames, mu, sd, nu, size):
+def ExGaussian(mu, sd, nu, size):
   y = pm.ExGaussian.dist(mu, sd, nu)
   return y.random(size=size)
 
-def Triangular(argnames, lower, upper, c, size):
+def Triangular(lower, upper, c, size):
   y = pm.Triangular.dist(lower, upper, c)
   return y.random(size=size)
 
-def Gumbel(argnames, mu, beta, size):
+def Gumbel(mu, beta, size):
   y = pm.Gumbel.dist(mu, beta)
   return y.random(size=size)
 
-def Logistic(argnames, mu, s, size):
+def Logistic(mu, s, size):
   y = pm.Logistic.dist(mu, s)
   return y.random(size=size)
 
-def LogitNormal(argnames, mu, sd, size):
+def LogitNormal(mu, sd, size):
   y = pm.LogitNormal.dist(mu, sd)
   return y.random(size=size)
 
 # Deterministic Discrete  Distribution Definitions
 
-def Binomial(argnames, n, p, size):
+def Binomial(n, p, size):
   y = pm.Binomial.dist(n, p)
   return y.random(size=size)
 
-def ZeroInflatedBinomial(argnames, psi, n, p, size):
+def ZeroInflatedBinomial(psi, n, p, size):
   y = pm.ZeroInflatedBinomial.dist(psi, n, p)
   return y.random(size=size)
 
-def BetaBinomial(argnames, alpha, beta, n, size):
+def BetaBinomial(alpha, beta, n, size):
   y = pm.BetaBinomial.dist(alpha, beta, n)
   return y.random(size=size)
 
-def Bernoulli(argnames, p, size):
+def Bernoulli(p, size):
   y = pm.Bernoulli.dist(p)
   return y.random(size=size)
 
-def Poisson(argnames, mu, size):
+def Poisson(mu, size):
   y = pm.Poisson.dist(mu)
   return y.random(size=size)
 
-def ZeroInflatedPoisson(argnames, psi, mu, size):
+def ZeroInflatedPoisson(psi, mu, size):
   y = pm.ZeroInflatedPoisson.dist(psi, mu)
   return y.random(size=size)
 
-def NegativeBinomial(argnames, mu, alpha, size):
+def NegativeBinomial(mu, alpha, size):
   y = pm.NegativeBinomial.dist(mu, alpha)
   return y.random(size=size)
 
-def ZeroInflatedNegativeBinomial(argnames, psi, mu, alpha, size):
+def ZeroInflatedNegativeBinomial(psi, mu, alpha, size):
   y = pm.ZeroInflatedNegativeBinomial.dist(psi, mu, alpha)
   return y.random(size=size)
 
-def DiscreteUniform(argnames, upper, lower, size):
+def DiscreteUniform(upper, lower, size):
   y = pm.DiscreteUniform.dist(upper, lower)
   return y.random(size=size)
 
-def Geometric(argnames, p, size):
+def Geometric(p, size):
   y = pm.Geometric.dist(p)
   return y.random(size=size)
 
-def Categorical(argnames, p, size):
+def Categorical(p, size):
   y = pm.Categorical.dist(p)
   return y.random(size=size)
 
-def DiscreteWeibull(argnames, q, beta, size):
+def DiscreteWeibull(q, beta, size):
   y = pm.DiscreteWeibull.dist(q, beta)
   return y.random(size=size)
 
-def Constant(argnames, c, size):
+def Constant(c, size):
   y = pm.Constant.dist(c)
   return y.random(size=size)
 
 # Plotting Function Definitions
 
-def distplot(argnames, x):
-  seaborn.distplot(x, axlabel=str(argnames[0]))
+def distplot(x):  # have to stop this plotting if x is Private
+  seaborn.distplot(x)
   buf = io.BytesIO()
   plt.savefig(buf, format="png")
   plt.close()
   return buf
 
-def private_mean(argnames, x):
+def private_mean(x):
   return numpy.mean(x)
 
-def private_median(argnames, x):
+def private_median(x):
   return numpy.median(x)
 
-def private_std(argnames, x):
+def private_std(x):
   return numpy.std(x)
 
-def private_abs(argnames, x):
+def private_abs(x):
   return abs(x)
 
-def private_all(argnames, x):
+def private_all(x):
   return all(x)
 
-def private_any(argnames, x):
+def private_any(x):
   return any(x)
 
-def private_bin(argnames, x):
+def private_bin(x):
   return bin(x)
 
-def private_bool(argnames, x):
+def private_bool(x):
   return bool(x)
 
-def private_chr(argnames, x):
+def private_chr(x):
   return chr(x)
 
-def private_cmp(argnames, x):
+def private_cmp(x):
   return cmp(x)
 
-def private_complex(argnames, x):
+def private_complex(x):
   return complex(x)
 
-def private_dict(argnames, x):
+def private_dict(x):
   return dict(x)
 
-def private_divmod(argnames, x):
+def private_divmod(x):
   return divmod(x)
 
-def private_enumerate(argnames, x):
+def private_enumerate(x):
   return list(enumerate(x))
 
-def private_exp(argnames, x):
+def private_exp(x):
   return numpy.exp(x)
 
-def private_filter(argnames, x):
+def private_filter(x):
   return filter(x)
 
-def private_float(argnames, x):
+def private_float(x):
   return float(x)
 
-def private_format(argnames, x):
+def private_format(x):
   return format(x)
 
-def private_frozenset(argnames, x):
+def private_frozenset(x):
   return frozenset(x)
 
-def private_getattr(argnames, x):
+def private_getattr(x):
   return getattr(x)
 
-def private_hasattr(argnames, x):
+def private_hasattr(x):
   return hasattr(x)
 
-def private_hex(argnames, x):
+def private_hex(x):
   return hex(x)
 
-def private_int(argnames, x):
+def private_int(x):
   return int(x)
 
-def private_isinstance(argnames, x):
+def private_isinstance(x):
   return isinstance(x)
 
-def private_issubclass(argnames, x):
+def private_issubclass(x):
   return issubclass(x)
 
-def private_iter(argnames, x):
+def private_iter(x):
   return iter(x)
 
-def private_len(argnames, x):
+def private_len(x):
   return len(x)
 
-def private_list(argnames, x):
+def private_list(x):
   return tuple(x)
 
-def private_long(argnames, x):
+def private_long(x):
   return long(x)
 
-def private_map(argnames, x):
+def private_map(x):
   return map(x)
 
-def private_min(argnames, x):
+def private_min(x):
   return min(x)
 
-def private_max(argnames, x):
+def private_max(x):
   return max(x)
 
-def private_object(argnames, x):
+def private_object(x):
   return object(x)
 
-def private_oct(argnames, x):
+def private_oct(x):
   return oct(x)
 
-def private_ord(argnames, x):
+def private_ord(x):
   return ord(x)
 
-def private_pow(argnames, x):
+def private_pow(x):
   return pow(x)
 
-def private_property(argnames, x):
+def private_property(x):
   return property(x)
 
-def private_range(argnames, x):
+def private_range(x):
   return range(x)
 
-def private_reduce(argnames, x):
+def private_reduce(x):
   return reduce(x)
 
-def private_repr(argnames, x):
+def private_repr(x):
   return repr(x)
 
-def private_reversed(argnames, x):
+def private_reversed(x):
   return reversed(x)
 
-def private_round(argnames, x):
+def private_round(x):
   return round(x)
 
-def private_set(argnames, x):
+def private_set(x):
   return frozenset(x)
 
-def private_slice(argnames, x):
+def private_slice(x):
   return slice(x)
 
-def private_sorted(argnames, x):
+def private_sorted(x):
   return sorted(x)
 
-def private_str(argnames, x):
+def private_str(x):
   return str(x)
 
-def private_sum(argnames, x):
+def private_sum(x):
   return sum(x)
 
-def private_tuple(argnames, x):
+def private_tuple(x):
   return tuple(x)
 
-def private_type(argnames, x):
+def private_type(x):
   return type(x)
 
-def private_unichr(argnames, x):
+def private_unichr(x):
   return unichr(x)
 
-def private_unicode(argnames, x):
+def private_unicode(x):
   return unicode(x)
 
-def private_vars(argnames, x):
+def private_vars(x):
   return vars(x)
 
-def private_xrange(argnames, x):
+def private_xrange(x):
   return xrange(x)
 
-def private_zip(argnames, x):
+def private_zip(x):
   return zip(x)
 
 
