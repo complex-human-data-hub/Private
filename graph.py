@@ -1,27 +1,25 @@
-#import thread
 import multiprocessing
 import pp
-#import logging as l
-#import networkx as nx
 import reprlib 
 import numpy
 from collections import OrderedDict
 import logging
 from builtins import builtins, prob_builtins, setPrivacy
 import copy
-import traceback
 from manifoldprivacy import distManifold
 import shutil
 import io
 import re
 import traceback
 import pprint
+import pickle
+import os
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 numpy.set_printoptions(precision=3)
 
-PrivacyCriterion = 1.0
+PrivacyCriterion = 1.0   # percent
 
 def ppset(s):
   """
@@ -35,13 +33,11 @@ class graph:
 
   def __init__(self):
 
-    #self.lock = thread.allocate_lock()
     self.lock = multiprocessing.Lock()
     self.whohaslock = None
+    self.prettyprinter = pprint.PrettyPrinter()
     self.globals = copy.copy(builtins)
     self.locals = {}
-    self.prettyprinter = pprint.PrettyPrinter()
-
 
     # each current program variable should be either deterministic or probablistic or both
 
@@ -63,7 +59,6 @@ class graph:
     self.private = set()
     self.public = set()
     self.privacy_unknown = set()
-
 
     # code associated with variables
 
@@ -139,8 +134,22 @@ class graph:
       else:
         return all(self.checkprivacydown(child) for child in children)
 
-  def eval_command_line_expression(self, code):
-    return(eval(code, self.globals, self.locals))
+  def eval_command_line_expression(self, code, dependson):
+    nonpublic = set(dependson) - self.public
+    if nonpublic == set():
+      s = str(eval(code, self.globals, self.locals))
+      return s
+    else:
+      return "Some dependencies are not public: " + ppset(nonpublic)
+
+  def checkPickling(self):
+    for key, value in self.globals.items():
+      try:
+        f = open(os.devnull, "w")
+        pickle.dump(value, f)
+      except:
+        print "Pickle error with: ", key
+        traceback.print_exc()
 
   def computePrivacy(self):
     
@@ -173,10 +182,12 @@ class graph:
               self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
               myname = "__private_sampler__" + user
               self.sampler_chains[myname] = None
+              self.checkPickling()
               self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
             self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
     except Exception as e:
       print "here: ", e
+      traceback.print_exc()
 
   def changeState(self, name, newstate):
     self.log.debug("Change state of %s to %s." % (name, newstate))
@@ -321,7 +332,7 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception: 
-        res += str(self.globals[name])
+        res += "Exception: " + str(self.globals[name])
       elif name in self.private:
         res += "Private"
       elif name in self.privacy_unknown:
@@ -337,7 +348,7 @@ class graph:
           res += str(self.globals[name])
         else:
           if longFormat:
-            res += self.prettyprinter.pformat(self.globals[name])
+            res += json.dumps(self.globals[name], indent=4)
           else:
             res += reprlib.repr(self.globals[name])
       else:
@@ -500,18 +511,18 @@ class graph:
   def constructPyMC3code(self):
     locals = {}
     loggingcode = """
-import logging
+logging = __import__("logging")
 _log = logging.getLogger("Private")
 logging.disable(100)
 """
 
     code = loggingcode + """
-import pymc3 as pm
-
-
 try:
+  exception_variable = "No Exception Variable"
+  pymc3 = __import__("pymc3")
 
-  basic_model = pm.Model()
+
+  basic_model = pymc3.Model()
 
   with basic_model:
 
@@ -534,7 +545,7 @@ try:
       locals[obsname] = self.globals[name]
 
     code += """
-    __private_result__ = (pm.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+    __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
 
 except Exception as e:
   # remove stuff after the : as that sometimes reveals private information
@@ -544,7 +555,7 @@ except Exception as e:
   else:
     estring = e.args[0]
     
-  newErrorString = estring
+  newErrorString = estring   # do we need to do this?
   e.args = (newErrorString,)
   __private_result__ = (e, exception_variable)
 
@@ -639,6 +650,9 @@ except Exception as e:
         if m:
           value = str(int(m.group(1))-1) + " arguments required."
         self.samplerexception[exception_variable] = str(value)
+      else:
+        for name in names:
+          self.samplerexception[name] = str(value)
     else: # successful sampler return
       tochecknames = list(self.privacy_unknown & set(value.varnames))   # names to check for privacy
       self.log.debug("names to check " + str(tochecknames))

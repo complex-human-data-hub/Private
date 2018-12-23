@@ -333,6 +333,16 @@ def private_zip(x):
 
 builtins = {\
 
+            # make __bultins__ None
+            # this is crucial to stop __builtins__ being available in eval code
+
+            "__builtins__": None,
+            "__import__": __import__,
+            "Exception": Exception,
+
+            "True": True,
+            "False": False,
+
             # Deterministic Continuous Distributions
 
             "Uniform": Uniform, \

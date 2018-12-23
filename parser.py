@@ -45,7 +45,7 @@ def show_prob_builtins():       return "spb"
 def show_ncpus():               return "sncpus"
 def help():                     return "help"
 
-def identifier():               return _(r'[a-zA-Z_][a-zA-Z0-9_]*')
+def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')
 def comment_string():           return _(r'#[a-zA-Z0-9_ ~=()\.,*#\[\]\///+-]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"

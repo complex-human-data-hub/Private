@@ -156,7 +156,7 @@ class InputVisitor(PTNodeVisitor):
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
         #if fn not in prob_builtins:
         #  raise Exception("Unknown distribution: " + fn)
-        pyMC3_code = "pm." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
+        pyMC3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3code=pyMC3_code)
  
     def visit_distribution_assignment(self, node, children): 
@@ -250,7 +250,7 @@ help: this message
       print depGraph.getValue(node.value, longFormat=True)
          
     def visit_command_line_expression(self, node, children):
-      return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode)))
+      return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
       #print "Because expressions may take a long time to compute you must assign them to a variable"
       #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
       #print "t = 4*b+5 and then t."

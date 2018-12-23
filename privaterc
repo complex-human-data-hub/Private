@@ -1,5 +1,7 @@
 muplot = distplot(mu)
 
+c = 4
+
 l = [e.Weather == "rain" for e in DemoEvents if e.hasField("Weather")]
 
 users = set([e.UserId for e in DemoEvents])
