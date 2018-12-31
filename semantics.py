@@ -183,6 +183,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_mccode(self, node, children):              return result("show_mccode", depGraph.constructPyMC3code()[1])
     def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", depGraph.canRunSampler(verbose=True))
     def visit_show_sets(self, node, children):                return result("show_sets", depGraph.show_sets())
+    def visit_show_jobs(self, node, children):                return result("show_jobs", depGraph.show_jobs())
     def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", depGraph.variablesToBeCalculated())
     def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", depGraph.variablesToBeSampled())
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
@@ -203,6 +204,7 @@ sevalcode: show eval code
 smccode: show pyMC3 code
 sss: show sampler status
 ss: show sets
+sj: show jobs
 vc: variables to calculate
 vs: variables to sample
 sb: show builtins

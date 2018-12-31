@@ -15,15 +15,15 @@ def execute(line):
     try:
       parse_tree = parser.parse(line)
     except Exception as e:  # didn't parse
-      print(e)
+      print("Syntax Error: " + e)
     else:
       try:
         result = PrivateSemanticAnalyser(parse_tree)
         if result:
           print(result)
       except Exception as e:
-        print(e)
-        #traceback.print_exc(file=sys.stdout)
+        print("Error: " + str(e))
+        traceback.print_exc(file=sys.stdout)
 
 def load_code(filename):
   f = open(filename, "r").readlines()

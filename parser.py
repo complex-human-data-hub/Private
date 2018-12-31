@@ -24,6 +24,7 @@ def command():                  return [delete, \
                                         show_mccode, \
                                         show_sampler_status, \
                                         show_sets, \
+                                        show_jobs, \
                                         variables_to_calculate, \
                                         variables_to_sample, \
                                         show_builtins, \
@@ -38,6 +39,7 @@ def show_eval_code():           return "sevalcode"
 def show_mccode():              return "smccode"
 def show_sampler_status():      return "sss"
 def show_sets():                return "ss"
+def show_jobs():                return "sj"
 def variables_to_calculate():   return "vc"
 def variables_to_sample():      return "vs"
 def show_builtins():            return "sb"
