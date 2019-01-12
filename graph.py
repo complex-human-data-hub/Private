@@ -162,25 +162,6 @@ class graph:
         print "Pickle error with: ", key
         traceback.print_exc()
 
-#  def propagateUnknownDown(self, name):
-#    if name in self.probdependson:
-#      for child in self.probdependson[name]:
-#        if child in self.public and child not in self.builtins:
-#          self.setPrivacy(child, "unknown_privacy")
-#          self.propagateUnknownDown(child)
-
-#  def propagateUnknownUp(self, name):
-#    for parent in self.deterministicParents(name):
-#      if parent in self.public:
-#        self.setPrivacy(parent, "unknown_privacy")
-#        self.propagateUnknownUp(parent)
-
-#  def propagatePrivate(self, name):
-#    parents = self.deterministicParents(name)
-#    for parent in parents:
-#      self.setPrivacy(parent, "private")
-#      self.propagatePrivate(parent)
-
   def showPrivacy(self):
     res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
     return res
@@ -235,11 +216,9 @@ class graph:
       if allPublic:
         for name in variablestochange:
           self.privacySamplerResults[name] = "public"
-          #self.setPrivacy(name, "public")
       else:
         for name in variablestochange:
           self.privacySamplerResults[name] = "private"
-          #self.setPrivacy(name, "private")
 
     # set all variables except builtins to unknown_privacy
 
@@ -343,11 +322,6 @@ class graph:
       self.private.add(name)
     elif privacy == "public":
       self.public.add(name)
-      if name in self.deterministic and name in self.globals:
-        if type(self.globals[name]) == io.BytesIO:   # write image to file 
-          self.globals[name].seek(0)
-          with open(name+'.png', 'wb') as f:
-            shutil.copyfileobj(self.globals[name], f)
     elif privacy == "unknown_privacy":
       self.unknown_privacy.add(name)
     else:
@@ -448,10 +422,13 @@ class graph:
         res += "Private"
       elif name in self.unknown_privacy:
         res += "Privacy Unknown"
-      #elif name in self.computing_privacy:
-      #  res += "Computing Privacy"
       elif name in self.uptodate:
-        if type(self.globals[name]) == numpy.ndarray:
+        if type(self.globals[name]) == io.BytesIO:   # write image to file 
+          self.globals[name].seek(0)
+          with open(name+'.png', 'wb') as f:
+            shutil.copyfileobj(self.globals[name], f)
+          res += reprlib.repr(self.globals[name])
+        elif type(self.globals[name]) == numpy.ndarray:
           if longFormat:
             res += str(self.globals[name])
           else:
@@ -775,7 +752,6 @@ except Exception as e:
           self.globals[name] = value[name]
         else:
           self.globals[name] = "Not retained."
-          #self.setPrivacy(name, "public") # no problem making this public as there is nothing to see
           
         self.changeState(name, "uptodate")
 
