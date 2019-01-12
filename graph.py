@@ -166,59 +166,27 @@ class graph:
     res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
     return res
 
-
-  def computePrivacy(self):
-
-    self.acquire("computePrivacy")
-
-    # run privacy samplers if needed
-
-    AllEvents = self.globals["Events"]
-    users = set([e.UserId for e in AllEvents])
-    privacysamplerjobnames = ["__private_sampler__" + user for user in users] 
-    jobnames = privacysamplerjobnames + ["__private_sampler__"]
-
-    # if the privacy samplers aren't running,
-    # there are variables to be sampled,
-    # you have the full N samples,
-    # but don't have the privacy samples
-
-    if len(self.jobs) == 0 and \
-       self.canRunSampler() and \
-       "__private_sampler__" in self.sampler_chains.keys() and \
-       not all(jobname in self.sampler_chains.keys() for jobname in jobnames): 
-         sampler_names = self.variablesToBeSampled()
-         locals, sampler_code =  self.constructPyMC3code()
-         for user in users:
-           self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
-           myname = "__private_sampler__" + user
-           self.log.debug("jobs[%s]" % myname)
-           self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
-         self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
-
-    # calculate manifold privacy if you haven't and chains are ready
-    # results are stored in self.privacySamplerResults (privacy of variables is not set directly
-
-    if len(self.privacySamplerResults) == 0 and all(jobname in self.sampler_chains.keys() for jobname in jobnames):
-      self.log.debug("Have samples and calculating manifold privacy")
-      allPublic = True
-      for myname in privacysamplerjobnames:
-        self.log.debug(myname)
-        try:
-          d = distManifold(self.sampler_chains[myname], self.sampler_chains["__private_sampler__"]) * 100.
-        except Exception as e:
-          self.log.debug(str(e))
-        self.log.debug(myname + ": " + str(d))
-        allPublic = allPublic and d < PrivacyCriterion
-    
-      variablestochange = self.variablesToBeSampled()
-      self.log.debug("variables to change " + str(variablestochange))
-      if allPublic:
-        for name in variablestochange:
-          self.privacySamplerResults[name] = "public"
+  def checkPrivacyUp(self, name):
+    if name not in self.unknown_privacy:
+      return self.getPrivacy(name) == "public"
+    else:
+      probParents = self.probabilisticParents(name)
+      if len(probParents) == 0:
+        return False
       else:
-        for name in variablestochange:
-          self.privacySamplerResults[name] = "private"
+        return all(self.checkPrivacyUp(parent) for parent in probParents)
+      
+  def checkPrivacyDown(self, name):
+    if name not in self.unknown_privacy:
+      return self.getPrivacy(name) == "public"
+    else:
+      probChildren = self.probabilisticChildren(name)
+      if len(probChildren) == 0:
+        return False
+      else:
+        return all(self.checkPrivacyDown(child) for child in probChildren)
+
+  def calculateGraphPrivacy(self): # calcualte all privacy that can be determined by analysis of the variable dependency graph
 
     # set all variables except builtins to unknown_privacy
 
@@ -242,7 +210,7 @@ class graph:
         if name in self.privacySamplerResults.keys():
           self.setPrivacy(name, self.privacySamplerResults[name])
 
-        # if children are all public set to public
+        # if determinisitic children are all public set to public
 
         if name in self.deterministic:
           if all(child in self.public for child in self.deterministicChildren(name)):
@@ -252,15 +220,80 @@ class graph:
 
         if any(child in self.private for child in self.getChildren(name)):
           self.setPrivacy(name, "private")
+
+        # check probabilistic variables to see if they are public because the variables above and below them are public
+ 
+        if name in self.probabilistic - self.deterministic:
+          if self.checkPrivacyUp(name) and self.checkPrivacyDown(name):
+            self.setPrivacy(name, "public")
         
         # determine if privacy changed
 
         if self.getPrivacy(name) != oldPrivacy:
           something_changed = True
 
-        # log privacy 
+      # log privacy 
 
-        self.log.debug(self.showPrivacy())
+      self.log.debug(self.showPrivacy())
+
+  def computePrivacy(self):
+
+    self.acquire("computePrivacy")
+
+    self.calculateGraphPrivacy()
+
+    if len(self.unknown_privacy) != 0:
+
+      # run privacy samplers if needed
+
+      AllEvents = self.globals["Events"]
+      users = set([e.UserId for e in AllEvents])
+      privacysamplerjobnames = ["__private_sampler__" + user for user in users] 
+      jobnames = privacysamplerjobnames + ["__private_sampler__"]
+
+      # if the privacy samplers aren't running,
+      # there are variables to be sampled,
+      # you have the full N samples,
+      # but don't have the privacy samples
+
+      if len(self.jobs) == 0 and \
+         self.canRunSampler() and \
+         "__private_sampler__" in self.sampler_chains.keys() and \
+         not all(jobname in self.sampler_chains.keys() for jobname in jobnames): 
+           sampler_names = self.variablesToBeSampled()
+           locals, sampler_code =  self.constructPyMC3code()
+           for user in users:
+             self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
+             myname = "__private_sampler__" + user
+             self.log.debug("jobs[%s]" % myname)
+             self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
+           self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
+  
+      # calculate manifold privacy if you haven't and chains are ready
+      # results are stored in self.privacySamplerResults (privacy of variables is not set directly
+  
+      if len(self.privacySamplerResults) == 0 and all(jobname in self.sampler_chains.keys() for jobname in jobnames):
+        self.log.debug("Have samples and calculating manifold privacy")
+        allPublic = True
+        for myname in privacysamplerjobnames:
+          self.log.debug(myname)
+          try:
+            d = distManifold(self.sampler_chains[myname], self.sampler_chains["__private_sampler__"]) * 100.
+          except Exception as e:
+            self.log.debug(str(e))
+          self.log.debug(myname + ": " + str(d))
+          allPublic = allPublic and d < PrivacyCriterion
+      
+        variablestochange = self.variablesToBeSampled()
+        self.log.debug("variables to change " + str(variablestochange))
+        if allPublic:
+          for name in variablestochange:
+            self.privacySamplerResults[name] = "public"
+        else:
+          for name in variablestochange:
+            self.privacySamplerResults[name] = "private"
+
+        self.calculateGraphPrivacy()  # recalculate in case any changes in privacySamplerResults allows more variables to be determined
 
     self.release()
 
@@ -574,6 +607,14 @@ class graph:
     for parent in self.deterministic:
       if parent in self.dependson:
         if name in self.dependson[parent]:
+          parents.add(parent)
+    return(parents)
+
+  def probabilisticParents(self, name):
+    parents = set([])
+    for parent in self.probabilistic:
+      if parent in self.probdependson:
+        if name in self.probdependson[parent]:
           parents.add(parent)
     return(parents)
 
