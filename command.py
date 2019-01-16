@@ -15,7 +15,7 @@ def execute(line):
     try:
       parse_tree = parser.parse(line)
     except Exception as e:  # didn't parse
-      print("Syntax Error: " + e)
+      print("Syntax Error: " + str(e))
     else:
       try:
         result = PrivateSemanticAnalyser(parse_tree)

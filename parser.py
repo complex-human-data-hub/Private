@@ -118,7 +118,7 @@ if __name__ == "__main__":
   
   for rule, input_line in input_lines:
     try: 
-      parser = ParserPython(rule, debug=False)
+      parser = ParserPython(rule, debug=False, autokwd=True)
       parse_tree = parser.parse(input_line)
       print parse_tree
       print input_line, " is valid"

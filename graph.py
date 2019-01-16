@@ -399,26 +399,33 @@ class graph:
 
   def delete(self, name):
     self.acquire("delete "+name)
-    self.changeState(name, "stale")
+    if name in self.probabilistic | self.deterministic:
 
-    self.globals.pop(name, None)
-    self.deterministic.discard(name)
-    self.probabilistic.discard(name)
-    self.stale.discard(name)
-    self.private.discard(name)
-    self.public.discard(name)
-    self.unknown_privacy.discard(name)
-    #self.computing_privacy.discard(name)
+      self.changeState(name, "stale")
 
-    self.code.pop(name, None)
-    self.probcode.pop(name, None)
-    self.pyMC3code.pop(name, None)
+      self.globals.pop(name, None)
+      self.deterministic.discard(name)
+      self.probabilistic.discard(name)
+      self.stale.discard(name)
+      self.private.discard(name)
+      self.public.discard(name)
+      self.unknown_privacy.discard(name)
+      #self.computing_privacy.discard(name)
 
-    self.dependson.pop(name, None)
-    self.probdependson.pop(name, None)
-    self.comment.pop(name, None)
+      self.code.pop(name, None)
+      self.probcode.pop(name, None)
+      self.pyMC3code.pop(name, None)
+
+      self.dependson.pop(name, None)
+      self.probdependson.pop(name, None)
+      self.comment.pop(name, None)
+      res = ""
+    else:
+      res = name + " not found."
+
     self.release()
     self.computePrivacy() # every delete could change the privacy assignments
+    return res
   
 #  def has_descendants(self, name):
 #      # Checks if a node given by 'name' has any descendants

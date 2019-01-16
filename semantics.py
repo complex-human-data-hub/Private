@@ -193,10 +193,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
     def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(depGraph.server.get_ncpus()))
     def visit_comment_line(self, node, children):             return result("comment_line", "")
-    def visit_delete(self, node, children):
-      depGraph.delete(children[0].code)
-      return result("show_delete", "")
-
+    def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[0].code))
     def visit_help(self, node, children):
         res = """
 dt: draw variable dependency tree
