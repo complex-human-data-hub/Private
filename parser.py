@@ -34,6 +34,9 @@ def command():                  return [delete, \
                                         show_prob_builtins, \
                                         show_ncpus, \
                                         help]
+def comment():                  return identifier, comment_string
+def delete():                   return "del", identifier
+def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
 def show_dependencies():        return "sd"
@@ -94,13 +97,10 @@ def command_line_expression():  return expression # this is here to catch when p
 #def identifier_list():          return identifier, ZeroOrMore(",", identifier)
 #def long_import():              return "from", module_name, "import", [identifier_list, starsym]
 #def all_import():               return [short_import, long_import]
-def comment():                  return identifier, comment_string
-def delete():                   return "del", identifier
-def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
 def line():                     return [command, assignment, command_line_expression, comment_line], EOF
 
 def PrivateParser():
-  return(ParserPython(line, debug = False))
+  return(ParserPython(line, debug = False, autokwd=True))
 
 if __name__ == "__main__":
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
   
   for rule, input_line in input_lines:
     try: 
-      parser = ParserPython(rule, debug=False, autokwd=True)
+      parser = ParserPython(rule, debug=True, autokwd=True)
       parse_tree = parser.parse(input_line)
       print parse_tree
       print input_line, " is valid"
