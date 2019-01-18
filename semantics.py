@@ -85,11 +85,11 @@ class InputVisitor(PTNodeVisitor):
     def visit_enumerated_list(self, node, children):
         return result("enumerated_list", "[" + ", ".join([c.code for c in children]) + "]", children)
     def visit_list_comprehension(self, node, children):
-        if len(children) == 3:
-          res = result("list_comprehension", "[" + children[0].code + " for " + children[1].code + " in " + children[2].code + "]", children)
+        if len(children) == 5:
+          res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + "]", children)
         else:
-          res = result("list_comprehension", "[" + children[0].code + " for " + children[1].code + " in " + children[2].code + " if " + children[3].code + "]", children)
-        res.remove_dependencies(children[1].depend)
+          res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "]", children)
+        res.remove_dependencies(children[2].depend)
         return res
     def visit_list(self, node, children):
         return result("list", children[0].code, children)
