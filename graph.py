@@ -4,7 +4,7 @@ import reprlib
 import numpy
 from collections import OrderedDict
 import logging
-from builtins import builtins, prob_builtins, setPrivacy
+from builtins import builtins, prob_builtins, setBuiltinPrivacy
 import copy
 from manifoldprivacy import distManifold
 import shutil
@@ -84,6 +84,8 @@ class graph:
     self.server = pp.Server()
     self.log = logging.getLogger("Private")
     #self.nxgraph = nx.DiGraph()
+    self.SamplerParameterUpdated = False
+    setBuiltinPrivacy(self) # set privacy of builtins
 
   def acquire(self, who):
     self.lock.acquire()
@@ -737,7 +739,7 @@ except Exception as e:
       sampler_names = self.variablesToBeSampled()
       self.log.debug("sampler names: " + str(sampler_names))
       self.log.debug("stale names: " + str(self.stale))
-      if sampler_names & self.stale != set([]):
+      if self.SamplerParameterUpdated or (sampler_names & self.stale != set([])):
         if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
           locals, sampler_code =  self.constructPyMC3code()
           for name in sampler_names:
@@ -747,6 +749,7 @@ except Exception as e:
           self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
           self.samplerexception = {}
           self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
+        self.SamplerParameterUpdated = False
     self.release()
 
   def callback(self, returnvalue):
@@ -758,6 +761,8 @@ except Exception as e:
     else:
       self.globals[name] = value
       self.changeState(name, "uptodate")
+      if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+        self.SamplerParameterUpdated = True
       #if type(value) == io.BytesIO:   # write image to file 
       #  value.seek(0)
       #  with open(name+'.png', 'wb') as f:
@@ -867,4 +872,3 @@ def samplerjob(myname, names, code, globals, locals):
     return (myname, names, e, "No Exception Variable")
 
 depGraph = graph()
-setPrivacy(depGraph) # set privacy of builtins
