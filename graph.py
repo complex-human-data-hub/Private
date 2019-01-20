@@ -636,6 +636,28 @@ class graph:
   def deterministicChildren(self, name):
     return self.dependson.get(name, set([]))
 
+
+  def isAncestor(self, name1, name2):
+    parents = self.getParents(name2)
+    if parents == set():
+      return False
+    elif name1 in parents:
+      return True
+    else:
+      return any(self.isAncestor(name1, parent) for parent in parents)
+    
+  def bubbleSort(self, names):
+    changed = True
+    while changed:
+      changed = False
+      i = 0
+      for i in xrange(len(names)-1):
+        if self.isAncestor(names[i], names[i+1]):
+          t = names[i]
+          names[i] = names[i+1]
+          names[i+1] = t
+          changed = True
+    
   def constructPyMC3code(self):
     locals = {}
     loggingcode = """
@@ -660,8 +682,9 @@ try:
     # sigma = pm.HalfNormal('sigma', sd=1)
     # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    probabilsitic_only_names = list(self.probabilistic - self.deterministic)
-    for name in probabilsitic_only_names:
+    probabilistic_only_names = list(self.probabilistic - self.deterministic)
+    self.bubbleSort(probabilistic_only_names)
+    for name in probabilistic_only_names:
       code += '    exception_variable = "%s"\n' % name
       code += "    " + self.pyMC3code[name] % ""+ "\n"
 
