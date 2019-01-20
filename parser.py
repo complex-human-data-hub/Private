@@ -18,6 +18,7 @@ def command():                  return [delete, \
                                         comment, \
                                         draw_tree, \
                                         show_variables, \
+                                        clear_variables, \
                                         show_dependencies, \
                                         show_code, \
                                         show_eval_code, \
@@ -39,6 +40,7 @@ def delete():                   return "del", identifier
 def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
+def clear_variables():          return "clear"
 def show_dependencies():        return "sd"
 def show_code():                return "scode"
 def show_eval_code():           return "sevalcode"

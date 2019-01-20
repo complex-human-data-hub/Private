@@ -177,6 +177,10 @@ class InputVisitor(PTNodeVisitor):
     def visit_command(self, node, children):                  return result("command", children[0].code)
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
+    def visit_clear_variables(self, node, children):
+      global depGraph
+      depGraph = graph()
+      return result("clear_variables", "All variables removed.")
     def visit_show_dependencies(self, node, children):        return result("show_dependencies", depGraph.show_dependencies())
     def visit_show_code(self, node, children):                return result("show_code", depGraph.show_code())
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", depGraph.show_eval_code())
@@ -193,9 +197,10 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
     def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(depGraph.server.get_ncpus()))
     def visit_comment_line(self, node, children):             return result("comment_line", "")
-    def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[0].code))
+    def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[1].code))
     def visit_help(self, node, children):
         res = """
+clear: remove all variables and restart
 dt: draw variable dependency tree
 sv: show variables
 sd: show dependencies
