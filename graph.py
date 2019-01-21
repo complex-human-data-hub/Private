@@ -2,7 +2,7 @@ import multiprocessing
 import pp
 import reprlib 
 import numpy
-from collections import OrderedDict
+from collections import OrderedDict, deque
 import logging
 from builtins import builtins, prob_builtins, setBuiltinPrivacy
 import copy
@@ -499,7 +499,7 @@ class graph:
       
   def __repr__(self):
     codebits = []
-    codewidth = 80
+    codewidth = 50
     valuewidth = 80
     for name in self.code.keys():
       codebits.append(name + " = " + str(self.code[name]))
@@ -646,18 +646,42 @@ class graph:
     else:
       return any(self.isAncestor(name1, parent) for parent in parents)
     
-  def bubbleSort(self, names):
-    changed = True
-    while changed:
-      changed = False
-      i = 0
-      for i in xrange(len(names)-1):
-        if self.isAncestor(names[i], names[i+1]):
-          t = names[i]
-          names[i] = names[i+1]
-          names[i+1] = t
-          changed = True
-    
+
+
+  def topological_sort(self):
+    order, enter, state = deque(), self.probabilistic | self.deterministic, {}
+    GRAY, BLACK = 0, 1
+
+    def dfs(node):
+      state[node] = GRAY
+      for k in self.dependson.get(node, ()):
+        sk = state.get(k, None)
+        if sk == GRAY: raise ValueError("cycle")
+        if sk == BLACK: continue
+        enter.discard(k)
+        dfs(k)
+      order.appendleft(node)
+      state[node] = BLACK
+
+    while enter: dfs(enter.pop())
+    return [name for name in order if name in self.probabilistic - self.deterministic]
+
+  def topological_sort_bak(self):
+    result = []
+    seen = set()
+    prob_only = self.probabilistic - self.deterministic
+    node = list(prob_only)[0]
+
+    def recursive_helper(node):
+      for neighbor in self.dependson.get(node, []):
+        if neighbor not in seen:
+          seen.add(neighbor)
+          recursive_helper(neighbor)
+      result.insert(0, node)         
+
+    recursive_helper(node)
+    return result
+
   def constructPyMC3code(self):
     locals = {}
     loggingcode = """
@@ -682,8 +706,8 @@ try:
     # sigma = pm.HalfNormal('sigma', sd=1)
     # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    probabilistic_only_names = list(self.probabilistic - self.deterministic)
-    self.bubbleSort(probabilistic_only_names)
+    probabilistic_only_names = self.topological_sort()
+
     for name in probabilistic_only_names:
       code += '    exception_variable = "%s"\n' % name
       code += "    " + self.pyMC3code[name] % ""+ "\n"
