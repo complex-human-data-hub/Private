@@ -466,9 +466,9 @@ class graph:
         res += "Privacy Unknown"
       elif name in self.uptodate:
         if type(self.globals[name]) == io.BytesIO:   # write image to file 
-          self.globals[name].seek(0)
-          with open(name+'.png', 'wb') as f:
-            shutil.copyfileobj(self.globals[name], f)
+          #self.globals[name].seek(0)
+          #with open(name+'.png', 'wb') as f:
+          #  shutil.copyfileobj(self.globals[name], f)
           res += reprlib.repr(self.globals[name])
         elif type(self.globals[name]) == numpy.ndarray:
           if longFormat:
@@ -810,10 +810,10 @@ except Exception as e:
       self.changeState(name, "uptodate")
       if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
         self.SamplerParameterUpdated = True
-      #if type(value) == io.BytesIO:   # write image to file 
-      #  value.seek(0)
-      #  with open(name+'.png', 'wb') as f:
-      #    shutil.copyfileobj(value, f)
+      if type(value) == io.BytesIO:   # write image to file 
+        value.seek(0)
+        with open(name+'.png', 'wb') as f:
+          shutil.copyfileobj(value, f)
     del self.jobs[name]
 
     self.release()
