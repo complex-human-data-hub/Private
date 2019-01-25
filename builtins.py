@@ -1,3 +1,6 @@
+import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
+matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
+                       # note these lines need to be at top of script
 import numpy.random
 import numpy
 from event import Event
@@ -161,8 +164,11 @@ def Constant(c, size):
 
 # Plotting Function Definitions
 
-def distplot(x):  # have to stop this plotting if x is Private
-  seaborn.distplot(x)
+def distplot(a, **kwargs):  # have to stop this plotting if x is Private
+  try:                                      # this is wrapped in a try because distplot throws a future warning that prevents execution
+    seaborn.distplot(a, **kwargs)
+  except Exception as e:
+    pass
   buf = io.BytesIO()
   plt.savefig(buf, format="png")
   plt.close()
@@ -173,6 +179,9 @@ def private_mean(x):
 
 def private_median(x):
   return numpy.median(x)
+
+def private_percentile(x, percent):
+  return numpy.percentile(x, percent)
 
 def private_std(x):
   return numpy.std(x)
@@ -406,6 +415,7 @@ builtins = {\
 
             "mean": private_mean, \
             "median": private_median, \
+            "percentile": private_percentile, \
             "std": private_std, \
 
             # Standard python builtins that don't generate privacy problems

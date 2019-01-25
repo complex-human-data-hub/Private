@@ -121,6 +121,9 @@ class InputVisitor(PTNodeVisitor):
         fn = children[0].code
         return result("indexed_variable", fn + "[" + ", ".join(c.code for c in children[1:]) + "]", children)
 
+    def visit_named_argument(self, node, children):
+        return result("named_argument", children[0].code + " = " + children[1].code)
+
     def visit_function_call(self, node, children):
         fn = children[0].code
         if fn == "set":

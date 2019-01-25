@@ -81,7 +81,8 @@ def bracketed_expression():     return "(", expression, ")"
 def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), list, atom]
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
-def argument():                 return [expression, (identifier, "=", expression)]
+def named_argument():           return identifier, "=", expression
+def argument():                 return [named_argument, expression]
 def function_call():            return identifier, "(", ZeroOrMore(argument, ","), argument, ")"
 def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def indexed_variable():         return dottedidentifier, "[", ZeroOrMore(expression, ","), expression, "]"
