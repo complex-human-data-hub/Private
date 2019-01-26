@@ -150,8 +150,12 @@ class graph:
   def eval_command_line_expression(self, code, dependson):
     nonpublic = set(dependson) - self.public
     if nonpublic == set():
-      s = str(eval(code, self.globals, self.locals))
-      return s
+      nonuptodate = set(dependson) - self.uptodate
+      if nonuptodate == set():
+        s = str(eval(code, self.globals, self.locals))
+        return s
+      else:
+        return "Some dependencies are not uptodate: " + ppset(nonuptodate)
     else:
       return "Some dependencies are not public: " + ppset(nonpublic)
 
