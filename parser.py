@@ -28,6 +28,7 @@ def command():                  return [delete, \
                                         show_sampler_results, \
                                         show_pp_stats, \
                                         show_sets, \
+                                        show_globals, \
                                         show_jobs, \
                                         variables_to_calculate, \
                                         variables_to_sample, \
@@ -50,6 +51,7 @@ def show_sampler_chains():      return "ssc"
 def show_sampler_results():     return "ssr"
 def show_pp_stats():            return "spp"
 def show_sets():                return "ss"
+def show_globals():             return "sg"
 def show_jobs():                return "sj"
 def variables_to_calculate():   return "vc"
 def variables_to_sample():      return "vs"

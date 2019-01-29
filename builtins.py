@@ -9,6 +9,7 @@ import seaborn
 import matplotlib.pyplot as plt
 import io
 import pymc3 as pm
+import copy
 
 # Deterministic Continuous Distribution Definitions
 
@@ -403,7 +404,7 @@ builtins = {\
 
             "NumberOfTuningSamples": 200, \
             "NumberOfChains": 2, \
-            "NumberOfSamples": 200, \
+            "NumberOfSamples": 400, \
 
             # Data
 
@@ -505,3 +506,20 @@ def showProbBuiltins():
   res += showNames(list(prob_builtins))
   return res
 
+def setUserIds():
+  return set([e.UserId for e in builtins["Events"]])
+
+def setGlobals():
+  # create a new set of globals with data that removes each user
+
+  result = {}
+  result["All"] = copy.copy(builtins)
+  users = set(e.UserId for e in builtins["Events"])
+  for user in users:
+    result[user] = copy.copy(builtins)
+    result[user]["Events"] = [e for e in builtins["Events"] if e.UserId != user]
+    result[user]["DemoEvents"] = result[user]["Events"]
+    
+  return result
+
+  

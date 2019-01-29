@@ -193,6 +193,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", depGraph.showSamplerResults())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(depGraph.server.get_stats()['local']))
     def visit_show_sets(self, node, children):                return result("show_sets", depGraph.show_sets())
+    def visit_show_globals(self, node, children):             return result("show_globals", depGraph.showGlobals())
     def visit_show_jobs(self, node, children):                return result("show_jobs", depGraph.show_jobs())
     def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", depGraph.variablesToBeCalculated())
     def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", depGraph.variablesToBeSampled())
@@ -214,6 +215,7 @@ sss: show sampler status
 ssc: show sampler chains
 ssr: show sampler results
 ss: show sets
+sg: show globals
 sj: show jobs
 vc: variables to calculate
 vs: variables to sample

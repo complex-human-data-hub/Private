@@ -4,7 +4,7 @@ import reprlib
 import numpy
 from collections import OrderedDict, deque
 import logging
-from builtins import builtins, prob_builtins, setBuiltinPrivacy
+from builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
 import copy
 from manifoldprivacy import distManifold
 import shutil
@@ -14,6 +14,7 @@ import traceback
 import pprint
 import dill as pickle
 import os
+import base64
 
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
@@ -46,7 +47,8 @@ class graph:
 
     # variables related to values
 
-    self.globals = copy.copy(builtins)
+    self.globals = setGlobals()
+    self.userids = setUserIds()
     self.locals = {}
     self.stale = set() 
     self.computing = set()
@@ -114,7 +116,14 @@ class graph:
     result += "unknown_privacy: "+ ppset(self.unknown_privacy) + "\n"
     result += "\n"
     result += "locals: "+ ppset(self.locals.keys()) + "\n"
-    result += "globals: "+ ppset(self.globals.keys()) + "\n"
+    result += "globals: "+ ppset(self.globals["All"].keys()) + "\n"
+    return result
+
+  def showGlobals(self):
+    result = ""
+    result += "All: "+ str(self.globals["All"].get("r", "Not here")) + "\n"
+    for user in self.userids:
+      result += user + ": "+ str(self.globals[user].get("r", "Not here")) + "\n"
     return result
 
   def show_jobs(self):
@@ -147,12 +156,17 @@ class graph:
       else:
         return all(self.checkprivacydown(child) for child in children)
 
-  def eval_command_line_expression(self, code, dependson):
+  def eval_command_line_expression(self, code, dependson, whichglobals = "All"):
     nonpublic = set(dependson) - self.public
     if nonpublic == set():
       nonuptodate = set(dependson) - self.uptodate
       if nonuptodate == set():
-        s = str(eval(code, self.globals, self.locals))
+        val = eval(code, self.globals[whichglobals], self.locals)
+        if type(val) == io.BytesIO:
+          #res += reprlib.repr(val)
+          s = "data:image/png;base64, " + base64.b64encode(val.getvalue())
+        else:
+          s = str(val)
         return s
       else:
         return "Some dependencies are not uptodate: " + ppset(nonuptodate)
@@ -160,7 +174,7 @@ class graph:
       return "Some dependencies are not public: " + ppset(nonpublic)
 
   def checkPickling(self):
-    for key, value in self.globals.items():
+    for key, value in self.globals["All"].items():
       try:
         f = open(os.devnull, "w")
         pickle.dump(value, f)
@@ -192,7 +206,7 @@ class graph:
       else:
         return all(self.checkPrivacyDown(child) for child in probChildren)
 
-  def calculateGraphPrivacy(self): # calcualte all privacy that can be determined by analysis of the variable dependency graph
+  def computePrivacy(self): 
 
     # set all variables except builtins to unknown_privacy
 
@@ -242,66 +256,41 @@ class graph:
 
       self.log.debug(self.showPrivacy())
 
-  def computePrivacy(self):
-
-    self.acquire("computePrivacy")
-
-    self.calculateGraphPrivacy()
-
-    if len(self.unknown_privacy) != 0:
-
-      # run privacy samplers if needed
-
-      AllEvents = self.globals["Events"]
-      users = set([e.UserId for e in AllEvents])
-      privacysamplerjobnames = ["__private_sampler__" + user for user in users] 
-      jobnames = privacysamplerjobnames + ["__private_sampler__"]
-
-      # if the privacy samplers aren't running,
-      # there are variables to be sampled,
-      # you have the full N samples,
-      # but don't have the privacy samples
-
-      if len(self.jobs) == 0 and \
-         self.canRunSampler() and \
-         "__private_sampler__" in self.sampler_chains.keys() and \
-         not all(jobname in self.sampler_chains.keys() for jobname in jobnames): 
-           sampler_names = self.variablesToBeSampled()
-           locals, sampler_code =  self.constructPyMC3code()
-           for user in users:
-             self.globals["Events"] = [e for e in AllEvents if e.UserId != user]
-             myname = "__private_sampler__" + user
-             self.log.debug("jobs[%s]" % myname)
-             self.jobs[myname] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.privacysamplercallback)
-           self.globals["Events"] = AllEvents # make sure to set globals["Events"] back to the entire data set on completion
-  
-      # calculate manifold privacy if you haven't and chains are ready
-      # results are stored in self.privacySamplerResults (privacy of variables is not set directly
-  
-      if len(self.privacySamplerResults) == 0 and all(jobname in self.sampler_chains.keys() for jobname in jobnames):
-        self.log.debug("Have samples and calculating manifold privacy")
-        allPublic = True
-        for myname in privacysamplerjobnames:
-          self.log.debug(myname)
-          try:
-            d = distManifold(self.sampler_chains[myname], self.sampler_chains["__private_sampler__"]) * 100.
-          except Exception as e:
-            self.log.debug(str(e))
-          self.log.debug(myname + ": " + str(d))
-          allPublic = allPublic and d < PrivacyCriterion
-      
-        variablestochange = self.variablesToBeSampled()
-        self.log.debug("variables to change " + str(variablestochange))
-        if allPublic:
-          for name in variablestochange:
-            self.privacySamplerResults[name] = "public"
-        else:
-          for name in variablestochange:
-            self.privacySamplerResults[name] = "private"
-
-        self.calculateGraphPrivacy()  # recalculate in case any changes in privacySamplerResults allows more variables to be determined
-
-    self.release()
+#  def computePrivacy.old(self):
+#
+#    self.acquire("computePrivacy")
+#
+#    self.calculateGraphPrivacy()
+#
+#    if len(self.unknown_privacy) != 0:
+#
+#      # calculate manifold privacy if you haven't and chains are ready
+#      # results are stored in self.privacySamplerResults (privacy of variables is not set directly
+#  
+#      if len(self.privacySamplerResults) == 0 and all(jobname in self.sampler_chains.keys() for jobname in jobnames):
+#        self.log.debug("Have samples and calculating manifold privacy")
+#        allPublic = True
+#        for myname in privacysamplerjobnames:
+#          self.log.debug(myname)
+#          try:
+#            d = distManifold(self.sampler_chains[myname], self.sampler_chains["__private_sampler__"]) * 100.
+#          except Exception as e:
+#            self.log.debug(str(e))
+#          self.log.debug(myname + ": " + str(d))
+#          allPublic = allPublic and d < PrivacyCriterion
+#      
+#        variablestochange = self.variablesToBeSampled()
+#        self.log.debug("variables to change " + str(variablestochange))
+#        if allPublic:
+#          for name in variablestochange:
+#            self.privacySamplerResults[name] = "public"
+#        else:
+#          for name in variablestochange:
+#            self.privacySamplerResults[name] = "private"
+#
+#        self.calculateGraphPrivacy()  # recalculate in case any changes in privacySamplerResults allows more variables to be determined
+#
+#    self.release()
 
 
   def changeState(self, name, newstate):
@@ -409,7 +398,7 @@ class graph:
 
       self.changeState(name, "stale")
 
-      self.globals.pop(name, None)
+      self.globals["All"].pop(name, None)
       self.deterministic.discard(name)
       self.probabilistic.discard(name)
       self.stale.discard(name)
@@ -463,38 +452,36 @@ class graph:
       elif name in self.computing:
         res += "Computing"
       elif name in self.exception: 
-        res += "Exception: " + str(self.globals[name])
+        res += "Exception: " + str(self.globals["All"][name])
       elif name in self.private:
         res += "Private"
       elif name in self.unknown_privacy:
         res += "Privacy Unknown"
       elif name in self.uptodate:
-        if type(self.globals[name]) == io.BytesIO:   # write image to file 
-          #self.globals[name].seek(0)
-          #with open(name+'.png', 'wb') as f:
-          #  shutil.copyfileobj(self.globals[name], f)
-          res += reprlib.repr(self.globals[name])
-        elif type(self.globals[name]) == numpy.ndarray:
+        if type(self.globals["All"][name]) == io.BytesIO:   # write image to file 
+          #res += reprlib.repr(self.globals["All"][name])
+          res += base64.b64encode(self.globals["All"][name].getvalue())
+        elif type(self.globals["All"][name]) == numpy.ndarray:
           if longFormat:
-            res += str(self.globals[name])
+            res += str(self.globals["All"][name])
           else:
-            s = self.globals[name].shape
-            res += "[" * len(s) + "%f" % self.globals[name].ravel()[0] + " ... " + "%f" % self.globals[name].ravel()[-1] + "]" * len(s)
-        elif type(self.globals[name]) == float: # always display floats in full
-          res += str(self.globals[name])
+            s = self.globals["All"][name].shape
+            res += "[" * len(s) + "%f" % self.globals["All"][name].ravel()[0] + " ... " + "%f" % self.globals["All"][name].ravel()[-1] + "]" * len(s)
+        elif type(self.globals["All"][name]) == float: # always display floats in full
+          res += str(self.globals["All"][name])
         else:
           if longFormat:
-            res += json.dumps(self.globals[name], indent=4)
+            res += json.dumps(self.globals["All"][name], indent=4)
           else:
-            res += reprlib.repr(self.globals[name])
+            res += reprlib.repr(self.globals["All"][name])
       else:
         raise Exception(name + " is not stale, computing, exception or uptodate.")
     elif name in self.builtins:
       if name in self.public:
         if longFormat:
-          res += str(self.globals[name])
+          res += str(self.globals["All"][name])
         else:
-          res += reprlib.repr(self.globals[name])
+          res += reprlib.repr(self.globals["All"][name])
       else:
         res += "Private"
     else:
@@ -686,7 +673,7 @@ class graph:
     recursive_helper(node)
     return result
 
-  def constructPyMC3code(self):
+  def constructPyMC3code(self, user):
     locals = {}
     loggingcode = """
 logging = __import__("logging")
@@ -721,7 +708,7 @@ try:
       code += '    exception_variable = "%s"\n' % name
       obsname = "__private_%s_observed" % name
       code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-      locals[obsname] = self.globals[name]
+      locals[obsname] = self.globals[user][name]
 
     code += """
     __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
@@ -738,7 +725,7 @@ except Exception as e:
   e.args = (newErrorString,)
   __private_result__ = (e, exception_variable)
 
-""".format(NumberOfSamples=self.globals["NumberOfSamples"], NumberOfChains=self.globals["NumberOfChains"], NumberOfTuningSamples=self.globals["NumberOfTuningSamples"])
+""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
     return locals, code
 
   def canRunSampler(self, verbose=False):
@@ -782,7 +769,9 @@ except Exception as e:
       if name not in self.jobs:
         self.changeState(name, "computing")
         self.log.debug("Calculate: " + name + " " + self.code[name])
-        self.jobs[name] = self.server.submit(job, (name, self.evalcode[name], self.globals, self.locals), callback=self.callback)
+        self.jobs[name + " All"] = self.server.submit(job, (name, "All", self.evalcode[name], self.globals["All"], self.locals), callback=self.callback)
+        for user in self.userids:
+          self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
       
     
     self.log.debug("self.jobs: " + str(self.jobs.keys()))
@@ -792,33 +781,38 @@ except Exception as e:
       self.log.debug("stale names: " + str(self.stale))
       if self.SamplerParameterUpdated or (sampler_names & self.stale != set([])):
         if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
-          locals, sampler_code =  self.constructPyMC3code()
           for name in sampler_names:
             self.changeState(name, "computing")
-          myname = "__private_sampler__"
+          myname = "__private_sampler__All"
           self.sampler_chains = {} # remove all sampler chains as they are now stale
           self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
           self.samplerexception = {}
-          self.jobs["__private_sampler__"] = self.server.submit(samplerjob, (myname, sampler_names, sampler_code, self.globals, locals), callback=self.samplercallback)
+          locals, sampler_code =  self.constructPyMC3code("All")
+          self.jobs[myname] = self.server.submit(samplerjob, (myname, "All", sampler_names, sampler_code, self.globals["All"], locals), callback=self.samplercallback)
+          for user in self.userids:
+            myname = "__private_sampler__" + user
+            locals, sampler_code =  self.constructPyMC3code(user)
+            self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
         self.SamplerParameterUpdated = False
     self.release()
 
   def callback(self, returnvalue):
     self.acquire("callback")
-    name, value = returnvalue
+    name, user, value = returnvalue
     if isinstance(value, Exception):
-      self.globals[name] = str(value)
+      self.globals[user][name] = str(value)
       self.changeState(name, "exception")
     else:
-      self.globals[name] = value
-      self.changeState(name, "uptodate")
-      if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
-        self.SamplerParameterUpdated = True
-      if type(value) == io.BytesIO:   # write image to file 
-        value.seek(0)
-        with open(name+'.png', 'wb') as f:
-          shutil.copyfileobj(value, f)
-    del self.jobs[name]
+      self.globals[user][name] = value
+      if user == "All":
+        self.changeState(name, "uptodate")
+        if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+          self.SamplerParameterUpdated = True
+        if type(value) == io.BytesIO:   # write image to file 
+          value.seek(0)
+          with open(name+'.png', 'wb') as f:
+            shutil.copyfileobj(value, f)
+    del self.jobs[name + " " + user]
 
     self.release()
     self.compute()
@@ -826,10 +820,10 @@ except Exception as e:
 
   def samplercallback(self, returnvalue):  
     self.acquire("samplercallback")
-    myname, names, value, exception_variable = returnvalue
+    myname, user, names, value, exception_variable = returnvalue
     if isinstance(value, Exception):
       for name in names:
-        self.globals[name] = ""
+        self.globals[user][name] = ""
         self.changeState(name, "exception")
       if exception_variable != "No Exception Variable":
         m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
@@ -846,20 +840,59 @@ except Exception as e:
         if len(tochecknames) > 0:
           sampleslist = [value[name] for name in tochecknames]
           samples = numpy.concatenate(sampleslist)
-        self.sampler_chains[myname] = samples
-        self.log.debug(self.showSamplerChains())
+        self.globals[user]["sampler_chains"] = samples
+        self.log.debug("Added sampler_chains for " + user)
       except Exception as e:
         self.log.debug("in samplercallback" + str(e))
 
-      for name in names:
-        if name in value.varnames:
-          self.globals[name] = value[name]
-        else:
-          self.globals[name] = "Not retained."
-          
-        self.changeState(name, "uptodate")
+      try:
+        for name in names:
+          if name in value.varnames:
+            self.globals[user][name] = value[name]
+          else:
+            self.globals[user][name] = "Not retained."
 
-    del self.jobs["__private_sampler__"]
+        # if all variables in all globals have been computed then set the variables to uptodate
+        aname = list(names)[0]
+        whichsamplersarecomplete = [isinstance(self.globals["All"].get(aname, None), numpy.ndarray)] + [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
+        self.log.debug(str(whichsamplersarecomplete))
+        if all(whichsamplersarecomplete):
+          self.log.debug("sampling all done")
+          for name in names:
+            self.changeState(name, "uptodate")
+
+          # calculate manifold privacy 
+          # results are stored in self.privacySamplerResults (privacy of variables is not set directly
+  
+            self.log.debug("Have samples and calculating manifold privacy")
+            allPublic = True
+            for user in self.userids:
+              try:
+                d = distManifold(self.globals[user]["sampler_chains"], self.globals["All"]["sampler_chains"]) * 100.
+                self.log.debug("d = %f" % d)
+              except Exception as e:
+                self.log.debug(str(e))
+              self.log.debug(user + ": " + str(d))
+              allPublic = allPublic and d < PrivacyCriterion
+      
+            variablestochange = self.variablesToBeSampled()
+            self.log.debug("variables to change " + str(variablestochange))
+            if allPublic:
+              for name in variablestochange:
+                self.privacySamplerResults[name] = "public"
+            else:
+              for name in variablestochange:
+                self.privacySamplerResults[name] = "private"
+        else:
+          self.log.debug("still more samples to compute" + str(whichsamplersarecomplete))
+      except Exception as e:
+        self.log.debug("in samplercallback when assigning values " + str(e))
+          
+
+    try:
+      del self.jobs[myname]
+    except Exception as e:
+      self.log.debug("trying ot del job " + str(e))
     self.release()
     self.compute()
     self.computePrivacy()
@@ -886,40 +919,40 @@ except Exception as e:
       res += k + ": " + v + "\n"
     return res
 
-  def privacysamplercallback(self, returnvalue):  
-    self.acquire("privacysamplercallback")
-    try:
-      myname, names, value, exception_variable = returnvalue
-      del self.jobs[myname]
-      #tochecknames = list(value.varnames)
-      #self.log.debug("tochecknames: " + str(self.computing_privacy & set(value.varnames)))
-      if len(value.varnames) > 0:
-        sampleslist = [value[name] for name in value.varnames]
-        samples = numpy.concatenate(sampleslist)
-        self.sampler_chains[myname] = samples
-      else:
-        self.log.error("No names to check in privacysamplercallback")
-        #self.log.error("self.computing_privacy = " + str(self.computing_privacy))
-        self.log.error("value.varnames = " + str(value.varnames))
-    except Exception as e:
-      self.log.debug("In privacysamplercallback "+ str(e))
-    self.release()
-    self.compute()
-    self.computePrivacy() # need to recompute privacy to update sampled variables privacy and to propagate to other determinisitically dependent variables
+#  def privacysamplercallback(self, returnvalue):  
+#    self.acquire("privacysamplercallback")
+#    try:
+#      myname, names, value, exception_variable = returnvalue
+#      del self.jobs[myname]
+#      #tochecknames = list(value.varnames)
+#      #self.log.debug("tochecknames: " + str(self.computing_privacy & set(value.varnames)))
+#      if len(value.varnames) > 0:
+#        sampleslist = [value[name] for name in value.varnames]
+#        samples = numpy.concatenate(sampleslist)
+#        self.sampler_chains[myname] = samples
+#      else:
+#        self.log.error("No names to check in privacysamplercallback")
+#        #self.log.error("self.computing_privacy = " + str(self.computing_privacy))
+#        self.log.error("value.varnames = " + str(value.varnames))
+#    except Exception as e:
+#      self.log.debug("In privacysamplercallback "+ str(e))
+#    self.release()
+#    self.compute()
+#    self.computePrivacy() # need to recompute privacy to update sampled variables privacy and to propagate to other determinisitically dependent variables
 
-def job(name, code, globals, locals):
+def job(name, user, code, globals, locals):
   try:
     value = eval(code, globals, locals)
-    return((name, value))
+    return((name, user, value))
   except Exception as e:
-    return((name, e))
+    return((name, user, e))
 
-def samplerjob(myname, names, code, globals, locals):
+def samplerjob(myname, user, names, code, globals, locals):
   try:
     exec(code, globals, locals)
     value, exception_variable = locals["__private_result__"]
-    return (myname, names, value, exception_variable)
+    return (myname, user, names, value, exception_variable)
   except Exception as e:
-    return (myname, names, e, "No Exception Variable")
+    return (myname, user, names, e, "No Exception Variable")
 
 depGraph = graph()
