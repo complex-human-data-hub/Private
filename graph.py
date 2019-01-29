@@ -20,7 +20,7 @@ logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 numpy.set_printoptions(precision=3)
 
-PrivacyCriterion = 1.0   # percent
+PrivacyCriterion = 11.0   # percent
 
 def ppset(s):
   """
@@ -208,10 +208,17 @@ class graph:
 
   def computePrivacy(self): 
 
-    # set all variables except builtins to unknown_privacy
+    self.acquire("computePrivacy")
 
+    # set all variables except builtins to unknown_privacy
     self.setAllUnknown()
-    self.log.debug(self.showPrivacy())
+
+    self.computeGraphPrivacy()
+    self.computeProbabilisticPrivacy()
+    self.computeGraphPrivacy()
+    self.release()
+
+  def computeGraphPrivacy(self):
 
     something_changed = True
 
@@ -219,16 +226,12 @@ class graph:
 
       something_changed = False
 
-      tmpUnknownPrivacy = self.unknown_privacy.copy()
+      #tmpUnknownPrivacy = self.unknown_privacy.copy()
 
-      for name in tmpUnknownPrivacy:
+      for name in self.deterministic | self.probabilistic:
+        self.log.debug("Considering " + name)
 
         oldPrivacy = self.getPrivacy(name)
-
-        # check the privacySamplerResults to see if we can fill in variables
-
-        if name in self.privacySamplerResults.keys():
-          self.setPrivacy(name, self.privacySamplerResults[name])
 
         # if determinisitic children are all public set to public
 
@@ -236,25 +239,39 @@ class graph:
           if all(child in self.public for child in self.deterministicChildren(name)):
             self.setPrivacy(name, "public")
 
-        # if name has a private child set to private
+        # if name has a private deterministic child set to private
 
-        if any(child in self.private for child in self.getChildren(name)):
+        if any(child in self.private for child in self.deterministicChildren(name)):
           self.setPrivacy(name, "private")
 
         # check probabilistic variables to see if they are public because the variables above and below them are public
  
         if name in self.probabilistic - self.deterministic:
+          self.log.debug( "check above and below " + name)
           if self.checkPrivacyUp(name) and self.checkPrivacyDown(name):
+            self.log.debug( name + " is public")
             self.setPrivacy(name, "public")
         
         # determine if privacy changed
 
         if self.getPrivacy(name) != oldPrivacy:
           something_changed = True
+          self.log.debug("Something changed")
+        else:
+          self.log.debug("Nothing changed")
 
-      # log privacy 
+  def computeProbabilisticPrivacy(self):
 
-      self.log.debug(self.showPrivacy())
+    # check the privacySamplerResults to see if we can fill in variables
+    # only do this if we don't know the privacy already as we don't want to overwrite the values calculated directly from the graph
+
+    for name in self.deterministic | self.probabilistic:
+      if name in self.unknown_privacy:
+        self.log.debug( "looking at privacySamplerResults: " + name)
+        self.log.debug( "unknown: " + str(self.unknown_privacy))
+        if name in self.privacySamplerResults.keys():
+          self.setPrivacy(name, self.privacySamplerResults[name])
+
 
 #  def computePrivacy.old(self):
 #
@@ -861,18 +878,17 @@ except Exception as e:
           for name in names:
             self.changeState(name, "uptodate")
 
-          # calculate manifold privacy 
-          # results are stored in self.privacySamplerResults (privacy of variables is not set directly
+            # calculate manifold privacy 
+            # results are stored in self.privacySamplerResults (privacy of variables is not set directly)
   
             self.log.debug("Have samples and calculating manifold privacy")
             allPublic = True
             for user in self.userids:
               try:
                 d = distManifold(self.globals[user]["sampler_chains"], self.globals["All"]["sampler_chains"]) * 100.
-                self.log.debug("d = %f" % d)
               except Exception as e:
                 self.log.debug(str(e))
-              self.log.debug(user + ": " + str(d))
+              self.log.debug(user + ": " + str(d) + " " + str(d < PrivacyCriterion))
               allPublic = allPublic and d < PrivacyCriterion
       
             variablestochange = self.variablesToBeSampled()

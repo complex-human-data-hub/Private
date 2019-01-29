@@ -1,5 +1,5 @@
-import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
-matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
+#import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
+#matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
                        # note these lines need to be at top of script
 import numpy.random
 import numpy
@@ -404,7 +404,7 @@ builtins = {\
 
             "NumberOfTuningSamples": 200, \
             "NumberOfChains": 2, \
-            "NumberOfSamples": 400, \
+            "NumberOfSamples": 200, \
 
             # Data
 
