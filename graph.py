@@ -20,7 +20,7 @@ logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 numpy.set_printoptions(precision=3)
 
-PrivacyCriterion = 11.0   # percent
+PrivacyCriterion = 3.0   # percent
 
 def ppset(s):
   """
@@ -261,7 +261,7 @@ class graph:
       #tmpUnknownPrivacy = self.unknown_privacy.copy()
 
       for name in self.deterministic | self.probabilistic:
-        self.log.debug("Considering " + name)
+        #self.log.debug("Considering " + name)
 
         oldPrivacy = self.getPrivacy(name)
 
@@ -279,18 +279,19 @@ class graph:
         # check probabilistic variables to see if they are public because the variables above and below them are public
  
         if name in self.probabilistic - self.deterministic:
-          self.log.debug( "check above and below " + name)
+          #self.log.debug( "check above and below " + name)
           if self.checkPrivacyUp(name) and self.checkPrivacyDown(name):
-            self.log.debug( name + " is public")
+            #self.log.debug( name + " is public")
             self.setPrivacy(name, "public")
         
         # determine if privacy changed
 
         if self.getPrivacy(name) != oldPrivacy:
           something_changed = True
-          self.log.debug("Something changed")
+          #self.log.debug("Something changed")
         else:
-          self.log.debug("Nothing changed")
+          #self.log.debug("Nothing changed")
+          pass
 
   def computeProbabilisticPrivacy(self):
 
@@ -299,8 +300,8 @@ class graph:
 
     for name in self.deterministic | self.probabilistic:
       if name in self.unknown_privacy:
-        self.log.debug( "looking at privacySamplerResults: " + name)
-        self.log.debug( "unknown: " + str(self.unknown_privacy))
+        #self.log.debug( "looking at privacySamplerResults: " + name)
+        #self.log.debug( "unknown: " + str(self.unknown_privacy))
         if name in self.privacySamplerResults.keys():
           self.setPrivacy(name, self.privacySamplerResults[name])
 
@@ -849,8 +850,9 @@ except Exception as e:
     self.acquire("callback")
     name, user, value = returnvalue
     if isinstance(value, Exception):
-      self.globals[user][name] = str(value)
-      self.changeState(name, "exception")
+      if user == "All":
+        self.globals[user][name] = str(value)
+        self.changeState(name, "exception")
     else:
       self.globals[user][name] = value
       if user == "All":
@@ -871,6 +873,7 @@ except Exception as e:
     self.acquire("samplercallback")
     myname, user, names, value, exception_variable = returnvalue
     if isinstance(value, Exception):
+      self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
       for name in names:
         self.globals[user][name] = ""
         self.changeState(name, "exception")
@@ -885,7 +888,7 @@ except Exception as e:
     else: # successful sampler return
       try:
         tochecknames = value.varnames   # names to check for privacy
-        self.log.debug("names to check " + str(tochecknames))
+        #self.log.debug("names to check " + str(tochecknames))
         if len(tochecknames) > 0:
           sampleslist = [value[name] for name in tochecknames]
           samples = numpy.concatenate(sampleslist)
@@ -924,7 +927,7 @@ except Exception as e:
               allPublic = allPublic and d < PrivacyCriterion
       
             variablestochange = self.variablesToBeSampled()
-            self.log.debug("variables to change " + str(variablestochange))
+            #self.log.debug("variables to change " + str(variablestochange))
             if allPublic:
               for name in variablestochange:
                 self.privacySamplerResults[name] = "public"

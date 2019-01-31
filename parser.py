@@ -67,6 +67,9 @@ def comment_string():           return _(r'#[a-zA-Z0-9_ ~=()\.,*#\[\]\///+-]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
 def starsym():                  return "*"
+def colon():                    return ":"
+def leftsquarebrack():          return "["
+def rightsquarebrack():         return "]"
 
 def dottedidentifier():         return identifier, ZeroOrMore(".", identifier)
 
@@ -80,7 +83,7 @@ def list_comprehension():       return "[", expression, "for", identifier_list, 
 def enumerated_list():          return "[", ZeroOrMore(expression, ","), expression, "]"
 def list():                     return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
-def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), list, atom]
+def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), list, atom], Optional(leftsquarebrack, expression, colon, expression, rightsquarebrack)
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
 def named_argument():           return identifier, "=", expression
@@ -96,12 +99,7 @@ def distribution_assignment():  return identifier, "~", distribution_call
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
-#def value():                    return identifier
-def command_line_expression():  return expression # this is here to catch when people enter an expression and explain why that isn't allowed.
-#def short_import():             return "import", module_name
-#def identifier_list():          return identifier, ZeroOrMore(",", identifier)
-#def long_import():              return "from", module_name, "import", [identifier_list, starsym]
-#def all_import():               return [short_import, long_import]
+def command_line_expression():  return expression 
 def line():                     return [command, assignment, command_line_expression, comment_line], EOF
 
 def PrivateParser():

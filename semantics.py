@@ -71,10 +71,11 @@ class InputVisitor(PTNodeVisitor):
     def visit_string(self, node, children):                   return result("string", node.value)
     def visit_comment_string(self, node, children):           return result("comment_string", node.value)
     def visit_boolean(self, node, children):                  return result("boolean", node.value)
-    def visit_notsym(self, node, children):
-        return result("notsym", node.value)
-    def visit_starsym(self, node, children):
-        return result("notsym", node.value)
+    def visit_notsym(self, node, children):                   return result("notsym", node.value)
+    def visit_starsym(self, node, children):                  return result("starsym", node.value)
+    def visit_leftsquarebrack(self, node, children):          return result("leftsquarebrack", node.value)
+    def visit_rightsquarebrack(self, node, children):         return result("rightsquarebrack", node.value)
+    def visit_colon(self, node, children):                    return result("colon", node.value)
     def visit_atom(self, node, children):
         return result("atom", children[0].code, children)
     def visit_identifier_list(self, node, children):

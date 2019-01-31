@@ -145,9 +145,9 @@ class FakeEvent:
 
 
 if __name__ == "__main__":
-  print "Set the locale to Australia"
+  #print "Set the locale to Australia"
   FakeEvent.setLocale("en_AU")   # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
-  print 
+  #print 
 
   #for eventType in FakeEvent.eventTypes:
   #  print eventType + " Event"
@@ -163,8 +163,8 @@ if __name__ == "__main__":
   # generate many events for a small set of users
 
   events = []
-  for user in xrange(5):
-    i = randint(10,15)
+  for user in xrange(40):
+    i = randint(30,35)
     ev = FakeEvent()
     userid = ev.UserId
     events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9) for _ in xrange(i)])

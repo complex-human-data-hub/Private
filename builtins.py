@@ -175,6 +175,9 @@ def distplot(a, **kwargs):  # have to stop this plotting if x is Private
   plt.close()
   return buf
 
+def private_array(x):
+  return numpy.array(x, numpy.float)
+
 def private_mean(x):
   return numpy.mean(x)
 
@@ -414,6 +417,7 @@ builtins = {\
 
             # Summary Statistics
 
+            "array": private_array, \
             "mean": private_mean, \
             "median": private_median, \
             "percentile": private_percentile, \
