@@ -7,7 +7,7 @@ future
 graphviz
 h5py
 ipaddress
-joblib
+joblib<0.13.0
 kiwisolver
 matplotlib
 networkx
