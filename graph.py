@@ -4,9 +4,9 @@ import reprlib
 import numpy
 from collections import OrderedDict, deque
 import logging
-from builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
 import copy
-from manifoldprivacy import distManifold
+from Private.manifoldprivacy import distManifold
 import shutil
 import io
 import re
@@ -83,7 +83,11 @@ class graph:
     self.whohaslock = None
     self.prettyprinter = pprint.PrettyPrinter()
     self.jobs = {}
-    self.server = pp.Server()
+    ppservers = ("172.31.23.106:60001","172.31.28.85:60001", "172.31.17.92:60001")
+    #ppservers = ("172.31.28.85:60001", "172.31.17.92:60001")
+    self.server = pp.Server(ppservers=ppservers)
+
+    print "Starting pp with", self.server.get_ncpus(), "workers"
     self.log = logging.getLogger("Private")
     #self.nxgraph = nx.DiGraph()
     self.SamplerParameterUpdated = False

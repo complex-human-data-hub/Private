@@ -35,6 +35,7 @@ def command():                  return [delete, \
                                         show_builtins, \
                                         show_prob_builtins, \
                                         show_ncpus, \
+                                        show_stats, \
                                         help]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
@@ -58,6 +59,7 @@ def variables_to_sample():      return "vs"
 def show_builtins():            return "sb"
 def show_prob_builtins():       return "spb"
 def show_ncpus():               return "sncpus"
+def show_stats():               return "showstats"
 def help():                     return "help"
 
 def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')   # Note removed _ from identifier names to make sure that an attacker doesn't have access 
