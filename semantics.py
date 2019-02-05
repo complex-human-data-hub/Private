@@ -155,16 +155,26 @@ class InputVisitor(PTNodeVisitor):
         depGraph.define(children[0].code, children[1].code, evalcode=children[1].evalcode, dependson=children[1].depend)
         return result("deterministic_assignment", children[0].code, evalcode=children[0].evalcode)
 
+    def visit_distribution_parameter(self, node, children):
+        if len(children) == 1:
+          return result("distribution_parameter", children[0].code, children, pyMC3code= children[0].code)
+        else:
+          return result("distribution_parameter", children[0].code+"[" + children[1].code+"]", children, pyMC3code=children[0].code+"[__" + children[1].code+"_Indices]")
+
     def visit_distribution_call(self, node, children):
         fn = children[0].code
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
         #if fn not in prob_builtins:
         #  raise Exception("Unknown distribution: " + fn)
-        pyMC3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.code for c in children[1:]) + "%%s)"
+        pyMC3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.pyMC3code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3code=pyMC3_code)
  
     def visit_distribution_assignment(self, node, children): 
-        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+        if len(children) > 2: # then we have a hierarchically defined variable
+          dependson = children[1].depend + children[2].depend
+          depGraph.define(children[0].code, children[2].code, dependson=dependson, prob = True, hier=children[1].code, pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
+        else:
+          depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children): 

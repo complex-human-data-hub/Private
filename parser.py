@@ -94,8 +94,9 @@ def indexed_variable():         return dottedidentifier, "[", ZeroOrMore(express
 def expression():               return simple_expression, Optional(relation, simple_expression)
 def deterministic_assignment(): return identifier, "=", expression
 def distribution_name():        return ["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal", "Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]
-def distribution_call():        return distribution_name, "(", ZeroOrMore(atom, ","), atom, ")"
-def distribution_assignment():  return identifier, "~", distribution_call
+def distribution_parameter():   return [number, (identifier, Optional("[", identifier, "]"))]
+def distribution_call():        return distribution_name, "(", ZeroOrMore(distribution_parameter, ","), distribution_parameter, ")"
+def distribution_assignment():  return identifier, Optional("[", identifier, "]"), "~", distribution_call
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)

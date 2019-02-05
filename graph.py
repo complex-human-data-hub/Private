@@ -61,8 +61,7 @@ class graph:
     self.private = set()
     self.public = set()
     self.unknown_privacy = set()
-    #self.computing_privacy = set()
-    self.sampler_chains = {}
+    #self.sampler_chains = {}
     self.privacySamplerResults = {} # this holds results from privacy samplers so we know the difference between when 
                                     # the privacy samplers haven't been run since last compute and when they have been run
 
@@ -72,6 +71,7 @@ class graph:
     self.probcode = OrderedDict() # private code of probabilistic variables
     self.evalcode = OrderedDict() # python code for determinitisitc variables
     self.pyMC3code = OrderedDict() # pyMC3 code for probabilistic variables
+    self.hierarchical = {} # what is the index variable of this hierarchical variable 
 
     # comments
 
@@ -104,7 +104,6 @@ class graph:
     result += "deterministic: "+ ppset(self.deterministic) + "\n"
     result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
     result += "builtin: "+ ppset(self.builtins) + "\n"
-    #result += "imports: "+ ppset(self.imports) + "\n"
     result += "\n"
     result += "uptodate: "+ ppset(self.uptodate) + "\n"
     result += "computing: "+ ppset(self.computing) + "\n"
@@ -419,7 +418,7 @@ class graph:
     self.comment[name] = the_comment
 
   #def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None, privacy="unknown_privacy"):
-  def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None):
+  def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.acquire("define " + name)
     if not dependson:
@@ -432,6 +431,8 @@ class graph:
           self.probdependson[name] = set(dependson)
         for n in self.probabilistic - self.deterministic:
           self.changeState(n, "stale")
+        if hier:
+          self.hierarchical[name] = hier
     else:
       self.deterministic.add(name)
       self.code[name] = code
@@ -460,6 +461,7 @@ class graph:
       self.code.pop(name, None)
       self.probcode.pop(name, None)
       self.pyMC3code.pop(name, None)
+      self.hierarchical.pop(name, None)
 
       self.dependson.pop(name, None)
       self.probdependson.pop(name, None)
@@ -545,7 +547,10 @@ class graph:
     for name in self.code.keys():
       codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      codebits.append(name + " ~ " + str(self.probcode[name]))
+      if name in self.hierarchical:
+        codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+      else:
+        codebits.append(name + " ~ " + str(self.probcode[name]))
     if len(codebits) > 0:
       m = max(len(line) for line in codebits)
       m = min(m, codewidth)
@@ -612,7 +617,10 @@ class graph:
             res += "    " + repr(list(self.dependson[name]))
       res += "\n"
     for name in self.probcode.keys():
-      res += name + " ~ "
+      if name in self.hierarchical:
+        res += name + "[" + self.hierarchical[name] + "] ~ " 
+      else:
+        res += name + " ~ "
       if name not in self.private:
         res += self.probcode[name][0:60]
       else:
@@ -723,7 +731,7 @@ class graph:
     recursive_helper(node)
     return result
 
-  def constructPyMC3code(self, user):
+  def constructPyMC3code(self, user=None):
     locals = {}
     loggingcode = """
 logging = __import__("logging")
@@ -731,7 +739,17 @@ _log = logging.getLogger("Private")
 logging.disable(100)
 """
 
-    code = loggingcode + """
+    code = loggingcode 
+    
+    # extract index variables
+
+    for indexvariable in list(set(self.hierarchical.values())):
+      code += "__%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
+      code += "__%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+      if user:
+        locals[indexvariable] = self.globals[user][indexvariable]
+
+    code += """
 try:
   exception_variable = "No Exception Variable"
   pymc3 = __import__("pymc3")
@@ -747,18 +765,25 @@ try:
     # sigma = pm.HalfNormal('sigma', sd=1)
     # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    probabilistic_only_names = self.topological_sort()
+    probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
 
     for name in probabilistic_only_names:
       code += '    exception_variable = "%s"\n' % name
-      code += "    " + self.pyMC3code[name] % ""+ "\n"
+      if name in self.hierarchical:
+        shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
+        code += "    " + self.pyMC3code[name] % shapecode + "\n"
+      else:
+        code += "    " + self.pyMC3code[name] % ""+ "\n"
 
     observed_names = list(self.probabilistic & self.deterministic)
     for name in observed_names:
       code += '    exception_variable = "%s"\n' % name
       obsname = "__private_%s_observed" % name
       code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-      locals[obsname] = self.globals[user][name]
+      if user:
+        locals[obsname] = self.globals[user][name]
+      else:
+        locals = None
 
     code += """
     __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
