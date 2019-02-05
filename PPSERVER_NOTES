@@ -1,0 +1,22 @@
+#EC2
+Master:
+  sg: chdh-private-sg
+
+Slave-X: 
+  sg: chdh-private-sg, ppserver
+
+#Setup
+sudo apt update
+sudo apt-get install libblas3 libblas-dev
+sudo apt install python-pip
+sudo pip install virtualenv
+virtualenv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+mkdir -p .config/matplotlib/
+cat "backend: Agg" > ~/.config/matplotlib/matplotlibrc
+
+#Run ppserver
+python ppserver.py -p 60001 -i 172.31.23.106
+
