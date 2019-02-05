@@ -92,8 +92,8 @@ class InputVisitor(PTNodeVisitor):
           res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "]", children)
         res.remove_dependencies(children[2].depend)
         return res
-    def visit_list(self, node, children):
-        return result("list", children[0].code, children)
+    def visit_private_list(self, node, children):
+        return result("private_list", children[0].code, children)
     
     def visit_bracketed_expression(self, node, children):
         return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
@@ -191,6 +191,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_command(self, node, children):                  return result("command", children[0].code)
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
+    def visit_show_values(self, node, children):              return result("show_values", depGraph.show_values())
     def visit_clear_variables(self, node, children):
       global depGraph
       depGraph = graph()
@@ -200,7 +201,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", depGraph.show_eval_code())
     def visit_show_mccode(self, node, children):              return result("show_mccode", depGraph.constructPyMC3code()[1])
     def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", depGraph.canRunSampler(verbose=True))
-    def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", depGraph.showSamplerChains())
+    #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", depGraph.showSamplerChains())
     def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", depGraph.showSamplerResults())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(depGraph.server.get_stats()['local']))
     def visit_show_sets(self, node, children):                return result("show_sets", depGraph.show_sets())
@@ -223,7 +224,6 @@ scode: show code
 sevalcode: show eval code
 smccode: show pyMC3 code
 sss: show sampler status
-ssc: show sampler chains
 ssr: show sampler results
 ss: show sets
 sg: show globals
@@ -238,29 +238,6 @@ help: this message
 """
         return result("help", res)
       
-#    def visit_short_import(self, node, children):
-#        if debug: print "short_import: ", children
-#        themodule = importlib.import_module("private_"+children[0])
-#        #for k,v in themodule.__private_globals__.items():
-#        #  depGraph.globals[children[0]+"_"+k] = v
-#        #  depGraph.imports.add(children[0]+"_"+k)
-#        depGraph.compute()
-
-#    def visit_import_list(self, node, children):
-#        if debug: print "import_list: ", children
-#        return result("import_list", " " + ", ".join(c if type(c) == unicode else c.code for c in children), children)
-
-#    def visit_long_import(self, node, children):
-#        if debug: print "long_import: ", children
-#        themodule = importlib.import_module("private_"+children[0])
-#        #for k,v in themodule.__private_globals__.items():
-#        #  depGraph.globals[k] = v
-#        #  depGraph.imports.add(k)
-#        depGraph.compute()
-
-#    def visit_all_import(self, node, children):
-#        if debug: print "all_import: ", children
-
     def visit_comment(self, node, children):
         #_log.debug("comment: " + str(children))
         depGraph.add_comment(children[0].code, children[1].code)

@@ -18,13 +18,14 @@ def command():                  return [delete, \
                                         comment, \
                                         draw_tree, \
                                         show_variables, \
+                                        show_values, \
                                         clear_variables, \
                                         show_dependencies, \
                                         show_code, \
                                         show_eval_code, \
                                         show_mccode, \
                                         show_sampler_status, \
-                                        show_sampler_chains, \
+                                        #show_sampler_chains, \
                                         show_sampler_results, \
                                         show_pp_stats, \
                                         show_sets, \
@@ -41,13 +42,14 @@ def delete():                   return "del", identifier
 def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
+def show_values():              return "sval"
 def clear_variables():          return "clear"
 def show_dependencies():        return "sd"
 def show_code():                return "scode"
 def show_eval_code():           return "sevalcode"
 def show_mccode():              return "smccode"
 def show_sampler_status():      return "sss"
-def show_sampler_chains():      return "ssc"
+#def show_sampler_chains():      return "ssc"
 def show_sampler_results():     return "ssr"
 def show_pp_stats():            return "spp"
 def show_sets():                return "ss"
@@ -81,9 +83,9 @@ def atom():                     return [number, boolean, string, dottedidentifie
 def identifier_list():          return identifier, ZeroOrMore(",", identifier)
 def list_comprehension():       return "[", expression, "for", identifier_list, "in", expression, Optional("if", expression), "]"
 def enumerated_list():          return "[", ZeroOrMore(expression, ","), expression, "]"
-def list():                     return [list_comprehension, enumerated_list]
+def private_list():             return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
-def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), list, atom], Optional(leftsquarebrack, expression, colon, expression, rightsquarebrack)
+def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), private_list, atom], Optional(leftsquarebrack, expression, colon, expression, rightsquarebrack)
 def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
 def named_argument():           return identifier, "=", expression

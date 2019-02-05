@@ -407,7 +407,7 @@ builtins = {\
 
             "NumberOfTuningSamples": 200, \
             "NumberOfChains": 2, \
-            "NumberOfSamples": 200, \
+            "NumberOfSamples": 500, \
 
             # Data
 
