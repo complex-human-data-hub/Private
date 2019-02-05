@@ -1,4 +1,4 @@
-pp_servers = [
+ppservers = [
     '172.31.12.179:60001', # Simon Slave 1
     '172.31.15.149:60001', # Simon Slave 2
     '172.31.1.252:60001', # Simon Slave 3
