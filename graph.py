@@ -16,6 +16,8 @@ import dill as pickle
 import os
 import base64
 
+from config import ppservers 
+
 logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 numpy.set_printoptions(precision=3)
@@ -83,8 +85,6 @@ class graph:
     self.whohaslock = None
     self.prettyprinter = pprint.PrettyPrinter()
     self.jobs = {}
-    ppservers = ("172.31.23.106:60001","172.31.28.85:60001", "172.31.17.92:60001")
-    #ppservers = ("172.31.28.85:60001", "172.31.17.92:60001")
     self.server = pp.Server(ppservers=ppservers)
 
     print "Starting pp with", self.server.get_ncpus(), "workers"
