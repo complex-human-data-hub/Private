@@ -9,10 +9,10 @@ import pydot
 import graphviz
 import logging
 import importlib
-from builtins import prob_builtins, showBuiltins, showProbBuiltins
+from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins
 
 from networkx.drawing.nx_pydot import write_dot
-from graph import *
+from Private.graph import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 #import logging
@@ -201,6 +201,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
     def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(depGraph.server.get_ncpus()))
+    def visit_show_stats(self, node, children):               return result("show_stats", str(depGraph.server.print_stats()))
     def visit_comment_line(self, node, children):             return result("comment_line", "")
     def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[1].code))
     def visit_help(self, node, children):
