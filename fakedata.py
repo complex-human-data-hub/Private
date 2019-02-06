@@ -8,7 +8,7 @@ class FakeEvent:
   fake = Faker()
   eventTypes = ["App", "Button", "Gmail", "SMS", "PhoneCall"]
   placeType = ["church", "cafe"]
-  weatherType = ["clear", "overcast", "cloudy", "rain"]
+  weatherType = ["clear", "overcast", "cloudy"]
   moonPhaseType = ["waning_gibbous", "waxing_gibbous"]
   audioClassType = ["audio_voice", "audio_home", "audio_street", "audio_car", "audio_home"]
   seasonType = ["summer", "winter", "autumn", "spring"]
@@ -20,7 +20,7 @@ class FakeEvent:
   def setLocale(cls, locale):
     FakeEvent.fake = Faker(locale)
 
-  def __init__(self, eventType = None, UserId = None, Latitude = None, Longitude = None):
+  def __init__(self, eventType = None, UserId = None, Latitude = None, Longitude = None, RainProb = None):
     if not eventType:
       eventType = choice(FakeEvent.eventTypes)
     self.type = eventType
@@ -62,9 +62,13 @@ class FakeEvent:
         self.address = FakeEvent.fake.address()
         self.MoonIllumination = uniform(0., 1.)
         self.MoonAge = uniform(0.0, 30.0)
-        self.Weather = choice(FakeEvent.weatherType) 
         self.Temperature = gauss(16, 10)
-        self.keywords.append(self.Weather)
+        if uniform(0.0, 1.0) < RainProb:
+          self.Weather = "rain"
+          self.keywords.append("rain")
+        else:
+          self.Weather = choice(FakeEvent.weatherType) 
+          self.keywords.append(self.Weather)
         self.keywords.append(choice(FakeEvent.moonPhaseType))
         if randint(0,6) == 0:
           self.keywords.append(choice(FakeEvent.placeType))
@@ -163,11 +167,14 @@ if __name__ == "__main__":
   # generate many events for a small set of users
 
   events = []
-  for user in xrange(40):
-    i = randint(30,35)
+  for user in xrange(10):
+    i = randint(55,60)
     ev = FakeEvent()
     userid = ev.UserId
-    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9) for _ in xrange(i)])
+    RainProb = 0.3
+    if user == 0:
+      RainProb = 0.5
+    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9, RainProb=RainProb) for _ in xrange(i)])
   print events
  
 

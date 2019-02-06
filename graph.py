@@ -22,7 +22,7 @@ logging.basicConfig(filename='private.log',level=logging.WARNING)
 
 numpy.set_printoptions(precision=3)
 
-PrivacyCriterion = 3.0   # percent
+PrivacyCriterion = 5.0   # percent
 
 def ppset(s):
   """
@@ -63,8 +63,7 @@ class graph:
     self.private = set()
     self.public = set()
     self.unknown_privacy = set()
-    #self.computing_privacy = set()
-    self.sampler_chains = {}
+    #self.sampler_chains = {}
     self.privacySamplerResults = {} # this holds results from privacy samplers so we know the difference between when 
                                     # the privacy samplers haven't been run since last compute and when they have been run
 
@@ -74,6 +73,7 @@ class graph:
     self.probcode = OrderedDict() # private code of probabilistic variables
     self.evalcode = OrderedDict() # python code for determinitisitc variables
     self.pyMC3code = OrderedDict() # pyMC3 code for probabilistic variables
+    self.hierarchical = {} # what is the index variable of this hierarchical variable 
 
     # comments
 
@@ -108,7 +108,6 @@ class graph:
     result += "deterministic: "+ ppset(self.deterministic) + "\n"
     result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
     result += "builtin: "+ ppset(self.builtins) + "\n"
-    #result += "imports: "+ ppset(self.imports) + "\n"
     result += "\n"
     result += "uptodate: "+ ppset(self.uptodate) + "\n"
     result += "computing: "+ ppset(self.computing) + "\n"
@@ -131,7 +130,7 @@ class graph:
     return result
 
   def show_jobs(self):
-    result = ""
+    result = "%d jobs\n" % len(self.jobs)
     for k,v in self.jobs.items():
       result += k + "\n"
     return result
@@ -310,43 +309,6 @@ class graph:
           self.setPrivacy(name, self.privacySamplerResults[name])
 
 
-#  def computePrivacy.old(self):
-#
-#    self.acquire("computePrivacy")
-#
-#    self.calculateGraphPrivacy()
-#
-#    if len(self.unknown_privacy) != 0:
-#
-#      # calculate manifold privacy if you haven't and chains are ready
-#      # results are stored in self.privacySamplerResults (privacy of variables is not set directly
-#  
-#      if len(self.privacySamplerResults) == 0 and all(jobname in self.sampler_chains.keys() for jobname in jobnames):
-#        self.log.debug("Have samples and calculating manifold privacy")
-#        allPublic = True
-#        for myname in privacysamplerjobnames:
-#          self.log.debug(myname)
-#          try:
-#            d = distManifold(self.sampler_chains[myname], self.sampler_chains["__private_sampler__"]) * 100.
-#          except Exception as e:
-#            self.log.debug(str(e))
-#          self.log.debug(myname + ": " + str(d))
-#          allPublic = allPublic and d < PrivacyCriterion
-#      
-#        variablestochange = self.variablesToBeSampled()
-#        self.log.debug("variables to change " + str(variablestochange))
-#        if allPublic:
-#          for name in variablestochange:
-#            self.privacySamplerResults[name] = "public"
-#        else:
-#          for name in variablestochange:
-#            self.privacySamplerResults[name] = "private"
-#
-#        self.calculateGraphPrivacy()  # recalculate in case any changes in privacySamplerResults allows more variables to be determined
-#
-#    self.release()
-
-
   def changeState(self, name, newstate):
     self.log.debug("Change state of %s to %s." % (name, newstate))
     self.uptodate.discard(name)
@@ -423,7 +385,7 @@ class graph:
     self.comment[name] = the_comment
 
   #def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None, privacy="unknown_privacy"):
-  def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None):
+  def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.acquire("define " + name)
     if not dependson:
@@ -436,6 +398,8 @@ class graph:
           self.probdependson[name] = set(dependson)
         for n in self.probabilistic - self.deterministic:
           self.changeState(n, "stale")
+        if hier:
+          self.hierarchical[name] = hier
     else:
       self.deterministic.add(name)
       self.code[name] = code
@@ -464,6 +428,7 @@ class graph:
       self.code.pop(name, None)
       self.probcode.pop(name, None)
       self.pyMC3code.pop(name, None)
+      self.hierarchical.pop(name, None)
 
       self.dependson.pop(name, None)
       self.probdependson.pop(name, None)
@@ -549,19 +514,22 @@ class graph:
     for name in self.code.keys():
       codebits.append(name + " = " + str(self.code[name]))
     for name in self.probcode.keys():
-      codebits.append(name + " ~ " + str(self.probcode[name]))
+      if name in self.hierarchical:
+        codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+      else:
+        codebits.append(name + " ~ " + str(self.probcode[name]))
     if len(codebits) > 0:
       m = max(len(line) for line in codebits)
       m = min(m, codewidth)
       newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
       valuebits = []
       for name in self.code.keys():
-        valuebits.append(self.getValue(name)[0:codewidth])
+        valuebits.append(self.getValue(name)[0:valuewidth])
       for name in self.probcode.keys():
         if name in self.samplerexception:
           valuebits.append(self.samplerexception[name])
         else:
-          valuebits.append(self.getValue(name)[0:codewidth])
+          valuebits.append(self.getValue(name)[0:valuewidth])
       commentbits = []
       for name in self.code.keys():
         commentbits.append(self.comment.get(name, ""))
@@ -570,6 +538,18 @@ class graph:
       return "\n".join("  ".join([codebit, valuebit, commentbit]) for codebit, valuebit, commentbit in zip(newcodebits, valuebits, commentbits))
     else:
       return ""
+
+  def show_values(self):
+    valuewidth = 120
+    valuebits = []
+    for name in self.code.keys():
+      valuebits.append(name + " = " + self.getValue(name)[0:valuewidth])
+    for name in self.probcode.keys():
+      if name in self.samplerexception:
+        valuebits.append(name + " ~ " + self.samplerexception[name])
+      else:
+        valuebits.append(name + " ~ " + self.getValue(name)[0:valuewidth])
+    return "\n".join(valuebits)
 
   def show_code(self):
     codebits = []
@@ -616,7 +596,10 @@ class graph:
             res += "    " + repr(list(self.dependson[name]))
       res += "\n"
     for name in self.probcode.keys():
-      res += name + " ~ "
+      if name in self.hierarchical:
+        res += name + "[" + self.hierarchical[name] + "] ~ " 
+      else:
+        res += name + " ~ "
       if name not in self.private:
         res += self.probcode[name][0:60]
       else:
@@ -727,7 +710,7 @@ class graph:
     recursive_helper(node)
     return result
 
-  def constructPyMC3code(self, user):
+  def constructPyMC3code(self, user=None):
     locals = {}
     loggingcode = """
 logging = __import__("logging")
@@ -735,7 +718,17 @@ _log = logging.getLogger("Private")
 logging.disable(100)
 """
 
-    code = loggingcode + """
+    code = loggingcode 
+    
+    # extract index variables
+
+    for indexvariable in list(set(self.hierarchical.values())):
+      code += "__%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
+      code += "__%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+      if user:
+        locals[indexvariable] = self.globals[user][indexvariable]
+
+    code += """
 try:
   exception_variable = "No Exception Variable"
   pymc3 = __import__("pymc3")
@@ -751,18 +744,25 @@ try:
     # sigma = pm.HalfNormal('sigma', sd=1)
     # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    probabilistic_only_names = self.topological_sort()
+    probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
 
     for name in probabilistic_only_names:
       code += '    exception_variable = "%s"\n' % name
-      code += "    " + self.pyMC3code[name] % ""+ "\n"
+      if name in self.hierarchical:
+        shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
+        code += "    " + self.pyMC3code[name] % shapecode + "\n"
+      else:
+        code += "    " + self.pyMC3code[name] % ""+ "\n"
 
     observed_names = list(self.probabilistic & self.deterministic)
     for name in observed_names:
       code += '    exception_variable = "%s"\n' % name
       obsname = "__private_%s_observed" % name
       code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-      locals[obsname] = self.globals[user][name]
+      if user:
+        locals[obsname] = self.globals[user][name]
+      else:
+        locals = None
 
     code += """
     __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
@@ -838,7 +838,7 @@ except Exception as e:
           for name in sampler_names:
             self.changeState(name, "computing")
           myname = "__private_sampler__All"
-          self.sampler_chains = {} # remove all sampler chains as they are now stale
+          #self.sampler_chains = {} # remove all sampler chains as they are now stale
           self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
           self.samplerexception = {}
           locals, sampler_code =  self.constructPyMC3code("All")
@@ -952,48 +952,27 @@ except Exception as e:
     self.compute()
     self.computePrivacy()
 
-  def showSamplerChains(self):
-    res = str(len(self.sampler_chains)) + " chains\n"
-    try:
-      for k,v in self.sampler_chains.items():
-        if type(v) == str:
-          res += k+ " " + str(v) + "\n"
-        elif type(v) == numpy.ndarray:
-          res += k + " array %s\n" % str(self.sampler_chains[k].shape)
-        elif v == None:
-          res += k+ " None\n"
-        else:
-          res += "Unknown value type\n"
-    except Exception as e:
-        res += "show sampler chains: " + str(e)
-    return res
+#  def showSamplerChains(self):
+#    res = str(len(self.sampler_chains)) + " chains\n"
+#    try:
+#      for k,v in self.sampler_chains.items():
+#        if type(v) == str:
+#          res += k+ " " + str(v) + "\n"
+#        elif type(v) == numpy.ndarray:
+#          res += k + " array %s\n" % str(self.sampler_chains[k].shape)
+#        elif v == None:
+#          res += k+ " None\n"
+#        else:
+#          res += "Unknown value type\n"
+#    except Exception as e:
+#        res += "show sampler chains: " + str(e)
+#    return res
 
   def showSamplerResults(self):
     res = str(len(self.privacySamplerResults)) + " results\n"
     for k,v in self.privacySamplerResults.items():
       res += k + ": " + v + "\n"
     return res
-
-#  def privacysamplercallback(self, returnvalue):  
-#    self.acquire("privacysamplercallback")
-#    try:
-#      myname, names, value, exception_variable = returnvalue
-#      del self.jobs[myname]
-#      #tochecknames = list(value.varnames)
-#      #self.log.debug("tochecknames: " + str(self.computing_privacy & set(value.varnames)))
-#      if len(value.varnames) > 0:
-#        sampleslist = [value[name] for name in value.varnames]
-#        samples = numpy.concatenate(sampleslist)
-#        self.sampler_chains[myname] = samples
-#      else:
-#        self.log.error("No names to check in privacysamplercallback")
-#        #self.log.error("self.computing_privacy = " + str(self.computing_privacy))
-#        self.log.error("value.varnames = " + str(value.varnames))
-#    except Exception as e:
-#      self.log.debug("In privacysamplercallback "+ str(e))
-#    self.release()
-#    self.compute()
-#    self.computePrivacy() # need to recompute privacy to update sampled variables privacy and to propagate to other determinisitically dependent variables
 
 def job(name, user, code, globals, locals):
   try:
