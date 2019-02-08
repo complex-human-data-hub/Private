@@ -890,16 +890,18 @@ except Exception as e:
         for name in names:
           self.samplerexception[name] = str(value)
     else: # successful sampler return
-      try:
-        tochecknames = value.varnames   # names to check for privacy
-        #self.log.debug("names to check " + str(tochecknames))
-        if len(tochecknames) > 0:
-          sampleslist = [value[name] for name in tochecknames]
-          samples = numpy.concatenate(sampleslist)
-        self.globals[user]["sampler_chains"] = samples
-        self.log.debug("Added sampler_chains for " + user)
-      except Exception as e:
-        self.log.debug("in samplercallback" + str(e))
+      #try:
+      #  tochecknames = value.varnames   # names to check for privacy
+      #  #self.log.debug("names to check " + str(tochecknames))
+      #  if len(tochecknames) > 0:
+      #    for name in tochecknames:
+      #      self.globals[user][name] = value[name]
+      #    #sampleslist = [value[name] for name in tochecknames]
+      #    #samples = numpy.concatenate(sampleslist)
+      #  #self.globals[user]["sampler_chains"] = samples
+      #  self.log.debug("Added sampler_chains for " + user)
+      #except Exception as e:
+      #  self.log.debug("in samplercallback" + str(e))
 
       try:
         for name in names:
@@ -908,35 +910,35 @@ except Exception as e:
           else:
             self.globals[user][name] = "Not retained."
 
-        # if all variables in all globals have been computed then set the variables to uptodate
+        # if All is done set variables to uptodate
+        if user == "All":
+          for name in names:
+            self.changeState(name, "uptodate")
+
+        # if all variables in all globals have been computed then calculate manifold privacy
         aname = list(names)[0]
         whichsamplersarecomplete = [isinstance(self.globals["All"].get(aname, None), numpy.ndarray)] + [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
         self.log.debug(str(whichsamplersarecomplete))
         if all(whichsamplersarecomplete):
           self.log.debug("sampling all done")
-          for name in names:
-            self.changeState(name, "uptodate")
-
-            # calculate manifold privacy 
-            # results are stored in self.privacySamplerResults (privacy of variables is not set directly)
+          # calculate manifold privacy 
+          # results are stored in self.privacySamplerResults (privacy of variables is not set directly)
+          self.log.debug("Have samples and calculating manifold privacy")
   
-            self.log.debug("Have samples and calculating manifold privacy")
-            allPublic = True
-            for user in self.userids:
-              try:
-                d = distManifold(self.globals[user]["sampler_chains"], self.globals["All"]["sampler_chains"]) * 100.
-              except Exception as e:
-                self.log.debug(str(e))
-              self.log.debug(user + ": " + str(d) + " " + str(d < PrivacyCriterion))
-              allPublic = allPublic and d < PrivacyCriterion
-      
-            variablestochange = self.variablesToBeSampled()
-            #self.log.debug("variables to change " + str(variablestochange))
-            if allPublic:
-              for name in variablestochange:
+          for name in names:
+            if name in value.varnames:
+
+              allPublic = True
+              for user in self.userids:
+                try:
+                  d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
+                except Exception as e:
+                  self.log.debug(str(e))
+                self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                allPublic = allPublic and d < PrivacyCriterion
+              if allPublic:
                 self.privacySamplerResults[name] = "public"
-            else:
-              for name in variablestochange:
+              else:
                 self.privacySamplerResults[name] = "private"
         else:
           self.log.debug("still more samples to compute" + str(whichsamplersarecomplete))
