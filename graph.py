@@ -2,6 +2,7 @@ import multiprocessing
 import pp
 import reprlib 
 import numpy
+import numpy.random
 from collections import OrderedDict, deque
 import logging
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
@@ -51,12 +52,12 @@ class graph:
 
     self.globals = setGlobals()
     self.userids = setUserIds()
-    self.locals = {}
-    self.stale = set() 
-    self.computing = set()
-    self.exception = set()
-    self.uptodate = set(builtins.keys()) or prob_builtins
-    self.samplerexception = {}
+    self.locals = {}   # do we need this?
+    self.stale = dict([(u, set() ) for u in self.userids])
+    self.computing = dict([(u, set() ) for u in self.userids])
+    self.exception = dict([(u, set() ) for u in self.userids])
+    self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.userids])
+    self.samplerexception = dict([(u, {}) for u in self.userids])
 
     # variables related to privacy
 
@@ -159,7 +160,7 @@ class graph:
       else:
         return all(self.checkprivacydown(child) for child in children)
 
-  def eval_command_line_expression(self, code, dependson, whichglobals = "All"):
+  def eval_command_line_expression(self, code, dependson, user = "All"):
     # determine status of all dependencies to see whether to evaluate
 
     result = ""
@@ -174,7 +175,7 @@ class graph:
      
     # look for not uptodate
 
-    notuptodate = set(dependson) - undefined - self.uptodate
+    notuptodate = set(dependson) - undefined - self.uptodate[user]
     if len(notuptodate) == 1:
       result += list(notuptodate)[0] + " is not uptodate  "
     elif len(notuptodate) > 1:
@@ -199,7 +200,7 @@ class graph:
     # if they are all empty then evaluate the expression
 
     if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set(): 
-      val = eval(code, self.globals[whichglobals], self.locals)
+      val = eval(code, self.globals[user], self.locals)
       if type(val) == io.BytesIO:
         #res += reprlib.repr(val)
         result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
@@ -309,30 +310,30 @@ class graph:
           self.setPrivacy(name, self.privacySamplerResults[name])
 
 
-  def changeState(self, name, newstate):
-    self.log.debug("Change state of %s to %s." % (name, newstate))
-    self.uptodate.discard(name)
-    self.computing.discard(name)
-    self.exception.discard(name)
-    self.stale.discard(name)
+  def changeState(self, user, name, newstate):
+    self.log.debug("Change state of %s to %s for user %s." % (name, newstate, user))
+    self.uptodate[user].discard(name)
+    self.computing[user].discard(name)
+    self.exception[user].discard(name)
+    self.stale[user].discard(name)
     if newstate == "uptodate":   # whenever a variable changes to be uptodate the privacy could have changed
-      self.uptodate.add(name)
+      self.uptodate[user].add(name)
     elif newstate == "computing": # when a variable changes to be computing its privacy is unknown
-      self.computing.add(name)
+      self.computing[user].add(name)
     elif newstate == "exception": # when a variable changes to be exception its privacy is unknown
-      self.exception.add(name)
+      self.exception[user].add(name)
     elif newstate == "stale": # when a variable changes to be stale its privacy is unknown
-      self.stale.add(name)
+      self.stale[user].add(name)
       # check dependencies to see if other variables need to be made stale
       #print name, self.deterministicParents(name)
       for parent in self.deterministicParents(name): # parents via deterministic links
         #print name, " det ", self.deterministicParents(name)
-        if parent not in self.stale:
-          self.changeState(parent, "stale")
+        if parent not in self.stale[user]:
+          self.changeState(user, parent, "stale")
       for child in self.probabilisticChildren(name): # children via probabilistic links
         #print name, " prob ", self.deterministicParents(name)
-        if child not in self.stale and child not in self.builtins:
-          self.changeState(child, "stale")
+        if child not in self.stale[user] and child not in self.builtins:
+          self.changeState(user, child, "stale")
     else:
       raise Exception("Unknown state %s in changeState" % newstate)
 
@@ -384,7 +385,6 @@ class graph:
   def add_comment(self, name, the_comment):
     self.comment[name] = the_comment
 
-  #def define(self, name, code, evalcode=None, dependson=None, prob = False, pyMC3code = None, privacy="unknown_privacy"):
   def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
     self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
     self.acquire("define " + name)
@@ -397,7 +397,8 @@ class graph:
         if dependson != []:
           self.probdependson[name] = set(dependson)
         for n in self.probabilistic - self.deterministic:
-          self.changeState(n, "stale")
+          for user in self.userids:
+            self.changeState(user, n, "stale")
         if hier:
           self.hierarchical[name] = hier
     else:
@@ -405,7 +406,8 @@ class graph:
       self.code[name] = code
       self.evalcode[name] = evalcode
       self.dependson[name] = set(dependson)
-      self.changeState(name, "stale")
+      for user in self.userids:
+        self.changeState(user, name, "stale")
     self.release()
     self.compute()
     self.computePrivacy() # every definition could change the privacy assignments
@@ -414,9 +416,10 @@ class graph:
     self.acquire("delete "+name)
     if name in self.probabilistic | self.deterministic:
 
-      self.changeState(name, "stale")
+      for user in self.userids:
+        self.changeState(user, name, "stale")
+        self.globals[user].pop(name, None)
 
-      self.globals["All"].pop(name, None)
       self.deterministic.discard(name)
       self.probabilistic.discard(name)
       self.stale.discard(name)
@@ -466,17 +469,17 @@ class graph:
   def getValue(self, name, longFormat = False):
     res = ""
     if name in self.deterministic | self.probabilistic:
-      if name in self.stale:
+      if name in self.stale["All"]:
         res += "Stale"
-      elif name in self.computing:
+      elif name in self.computing["All"]:
         res += "Computing"
-      elif name in self.exception: 
+      elif name in self.exception["All"]: 
         res += "Exception: " + str(self.globals["All"][name])
       elif name in self.private:
         res += "Private"
       elif name in self.unknown_privacy:
         res += "Privacy Unknown"
-      elif name in self.uptodate:
+      elif name in self.uptodate["All"]:
         if type(self.globals["All"][name]) == io.BytesIO:   # write image to file 
           #res += reprlib.repr(self.globals["All"][name])
           res += base64.b64encode(self.globals["All"][name].getvalue())
@@ -610,22 +613,22 @@ class graph:
       res += "\n"
     return res[0:-1]
 
-  def checkup(self, name):
-    nonuptodateparents = self.getParents(name) & (self.probabilistic - self.uptodate)
+  def checkup(self, user, name):
+    nonuptodateparents = self.getParents(name) & (self.probabilistic - self.uptodate[user])
     if nonuptodateparents == set([]):
       return True
     else:
-      return all(self.checkup(p) for p in nonuptodateparents)
+      return all(self.checkup(user, p) for p in nonuptodateparents)
 
-  def checkdown(self, name):
+  def checkdown(self, user, name):
     if name not in self.dependson and name not in self.probdependson:
       return False
 
-    nonuptodatechildren = self.getChildren(name) - self.uptodate - prob_builtins
+    nonuptodatechildren = self.getChildren(name) - self.uptodate[user] - prob_builtins
     if nonuptodatechildren == set([]):
       return True
     else:
-      return all(self.checkdown(p) for p in nonuptodatechildren)
+      return all(self.checkdown(user, p) for p in nonuptodatechildren)
 
   def getParents(self, name):
     parents = set([])
@@ -711,24 +714,25 @@ class graph:
     return result
 
   def constructPyMC3code(self, user=None):
-    locals = {}
-    loggingcode = """
+    try:
+      locals = {}
+      loggingcode = """
 logging = __import__("logging")
 _log = logging.getLogger("Private")
 logging.disable(100)
 """
 
-    code = loggingcode 
+      code = loggingcode 
     
-    # extract index variables
+      # extract index variables
 
-    for indexvariable in list(set(self.hierarchical.values())):
-      code += "__%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
-      code += "__%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
-      if user:
-        locals[indexvariable] = self.globals[user][indexvariable]
+      for indexvariable in list(set(self.hierarchical.values())):
+        code += "__%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
+        code += "__%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+        if user:
+          locals[indexvariable] = self.globals[user][indexvariable]
 
-    code += """
+      code += """
 try:
   exception_variable = "No Exception Variable"
   pymc3 = __import__("pymc3")
@@ -739,32 +743,32 @@ try:
   with basic_model:
 
 """
-    # Examples
-    # mu = alpha + beta[0]*X1 + beta[1]*X2
-    # sigma = pm.HalfNormal('sigma', sd=1)
-    # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+      # Examples
+      # mu = alpha + beta[0]*X1 + beta[1]*X2
+      # sigma = pm.HalfNormal('sigma', sd=1)
+      # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
+      probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
 
-    for name in probabilistic_only_names:
-      code += '    exception_variable = "%s"\n' % name
-      if name in self.hierarchical:
-        shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
-        code += "    " + self.pyMC3code[name] % shapecode + "\n"
-      else:
-        code += "    " + self.pyMC3code[name] % ""+ "\n"
+      for name in probabilistic_only_names:
+        code += '    exception_variable = "%s"\n' % name
+        if name in self.hierarchical:
+          shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
+          code += "    " + self.pyMC3code[name] % shapecode + "\n"
+        else:
+          code += "    " + self.pyMC3code[name] % ""+ "\n"
 
-    observed_names = list(self.probabilistic & self.deterministic)
-    for name in observed_names:
-      code += '    exception_variable = "%s"\n' % name
-      obsname = "__private_%s_observed" % name
-      code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-      if user:
-        locals[obsname] = self.globals[user][name]
-      else:
-        locals = None
+      observed_names = list(self.probabilistic & self.deterministic)
+      for name in observed_names:
+        code += '    exception_variable = "%s"\n' % name
+        obsname = "__private_%s_observed" % name
+        code += "    " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
+        if user:
+          locals[obsname] = self.globals[user][name]
+        else:
+          locals = None
 
-    code += """
+      code += """
     __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
 
 except Exception as e:
@@ -780,19 +784,25 @@ except Exception as e:
   __private_result__ = (e, exception_variable)
 
 """.format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
-    return locals, code
 
-  def canRunSampler(self, verbose=False):
+      return locals, code
+
+    except Exception as e:
+      self.log.debug("In constructMCcode user = " + user + " " + str(e))
+      self.log.debug("In constructMCcode user = " + user + " " + str(self.globals[user]))
+
+
+  def canRunSampler(self, user, verbose=False):
     if len(self.probabilistic) == 0:
       return False
     result = True
     if verbose:
       output = ""
     for name in self.probabilistic:
-      if verbose: output += name + " checkdown " + str(self.checkdown(name)) + "\n"
-      result = result and self.checkdown(name)
-      if verbose: output += name + " checkup " + str(self.checkup(name)) + "\n"
-      result = result and self.checkup(name)
+      if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
+      result = result and self.checkdown(user, name)
+      if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
+      result = result and self.checkup(user, name)
     if verbose:
       return output
     else:
@@ -803,14 +813,10 @@ except Exception as e:
     names = self.probabilistic - self.deterministic
     return names
 
-  def variablesToBeCalculated(self):
+  def variablesToBeCalculated(self, user):
     names = set([])
-    for name in self.deterministic & self.stale:
-      #self.log.debug(name + " " + str(self.dependson.get(name, set([])) - self.uptodate - self.builtins ))
-      #self.log.debug(name + " " + str(self.dependson.get(name, set([]))))
-      #self.log.debug(name + " " + str(self.uptodate))
-      #self.log.debug(name + " " + str(self.builtins))
-      if self.dependson.get(name, set([])) - self.uptodate - self.builtins == set([]):
+    for name in self.deterministic & self.stale[user]:
+      if self.dependson.get(name, set([])) - self.uptodate[user] - self.builtins == set([]):
         names.add(name)
     return(names)
 
@@ -819,12 +825,11 @@ except Exception as e:
 
     self.acquire("compute")
 
-    for name in self.variablesToBeCalculated():
-      if name not in self.jobs:
-        self.changeState(name, "computing")
-        self.log.debug("Calculate: " + name + " " + self.code[name])
-        self.jobs[name + " All"] = self.server.submit(job, (name, "All", self.evalcode[name], self.globals["All"], self.locals), callback=self.callback)
-        for user in self.userids:
+    for user in self.userids:
+      for name in self.variablesToBeCalculated(user):
+        if name not in self.jobs:
+          self.changeState(user, name, "computing")
+          self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
           self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
       
     
@@ -832,18 +837,15 @@ except Exception as e:
     if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
       sampler_names = self.variablesToBeSampled()
       self.log.debug("sampler names: " + str(sampler_names))
-      self.log.debug("stale names: " + str(self.stale))
-      if self.SamplerParameterUpdated or (sampler_names & self.stale != set([])):
-        if self.canRunSampler(): # all necessary dependencies for all probabilistic variables have been defined or computed
-          for name in sampler_names:
-            self.changeState(name, "computing")
-          myname = "__private_sampler__All"
-          #self.sampler_chains = {} # remove all sampler chains as they are now stale
+      for user in self.userids:
+        self.log.debug("stale names for user %s: " % user + str(self.stale[user]))
+        if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
           self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
-          self.samplerexception = {}
-          locals, sampler_code =  self.constructPyMC3code("All")
-          self.jobs[myname] = self.server.submit(samplerjob, (myname, "All", sampler_names, sampler_code, self.globals["All"], locals), callback=self.samplercallback)
-          for user in self.userids:
+          if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
+            for name in sampler_names:
+              self.changeState(user, name, "computing")
+            self.samplerexception[user] = {}
+
             myname = "__private_sampler__" + user
             locals, sampler_code =  self.constructPyMC3code(user)
             self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
@@ -856,11 +858,12 @@ except Exception as e:
     if isinstance(value, Exception):
       if user == "All":
         self.globals[user][name] = str(value)
-        self.changeState(name, "exception")
+        self.changeState(user, name, "exception")
     else:
       self.globals[user][name] = value
+      self.log.debug("Updating %s for user %s" % (name, user))
+      self.changeState(user, name, "uptodate")
       if user == "All":
-        self.changeState(name, "uptodate")
         if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
           self.SamplerParameterUpdated = True
         if type(value) == io.BytesIO:   # write image to file 
@@ -880,44 +883,29 @@ except Exception as e:
       self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
       for name in names:
         self.globals[user][name] = ""
-        self.changeState(name, "exception")
+        self.changeState(user, name, "exception")
       if exception_variable != "No Exception Variable":
         m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
         if m:
           value = str(int(m.group(1))-1) + " arguments required."
-        self.samplerexception[exception_variable] = str(value)
+        self.samplerexception[user][exception_variable] = str(value)
       else:
         for name in names:
-          self.samplerexception[name] = str(value)
+          self.samplerexception[user][name] = str(value)
     else: # successful sampler return
-      #try:
-      #  tochecknames = value.varnames   # names to check for privacy
-      #  #self.log.debug("names to check " + str(tochecknames))
-      #  if len(tochecknames) > 0:
-      #    for name in tochecknames:
-      #      self.globals[user][name] = value[name]
-      #    #sampleslist = [value[name] for name in tochecknames]
-      #    #samples = numpy.concatenate(sampleslist)
-      #  #self.globals[user]["sampler_chains"] = samples
-      #  self.log.debug("Added sampler_chains for " + user)
-      #except Exception as e:
-      #  self.log.debug("in samplercallback" + str(e))
-
       try:
         for name in names:
           if name in value.varnames:
-            self.globals[user][name] = value[name]
-          else:
-            self.globals[user][name] = "Not retained."
-
-        # if All is done set variables to uptodate
-        if user == "All":
-          for name in names:
-            self.changeState(name, "uptodate")
+            self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
+          else:                                                              # manifold privacy is applied to individual variables
+            self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
+                                                                             # that could be exploited
+        for name in names:
+          self.changeState(user, name, "uptodate")
 
         # if all variables in all globals have been computed then calculate manifold privacy
         aname = list(names)[0]
-        whichsamplersarecomplete = [isinstance(self.globals["All"].get(aname, None), numpy.ndarray)] + [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
+        whichsamplersarecomplete = [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
         self.log.debug(str(whichsamplersarecomplete))
         if all(whichsamplersarecomplete):
           self.log.debug("sampling all done")
@@ -929,11 +917,12 @@ except Exception as e:
             if name in value.varnames:
 
               allPublic = True
-              for user in self.userids:
+              for user in [u for u in self.userids if u != "All"]:
                 try:
                   d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
                 except Exception as e:
                   self.log.debug(str(e))
+                  self.log.debug("Array shapes are: ", self.globals[user][name].shape, self.globals["All"][name].shape)
                 self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
                 allPublic = allPublic and d < PrivacyCriterion
               if allPublic:
@@ -953,22 +942,6 @@ except Exception as e:
     self.release()
     self.compute()
     self.computePrivacy()
-
-#  def showSamplerChains(self):
-#    res = str(len(self.sampler_chains)) + " chains\n"
-#    try:
-#      for k,v in self.sampler_chains.items():
-#        if type(v) == str:
-#          res += k+ " " + str(v) + "\n"
-#        elif type(v) == numpy.ndarray:
-#          res += k + " array %s\n" % str(self.sampler_chains[k].shape)
-#        elif v == None:
-#          res += k+ " None\n"
-#        else:
-#          res += "Unknown value type\n"
-#    except Exception as e:
-#        res += "show sampler chains: " + str(e)
-#    return res
 
   def showSamplerResults(self):
     res = str(len(self.privacySamplerResults)) + " results\n"

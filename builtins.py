@@ -511,7 +511,7 @@ def showProbBuiltins():
   return res
 
 def setUserIds():
-  return set([e.UserId for e in builtins["Events"]])
+  return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 def setGlobals():
   # create a new set of globals with data that removes each user
