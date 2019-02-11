@@ -86,7 +86,7 @@ class graph:
     self.whohaslock = None
     self.prettyprinter = pprint.PrettyPrinter()
     self.jobs = {}
-    self.server = pp.Server(ppservers=ppservers)
+    self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = 400000)
 
     print "Starting pp with", self.server.get_ncpus(), "workers"
     self.log = logging.getLogger("Private")
