@@ -1,0 +1,19 @@
+NumberOfSamples = 400
+Nunits = 400
+Nteams = 5  
+realRA = 0.6  
+realRB = 0.5  
+obsA = Binomial(Nunits, realRA, Nteams)  
+obsB = Binomial(Nunits, realRB, Nteams)  
+diff = estRA - estRB  
+diffplot = distplot(diff)  
+stddiff = std(diff)  
+HDIlower = percentile(diff, 2.5)  
+HDIupper = percentile(diff, 97.5)  
+meanestRA = mean(estRA)  
+meanestRB = mean(estRB)  
+estRA ~ Uniform(0, 1)  
+estRB ~ Uniform(0, 1)  
+obsA ~ Binomial(Nunits, estRA)  
+obsB ~ Binomial(Nunits, estRB) 
+

@@ -2,6 +2,10 @@ import sys
 import io
 import traceback
 import logging
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("filename", default = None)
+args = parser.parse_args()
 
 _log = logging.getLogger("Private")
 logging.basicConfig(filename='private.log',level=logging.DEBUG)
@@ -32,7 +36,8 @@ def load_code(filename):
     execute(line[0:-1])
     
 parser = PrivateParser()
-load_code("privaterc")
+if args.filename:
+  load_code(args.filename)
 
 input_line = raw_input("> ")
 while input_line != 'exit':
