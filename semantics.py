@@ -221,6 +221,7 @@ clear: remove all variables and restart
 dt: draw variable dependency tree
 sv: show variables
 sd: show dependencies
+spp: show pp stats
 scode: show code
 sevalcode: show eval code
 smccode: show pyMC3 code

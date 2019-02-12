@@ -167,7 +167,7 @@ if __name__ == "__main__":
   # generate many events for a small set of users
 
   events = []
-  for user in xrange(3):
+  for user in xrange(10):
     i = randint(5,10)
     ev = FakeEvent()
     userid = ev.UserId

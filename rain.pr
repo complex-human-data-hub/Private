@@ -1,0 +1,4 @@
+rain = [e.Weather  == "rain" for e in Events if e.hasField("Weather")]
+rain ~ Bernoulli(rate)
+rate ~ Uniform(0,1)
+meanr = mean(rate)

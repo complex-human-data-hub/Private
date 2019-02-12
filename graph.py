@@ -720,6 +720,7 @@ class graph:
       loggingcode = """
 try:
   logging = __import__("logging")
+  _log = logging.getLogger("Private")
   logging.disable(100)
 """
 
@@ -842,7 +843,7 @@ except Exception as e:
           #time.sleep(1)
       
     
-    self.log.debug("self.jobs: " + str(self.jobs.keys()))
+    #self.log.debug("self.jobs: " + str(self.jobs.keys()))
     if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
       sampler_names = self.variablesToBeSampled()
       self.log.debug("sampler names: " + str(sampler_names))
@@ -894,13 +895,13 @@ except Exception as e:
     self.computePrivacy()
 
   def samplercallback(self, returnvalue):  
-    with open("/tmp/private.log", "a") as f:
-      f.write("Starting samplercallback\n")
-    self.log.debug("Starting samplercallback\n")
+    #with open("/tmp/private.log", "a") as f:
+    #  f.write("Starting samplercallback\n")
+    #self.log.debug("Starting samplercallback\n")
     self.acquire("samplercallback")
     myname, user, names, value, exception_variable = returnvalue
-    with open("/tmp/private.log", "a") as f:
-      f.write("samplercallback for %s\n" % user)
+    #with open("/tmp/private.log", "a") as f:
+    #  f.write("samplercallback for %s\n" % user)
     if isinstance(value, Exception):
       self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
       for name in names:
@@ -927,9 +928,9 @@ except Exception as e:
 
         # if all variables in all globals have been computed then calculate manifold privacy
         aname = list(names)[0]
-        whichsamplersarecomplete = [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
+        whichsamplersarecomplete = [isinstance(self.globals[u].get(aname, None), numpy.ndarray) for u in self.userids]
         if all(whichsamplersarecomplete):
-          self.log.debug("sampling all done")
+          #self.log.debug("sampling all done")
           # calculate manifold privacy 
           # results are stored in self.privacySamplerResults (privacy of variables is not set directly)
           self.log.debug("Have samples and calculating manifold privacy")
@@ -937,19 +938,21 @@ except Exception as e:
           for name in names:
             if name in value.varnames:
 
-              allPublic = True
-              for user in [u for u in self.userids if u != "All"]:
-                try:
-                  d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
-                except Exception as e:
-                  self.log.debug(str(e))
-                  self.log.debug("Array shapes are: {} {}".format( self.globals[user][name].shape, self.globals["All"][name].shape ))
-                self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-                allPublic = allPublic and d < PrivacyCriterion
-              if allPublic:
-                self.privacySamplerResults[name] = "public"
-              else:
+              if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
                 self.privacySamplerResults[name] = "private"
+              else:
+                allPublic = True
+                for usr in [u for u in self.userids if u != "All"]:
+                  try:
+                    d = distManifold(self.globals[usr][name], self.globals["All"][name]) * 100.
+                  except Exception as e:
+                    self.log.debug(str(e))
+                  self.log.debug(usr + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                  allPublic = allPublic and d < PrivacyCriterion
+                if allPublic:
+                  self.privacySamplerResults[name] = "public"
+                else:
+                  self.privacySamplerResults[name] = "private"
         else:
           self.log.debug("still more samples to compute " + str(whichsamplersarecomplete))
       except Exception as e:
@@ -961,19 +964,19 @@ except Exception as e:
     except Exception as e:
       self.log.debug("trying ot del job " + str(e))
     self.release()
-    with open("/tmp/private.log", "a") as f:
-      f.write("Released samplercallback lock for %s\n" % user)
-    self.log.debug("Released samplercallback lock for %s\n" % user)
+    #with open("/tmp/private.log", "a") as f:
+    #  f.write("Released samplercallback lock for %s\n" % user)
+    #self.log.debug("Released samplercallback lock for %s\n" % user)
 
     self.compute()
-    with open("/tmp/private.log", "a") as f:
-      f.write("Done compute for %s\n" % user)
-    self.log.debug("Done compute for %s\n" % user)
+    #with open("/tmp/private.log", "a") as f:
+    #  f.write("Done compute for %s\n" % user)
+    #self.log.debug("Done compute for %s\n" % user)
 
     self.computePrivacy()
-    with open("/tmp/private.log", "a") as f:
-      f.write("Done computePrivacy for %s\n" % user)
-    self.log.debug("Done computePrivacy for %s\n" % user)
+    #with open("/tmp/private.log", "a") as f:
+    #  f.write("Done computePrivacy for %s\n" % user)
+    #self.log.debug("Done computePrivacy for %s\n" % user)
 
   def showSamplerResults(self):
     res = str(len(self.privacySamplerResults)) + " results\n"
