@@ -16,6 +16,7 @@ import pprint
 import dill as pickle
 import os
 import base64
+import time
 
 from config import ppservers 
 
@@ -717,13 +718,18 @@ class graph:
     try:
       locals = {}
       loggingcode = """
-logging = __import__("logging")
-_log = logging.getLogger("Private")
-logging.disable(100)
+try:
+  logging = __import__("logging")
+  logging.disable(100)
 """
 
-      code = loggingcode 
-    
+      #code = loggingcode 
+      code = """
+try:
+  with open("/tmp/private.log", "a") as f:
+    f.write("Starting: %s\\n" % '{}')
+""".format(user)
+
       # extract index variables
 
       for indexvariable in list(set(self.hierarchical.values())):
@@ -733,7 +739,6 @@ logging.disable(100)
           locals[indexvariable] = self.globals[user][indexvariable]
 
       code += """
-try:
   exception_variable = "No Exception Variable"
   pymc3 = __import__("pymc3")
 
@@ -770,6 +775,8 @@ try:
 
       code += """
     __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+    with open("/tmp/private.log", "a") as f:
+      f.write("    Sampler done\\n")
 
 except Exception as e:
   # remove stuff after the : as that sometimes reveals private information
@@ -827,10 +834,12 @@ except Exception as e:
 
     for user in self.userids:
       for name in self.variablesToBeCalculated(user):
-        if name not in self.jobs:
+        jobname = name + " " + user
+        if jobname not in self.jobs:
           self.changeState(user, name, "computing")
           self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
           self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
+          #time.sleep(1)
       
     
     self.log.debug("self.jobs: " + str(self.jobs.keys()))
@@ -849,6 +858,7 @@ except Exception as e:
             myname = "__private_sampler__" + user
             locals, sampler_code =  self.constructPyMC3code(user)
             self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
+            time.sleep(1)
         self.SamplerParameterUpdated = False
     self.release()
 
@@ -861,7 +871,6 @@ except Exception as e:
         self.changeState(user, name, "exception")
     else:
       self.globals[user][name] = value
-      self.log.debug("Updating %s for user %s" % (name, user))
       self.changeState(user, name, "uptodate")
       if user == "All":
         if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
@@ -870,15 +879,27 @@ except Exception as e:
           value.seek(0)
           with open(name+'.png', 'wb') as f:
             shutil.copyfileobj(value, f)
-    del self.jobs[name + " " + user]
+    try:
+      jobname = name + " " + user
+      if jobname in self.jobs:
+        del self.jobs[name + " " + user]
+      else:
+        self.log.debug("Trying to delete job %s that is not in self.jobs" % jobname)
+        self.log.debug(self.jobs)
+    except Exception as e:
+      self.log.debug(str(e))
 
     self.release()
     self.compute()
     self.computePrivacy()
 
   def samplercallback(self, returnvalue):  
+    with open("/tmp/private.log", "a") as f:
+      f.write("Starting samplercallback\n")
     self.acquire("samplercallback")
     myname, user, names, value, exception_variable = returnvalue
+    with open("/tmp/private.log", "a") as f:
+      f.write("samplercallback for %s\n" % user)
     if isinstance(value, Exception):
       self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
       for name in names:
@@ -906,7 +927,6 @@ except Exception as e:
         # if all variables in all globals have been computed then calculate manifold privacy
         aname = list(names)[0]
         whichsamplersarecomplete = [isinstance(self.globals[user].get(aname, None), numpy.ndarray) for user in self.userids]
-        self.log.debug(str(whichsamplersarecomplete))
         if all(whichsamplersarecomplete):
           self.log.debug("sampling all done")
           # calculate manifold privacy 
@@ -930,7 +950,7 @@ except Exception as e:
               else:
                 self.privacySamplerResults[name] = "private"
         else:
-          self.log.debug("still more samples to compute" + str(whichsamplersarecomplete))
+          self.log.debug("still more samples to compute " + str(whichsamplersarecomplete))
       except Exception as e:
         self.log.debug("in samplercallback when assigning values " + str(e))
           
@@ -940,8 +960,14 @@ except Exception as e:
     except Exception as e:
       self.log.debug("trying ot del job " + str(e))
     self.release()
+    with open("/tmp/private.log", "a") as f:
+      f.write("Released samplercallback lock for %s\n" % user)
     self.compute()
+    with open("/tmp/private.log", "a") as f:
+      f.write("Done compute for %s\n" % user)
     self.computePrivacy()
+    with open("/tmp/private.log", "a") as f:
+      f.write("Done computePrivacy for %s\n" % user)
 
   def showSamplerResults(self):
     res = str(len(self.privacySamplerResults)) + " results\n"
@@ -950,6 +976,9 @@ except Exception as e:
     return res
 
 def job(name, user, code, globals, locals):
+  with open("/tmp/private.log", "a") as f:
+    f.write("in job %s %s\n" % (name, user))
+    f.write(code +"\n")
   try:
     value = eval(code, globals, locals)
     return((name, user, value))
@@ -957,11 +986,17 @@ def job(name, user, code, globals, locals):
     return((name, user, e))
 
 def samplerjob(myname, user, names, code, globals, locals):
+  with open("/tmp/private.log", "a") as f:
+    f.write("in sampler job %s %s %s\n" % (myname, user, str(names)))
   try:
     exec(code, globals, locals)
     value, exception_variable = locals["__private_result__"]
+    with open("/tmp/private.log", "a") as f:
+      f.write("end of samplerjob %s %s %s\n" % (str(myname), str(value), str(exception_variable)))
     return (myname, user, names, value, exception_variable)
   except Exception as e:
+    with open("/tmp/private.log", "a") as f:
+      f.write("in sampler job exception: %s\n" % str(e))
     return (myname, user, names, e, "No Exception Variable")
 
 depGraph = graph()

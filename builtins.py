@@ -289,6 +289,9 @@ def private_ord(x):
 def private_pow(x):
   return pow(x)
 
+def private_open(name, per): ####### WARNING Do not ship with this line in ###########
+  return open(name, per)
+
 def private_property(x):
   return property(x)
 
@@ -456,6 +459,7 @@ builtins = {\
             "max":private_max, \
             "object":private_object, \
             "oct":private_oct, \
+            "open":private_open,       ####### WARNING Do not ship with this line in ###########
             "ord":private_ord, \
             "pow":private_pow, \
             "property":private_property, \
