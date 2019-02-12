@@ -733,8 +733,8 @@ try:
       # extract index variables
 
       for indexvariable in list(set(self.hierarchical.values())):
-        code += "__%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
-        code += "__%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+        code += "  __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
+        code += "  __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
         if user:
           locals[indexvariable] = self.globals[user][indexvariable]
 
@@ -896,6 +896,7 @@ except Exception as e:
   def samplercallback(self, returnvalue):  
     with open("/tmp/private.log", "a") as f:
       f.write("Starting samplercallback\n")
+    self.log.debug("Starting samplercallback\n")
     self.acquire("samplercallback")
     myname, user, names, value, exception_variable = returnvalue
     with open("/tmp/private.log", "a") as f:
@@ -942,7 +943,7 @@ except Exception as e:
                   d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
                 except Exception as e:
                   self.log.debug(str(e))
-                  self.log.debug("Array shapes are: ", self.globals[user][name].shape, self.globals["All"][name].shape)
+                  self.log.debug("Array shapes are: {} {}".format( self.globals[user][name].shape, self.globals["All"][name].shape ))
                 self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
                 allPublic = allPublic and d < PrivacyCriterion
               if allPublic:
@@ -962,12 +963,17 @@ except Exception as e:
     self.release()
     with open("/tmp/private.log", "a") as f:
       f.write("Released samplercallback lock for %s\n" % user)
+    self.log.debug("Released samplercallback lock for %s\n" % user)
+
     self.compute()
     with open("/tmp/private.log", "a") as f:
       f.write("Done compute for %s\n" % user)
+    self.log.debug("Done compute for %s\n" % user)
+
     self.computePrivacy()
     with open("/tmp/private.log", "a") as f:
       f.write("Done computePrivacy for %s\n" % user)
+    self.log.debug("Done computePrivacy for %s\n" % user)
 
   def showSamplerResults(self):
     res = str(len(self.privacySamplerResults)) + " results\n"
