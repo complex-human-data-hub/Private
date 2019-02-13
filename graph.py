@@ -87,7 +87,13 @@ class graph:
     self.whohaslock = None
     self.prettyprinter = pprint.PrettyPrinter()
     self.jobs = {}
-    self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = 400000)
+
+    if not ppservers:
+        # Running locally, let ncpus default to the number of system processors
+        self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = 400000)
+    else:
+        # Set ncpus to 0 so that we only process on remote machines
+        self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = 400000)
 
     print "Starting pp with", self.server.get_ncpus(), "workers"
     self.log = logging.getLogger("Private")
