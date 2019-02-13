@@ -4,9 +4,10 @@ import traceback
 import logging
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("filename", default = None)
+parser.add_argument("filename", nargs="?", default = None)
 args = parser.parse_args()
 
+print "args", args
 _log = logging.getLogger("Private")
 logging.basicConfig(filename='private.log',level=logging.DEBUG)
 _log.debug("============================= Starting new interpreter ======================================")
