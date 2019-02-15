@@ -19,7 +19,10 @@ To run commands from a file
 python command.py yourCommandsFile.pr
 ```
 
-# License
+## Tutorials
+More examples of how to use Private are contained in the tutorials directory
+
+## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
 
 
