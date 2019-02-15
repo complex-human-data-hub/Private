@@ -19,7 +19,8 @@ To run commands from a file
 python command.py yourCommandsFile.pr
 ```
 
-
+# License
+[GNU GPLv3] (https://choosealicense.com/licenses/gpl-3.0/)
 
 
 
