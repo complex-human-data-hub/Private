@@ -14,337 +14,337 @@ import copy
 # Deterministic Continuous Distribution Definitions
 
 def Uniform(lower, upper, size):
-  y = pm.Uniform.dist(lower, upper)
-  return y.random(size=size)
+    y = pm.Uniform.dist(lower, upper)
+    return y.random(size=size)
 
 def Normal(mu, sd, size):
-  y = pm.Normal.dist(mu, sd)
-  return y.random(size=size)
+    y = pm.Normal.dist(mu, sd)
+    return y.random(size=size)
 
 def HalfNormal(sd, size):
-  y = pm.HalfNormal.dist(sd)
-  return y.random(size=size)
+    y = pm.HalfNormal.dist(sd)
+    return y.random(size=size)
 
 def SkewNormal(mu, sd, alpha, size):
-  y = pm.SkewNormal.dist(mu=mu, sd=sd, alpha=alpha)
-  return y.random(size=size)
+    y = pm.SkewNormal.dist(mu=mu, sd=sd, alpha=alpha)
+    return y.random(size=size)
 
 def Beta(mu, sd, size):
-  y = pm.Beta.dist(mu=mu, sd=sd)
-  return y.random(size=size)
+    y = pm.Beta.dist(mu=mu, sd=sd)
+    return y.random(size=size)
 
 def Kumaraswamy(a, b, size):
-  y = pm.Kumaraswamy.dist(a, b)
-  return y.random(size=size)
+    y = pm.Kumaraswamy.dist(a, b)
+    return y.random(size=size)
 
 def Exponential(lam, size):
-  y = pm.Exponential.dist(lam)
-  return y.random(size=size)
+    y = pm.Exponential.dist(lam)
+    return y.random(size=size)
 
 def Laplace(mu, b, size):
-  y = pm.Laplace.dist(mu, b)
-  return y.random(size=size)
+    y = pm.Laplace.dist(mu, b)
+    return y.random(size=size)
 
 def StudentT(nu, size):
-  y = pm.StudentT.dist(nu)
-  return y.random(size=size)
+    y = pm.StudentT.dist(nu)
+    return y.random(size=size)
 
 def HalfStudentT(nu, size):
-  y = pm.HalfStudentT.dist(nu)
-  return y.random(size=size)
+    y = pm.HalfStudentT.dist(nu)
+    return y.random(size=size)
 
 def Cauchy(alpha, beta, size):
-  y = pm.Cauchy.dist(alpha, beta)
-  return y.random(size=size)
+    y = pm.Cauchy.dist(alpha, beta)
+    return y.random(size=size)
 
 def HalfCauchy(beta, size):
-  y = pm.HalfCauchy.dist(beta)
-  return y.random(size=size)
+    y = pm.HalfCauchy.dist(beta)
+    return y.random(size=size)
 
 def Gamma(mu, sd, size):
-  y = pm.Gamma.dist(mu, sd)
-  return y.random(size=size)
+    y = pm.Gamma.dist(mu, sd)
+    return y.random(size=size)
 
 def Weibull(alpha, beta, size):
-  y = pm.Weibull.dist(alpha, beta)
-  return y.random(size=size)
+    y = pm.Weibull.dist(alpha, beta)
+    return y.random(size=size)
 
 def LogNormal(mu, sd, size):
-  y = pm.Lognormal.dist(mu=mu, sd=sd)
-  return y.random(size=size)
+    y = pm.Lognormal.dist(mu=mu, sd=sd)
+    return y.random(size=size)
 
 def ChiSquared(nu, size):
-  y = pm.ChiSquared.dist(nu)
-  return y.random(size=size)
+    y = pm.ChiSquared.dist(nu)
+    return y.random(size=size)
 
 def Wald(mu, lam, size):
-  y = pm.Wald.dist(mu, lam)
-  return y.random(size=size)
+    y = pm.Wald.dist(mu, lam)
+    return y.random(size=size)
 
 def Pareto(alpha, m, size):
-  y = pm.Pareto.dist(alpha, m)
-  return y.random(size=size)
+    y = pm.Pareto.dist(alpha, m)
+    return y.random(size=size)
 
 def InverseGamma(mu, sd, size):
-  y = pm.InverseGamma.dist(mu, sd)
-  return y.random(size=size)
+    y = pm.InverseGamma.dist(mu, sd)
+    return y.random(size=size)
 
 def ExGaussian(mu, sd, nu, size):
-  y = pm.ExGaussian.dist(mu, sd, nu)
-  return y.random(size=size)
+    y = pm.ExGaussian.dist(mu, sd, nu)
+    return y.random(size=size)
 
 def Triangular(lower, upper, c, size):
-  y = pm.Triangular.dist(lower, upper, c)
-  return y.random(size=size)
+    y = pm.Triangular.dist(lower, upper, c)
+    return y.random(size=size)
 
 def Gumbel(mu, beta, size):
-  y = pm.Gumbel.dist(mu, beta)
-  return y.random(size=size)
+    y = pm.Gumbel.dist(mu, beta)
+    return y.random(size=size)
 
 def Logistic(mu, s, size):
-  y = pm.Logistic.dist(mu, s)
-  return y.random(size=size)
+    y = pm.Logistic.dist(mu, s)
+    return y.random(size=size)
 
 def LogitNormal(mu, sd, size):
-  y = pm.LogitNormal.dist(mu, sd)
-  return y.random(size=size)
+    y = pm.LogitNormal.dist(mu, sd)
+    return y.random(size=size)
 
 # Deterministic Discrete  Distribution Definitions
 
 def Binomial(n, p, size):
-  y = pm.Binomial.dist(n, p)
-  return y.random(size=size)
+    y = pm.Binomial.dist(n, p)
+    return y.random(size=size)
 
 def ZeroInflatedBinomial(psi, n, p, size):
-  y = pm.ZeroInflatedBinomial.dist(psi, n, p)
-  return y.random(size=size)
+    y = pm.ZeroInflatedBinomial.dist(psi, n, p)
+    return y.random(size=size)
 
 def BetaBinomial(alpha, beta, n, size):
-  y = pm.BetaBinomial.dist(alpha, beta, n)
-  return y.random(size=size)
+    y = pm.BetaBinomial.dist(alpha, beta, n)
+    return y.random(size=size)
 
 def Bernoulli(p, size):
-  y = pm.Bernoulli.dist(p)
-  return y.random(size=size)
+    y = pm.Bernoulli.dist(p)
+    return y.random(size=size)
 
 def Poisson(mu, size):
-  y = pm.Poisson.dist(mu)
-  return y.random(size=size)
+    y = pm.Poisson.dist(mu)
+    return y.random(size=size)
 
 def ZeroInflatedPoisson(psi, mu, size):
-  y = pm.ZeroInflatedPoisson.dist(psi, mu)
-  return y.random(size=size)
+    y = pm.ZeroInflatedPoisson.dist(psi, mu)
+    return y.random(size=size)
 
 def NegativeBinomial(mu, alpha, size):
-  y = pm.NegativeBinomial.dist(mu, alpha)
-  return y.random(size=size)
+    y = pm.NegativeBinomial.dist(mu, alpha)
+    return y.random(size=size)
 
 def ZeroInflatedNegativeBinomial(psi, mu, alpha, size):
-  y = pm.ZeroInflatedNegativeBinomial.dist(psi, mu, alpha)
-  return y.random(size=size)
+    y = pm.ZeroInflatedNegativeBinomial.dist(psi, mu, alpha)
+    return y.random(size=size)
 
 def DiscreteUniform(upper, lower, size):
-  y = pm.DiscreteUniform.dist(upper, lower)
-  return y.random(size=size)
+    y = pm.DiscreteUniform.dist(upper, lower)
+    return y.random(size=size)
 
 def Geometric(p, size):
-  y = pm.Geometric.dist(p)
-  return y.random(size=size)
+    y = pm.Geometric.dist(p)
+    return y.random(size=size)
 
 def Categorical(p, size):
-  y = pm.Categorical.dist(p)
-  return y.random(size=size)
+    y = pm.Categorical.dist(p)
+    return y.random(size=size)
 
 def DiscreteWeibull(q, beta, size):
-  y = pm.DiscreteWeibull.dist(q, beta)
-  return y.random(size=size)
+    y = pm.DiscreteWeibull.dist(q, beta)
+    return y.random(size=size)
 
 def Constant(c, size):
-  y = pm.Constant.dist(c)
-  return y.random(size=size)
+    y = pm.Constant.dist(c)
+    return y.random(size=size)
 
 # Plotting Function Definitions
 
 def distplot(a, **kwargs):  # have to stop this plotting if x is Private
-  try:                                      # this is wrapped in a try because distplot throws a future warning that prevents execution
-    seaborn.distplot(a, **kwargs)
-  except Exception as e:
-    pass
-  buf = io.BytesIO()
-  plt.savefig(buf, format="png")
-  plt.close()
-  return buf
+    try:                                      # this is wrapped in a try because distplot throws a future warning that prevents execution
+        seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
 
 def private_array(x):
-  return numpy.array(x, numpy.float)
+    return numpy.array(x, numpy.float)
 
 def private_mean(x):
-  return numpy.mean(x)
+    return numpy.mean(x)
 
 def private_median(x):
-  return numpy.median(x)
+    return numpy.median(x)
 
 def private_percentile(x, percent):
-  return numpy.percentile(x, percent)
+    return numpy.percentile(x, percent)
 
 def private_std(x):
-  return numpy.std(x)
+    return numpy.std(x)
 
 def private_abs(x):
-  return abs(x)
+    return abs(x)
 
 def private_all(x):
-  return all(x)
+    return all(x)
 
 def private_any(x):
-  return any(x)
+    return any(x)
 
 def private_bin(x):
-  return bin(x)
+    return bin(x)
 
 def private_bool(x):
-  return bool(x)
+    return bool(x)
 
 def private_chr(x):
-  return chr(x)
+    return chr(x)
 
 def private_cmp(x):
-  return cmp(x)
+    return cmp(x)
 
 def private_complex(x):
-  return complex(x)
+    return complex(x)
 
 def private_dict(x):
-  return dict(x)
+    return dict(x)
 
 def private_divmod(x):
-  return divmod(x)
+    return divmod(x)
 
 def private_enumerate(x):
-  return list(enumerate(x))
+    return list(enumerate(x))
 
 def private_exp(x):
-  return numpy.exp(x)
+    return numpy.exp(x)
 
 def private_filter(x):
-  return filter(x)
+    return filter(x)
 
 def private_float(x):
-  return float(x)
+    return float(x)
 
 def private_format(x):
-  return format(x)
+    return format(x)
 
 def private_frozenset(x):
-  return frozenset(x)
+    return frozenset(x)
 
 def private_getattr(x):
-  return getattr(x)
+    return getattr(x)
 
 def private_hasattr(x):
-  return hasattr(x)
+    return hasattr(x)
 
 def private_hex(x):
-  return hex(x)
+    return hex(x)
 
 def private_int(x):
-  return int(x)
+    return int(x)
 
 def private_isinstance(x):
-  return isinstance(x)
+    return isinstance(x)
 
 def private_issubclass(x):
-  return issubclass(x)
+    return issubclass(x)
 
 def private_iter(x):
-  return iter(x)
+    return iter(x)
 
 def private_len(x):
-  return len(x)
+    return len(x)
 
 def private_list(x):
-  return tuple(x)
+    return tuple(x)
 
 def private_long(x):
-  return long(x)
+    return long(x)
 
 def private_map(x):
-  return map(x)
+    return map(x)
 
 def private_min(x):
-  return min(x)
+    return min(x)
 
 def private_max(x):
-  return max(x)
+    return max(x)
 
 def private_object(x):
-  return object(x)
+    return object(x)
 
 def private_oct(x):
-  return oct(x)
+    return oct(x)
 
 def private_ord(x):
-  return ord(x)
+    return ord(x)
 
 def private_pow(x):
-  return pow(x)
+    return pow(x)
 
 def private_open(name, per): ####### WARNING Do not ship with this line in ###########
-  return open(name, per)
+    return open(name, per)
 
 def private_property(x):
-  return property(x)
+    return property(x)
 
 def private_range(x):
-  return range(x)
+    return range(x)
 
 def private_reduce(x):
-  return reduce(x)
+    return reduce(x)
 
 def private_repr(x):
-  return repr(x)
+    return repr(x)
 
 def private_reversed(x):
-  return reversed(x)
+    return reversed(x)
 
 def private_round(x):
-  return round(x)
+    return round(x)
 
 def private_set(x):
-  return frozenset(x)
+    return frozenset(x)
 
 def private_slice(x):
-  return slice(x)
+    return slice(x)
 
 def private_sorted(x):
-  return sorted(x)
+    return sorted(x)
 
 def private_str(x):
-  return str(x)
+    return str(x)
 
 def private_sum(x):
-  return sum(x)
+    return sum(x)
 
 def private_tuple(x):
-  return tuple(x)
+    return tuple(x)
 
 def private_type(x):
-  return type(x)
+    return type(x)
 
 def private_unichr(x):
-  return unichr(x)
+    return unichr(x)
 
 def private_unicode(x):
-  return unicode(x)
+    return unicode(x)
 
 def private_vars(x):
-  return vars(x)
+    return vars(x)
 
 def private_xrange(x):
-  return xrange(x)
+    return xrange(x)
 
 def private_zip(x):
-  return zip(x)
+    return zip(x)
 
 
 builtins = {\
@@ -406,7 +406,7 @@ builtins = {\
 
             "distplot": distplot, \
 
-            # Control of Sampler 
+            # Control of Sampler
 
             "NumberOfTuningSamples": 200, \
             "NumberOfChains": 2, \
@@ -485,49 +485,47 @@ prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "K
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
 
 def setBuiltinPrivacy(graph):
-  for name in builtins:
-    graph.setPrivacy(name, "public")
-  for name in prob_builtins:
-    graph.setPrivacy(name, "public")
- 
-  graph.setPrivacy("Events", "private")
+    for name in builtins:
+        graph.setPrivacy(name, "public")
+    for name in prob_builtins:
+        graph.setPrivacy(name, "public")
+
+    graph.setPrivacy("Events", "private")
 
 def showNames(names, width=80):
-  res = ""
-  names.sort()
-  columnWidth = max(len(s) for s in names)+2
-  numColumns = width / columnWidth
-  
-  numRows = len(names) / numColumns
-  rows = [""] * numRows
-  for i, name in enumerate(names):
-    rows[i%numRows] += name.ljust(columnWidth)
-  return "\n".join(rows)
+    res = ""
+    names.sort()
+    columnWidth = max(len(s) for s in names)+2
+    numColumns = width / columnWidth
+
+    numRows = len(names) / numColumns
+    rows = [""] * numRows
+    for i, name in enumerate(names):
+        rows[i%numRows] += name.ljust(columnWidth)
+    return "\n".join(rows)
 
 def showBuiltins():
-  res = "Builtins\n\n"
-  res += showNames(builtins.keys())
-  return res
+    res = "Builtins\n\n"
+    res += showNames(builtins.keys())
+    return res
 
 def showProbBuiltins():
-  res = "Probabilistic Builtins\n\n"
-  res += showNames(list(prob_builtins))
-  return res
+    res = "Probabilistic Builtins\n\n"
+    res += showNames(list(prob_builtins))
+    return res
 
 def setUserIds():
-  return set([e.UserId for e in builtins["Events"]] + ["All"])
+    return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 def setGlobals():
-  # create a new set of globals with data that removes each user
+    # create a new set of globals with data that removes each user
 
-  result = {}
-  result["All"] = copy.copy(builtins)
-  users = set(e.UserId for e in builtins["Events"])
-  for user in users:
-    result[user] = copy.copy(builtins)
-    result[user]["Events"] = [e for e in builtins["Events"] if e.UserId != user]
-    result[user]["DemoEvents"] = result[user]["Events"]
-    
-  return result
+    result = {}
+    result["All"] = copy.copy(builtins)
+    users = set(e.UserId for e in builtins["Events"])
+    for user in users:
+        result[user] = copy.copy(builtins)
+        result[user]["Events"] = [e for e in builtins["Events"] if e.UserId != user]
+        result[user]["DemoEvents"] = result[user]["Events"]
 
-  
+    return result

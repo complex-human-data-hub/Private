@@ -8,4 +8,3 @@ with open('ppserver.conf', 'r') as f:
             ppservers_list.append(s)
 
 ppservers = tuple(ppservers_list)
-

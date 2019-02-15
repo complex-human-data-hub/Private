@@ -1539,4 +1539,3 @@ data = [{ 'AccelerometryCount': 6,
   'type': 'App'}]
 Events = [Event(d) for d in data]
 DemoEvents = Events
-

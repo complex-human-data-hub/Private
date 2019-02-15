@@ -3268,6 +3268,6 @@ code = "[Event(d) for d in %s]" % str(data)
 #print [e.latitude for e in f if e.hasField("latitude")]
 
 def define_demo_events(graph):
-  graph.define("Events", code, privacy="private")
-  graph.define("PublicEvents", code, privacy="public")
-  graph.compute()
+    graph.define("Events", code, privacy="private")
+    graph.define("PublicEvents", code, privacy="public")
+    graph.compute()

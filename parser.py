@@ -63,7 +63,7 @@ def show_ncpus():               return "sncpus"
 def show_stats():               return "showstats"
 def help():                     return "help"
 
-def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')   # Note removed _ from identifier names to make sure that an attacker doesn't have access 
+def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')   # Note removed _ from identifier names to make sure that an attacker doesn't have access
                                                                     # to reflection interface
 
 def comment_string():           return _(r'#[a-zA-Z0-9_ ~=()\.,*#\[\]\///+-]*')
@@ -103,31 +103,31 @@ def distribution_assignment():  return identifier, Optional("[", identifier, "]"
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
-def command_line_expression():  return expression 
+def command_line_expression():  return expression
 def line():                     return [command, assignment, command_line_expression, comment_line], EOF
 
 def PrivateParser():
-  return(ParserPython(line, debug = False, autokwd=True))
+    return(ParserPython(line, debug = False, autokwd=True))
 
 if __name__ == "__main__":
 
-  input_lines = [(arithmetic_expression, "9"), \
-                 (expression, "True or False"), \
-                 (identifier, "a"), \
-                 (line, "a="), \
-                 (boolean_expression, "True"), \
-                 (deterministic_assignment, "a = 9"),
-                 (line, "AlisonSimon=9"),
-                 (line, "Alison_Simon=9"),
-                 (line, "Alison+Simon=9"),
-                 (line, "a=b*3"),
-                 (line, "a=[b, 3]")]
-  
-  for rule, input_line in input_lines:
-    try: 
-      parser = ParserPython(rule, debug=True, autokwd=True)
-      parse_tree = parser.parse(input_line)
-      print parse_tree
-      print input_line, " is valid"
-    except:
-      print input_line, " is invalid"
+    input_lines = [(arithmetic_expression, "9"), \
+                   (expression, "True or False"), \
+                   (identifier, "a"), \
+                   (line, "a="), \
+                   (boolean_expression, "True"), \
+                   (deterministic_assignment, "a = 9"),
+                   (line, "AlisonSimon=9"),
+                   (line, "Alison_Simon=9"),
+                   (line, "Alison+Simon=9"),
+                   (line, "a=b*3"),
+                   (line, "a=[b, 3]")]
+
+    for rule, input_line in input_lines:
+        try:
+            parser = ParserPython(rule, debug=True, autokwd=True)
+            parse_tree = parser.parse(input_line)
+            print parse_tree
+            print input_line, " is valid"
+        except:
+            print input_line, " is invalid"

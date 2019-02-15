@@ -16,36 +16,36 @@ from parser import PrivateParser
 from semantics import PrivateSemanticAnalyser
 
 def execute(line):
-  if line != "":
-    try:
-      parse_tree = parser.parse(line)
-    except Exception as e:  # didn't parse
-      print("Syntax Error: " + str(e))
-    else:
-      try:
-        result = PrivateSemanticAnalyser(parse_tree)
-        if result:
-          print(result)
-      except Exception as e:
-        print("Error: " + str(e))
-        traceback.print_exc(file=sys.stdout)
+    if line != "":
+        try:
+            parse_tree = parser.parse(line)
+        except Exception as e:  # didn't parse
+            print("Syntax Error: " + str(e))
+        else:
+            try:
+                result = PrivateSemanticAnalyser(parse_tree)
+                if result:
+                    print(result)
+            except Exception as e:
+                print("Error: " + str(e))
+                traceback.print_exc(file=sys.stdout)
 
 def load_code(filename):
-  f = open(filename, "r").readlines()
-  for line in f:
-    print line[0:-1]
-    execute(line[0:-1])
-    
+    f = open(filename, "r").readlines()
+    for line in f:
+        print line[0:-1]
+        execute(line[0:-1])
+
 parser = PrivateParser()
 if args.filename:
-  load_code(args.filename)
+    load_code(args.filename)
 
 input_line = raw_input("> ")
 while input_line != 'exit':
-  if input_line != "":
-    execute(input_line)
+    if input_line != "":
+        execute(input_line)
 
-  input_line = raw_input("> ")
+    input_line = raw_input("> ")
 
 
 exit()

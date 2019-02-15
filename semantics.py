@@ -24,34 +24,34 @@ from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
 class result:
 
-  def __init__(self, result_type, code = None, depend = None, evalcode = None, pyMC3code = None):
-    self.result_type = result_type
-    self.code = code
-    if evalcode == None:
-      self.evalcode = code
-    else:
-      self.evalcode = evalcode
-    self.pyMC3code = pyMC3code
-    self.depend = None
-    if depend:
-      if type(depend) == SemanticActionResults:
-        self.depend = []
-        for child in depend:
-          if child.__class__.__name__ == "result":
-            if child.depend:
-              self.depend.extend(child.depend)
-      elif type(depend) == str:
-        self.depend = [depend]
-      elif type(depend) == unicode:
-        self.depend = [depend]
-      else:
-        raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a unicode: " + str(depend) + " is a " + str(type(depend)))
+    def __init__(self, result_type, code = None, depend = None, evalcode = None, pyMC3code = None):
+        self.result_type = result_type
+        self.code = code
+        if evalcode == None:
+            self.evalcode = code
+        else:
+            self.evalcode = evalcode
+        self.pyMC3code = pyMC3code
+        self.depend = None
+        if depend:
+            if type(depend) == SemanticActionResults:
+                self.depend = []
+                for child in depend:
+                    if child.__class__.__name__ == "result":
+                        if child.depend:
+                            self.depend.extend(child.depend)
+            elif type(depend) == str:
+                self.depend = [depend]
+            elif type(depend) == unicode:
+                self.depend = [depend]
+            else:
+                raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a unicode: " + str(depend) + " is a " + str(type(depend)))
 
-  def remove_dependencies(self, dependenciesToRemove):
-    self.depend = list(set(self.depend) - set(dependenciesToRemove)) 
+    def remove_dependencies(self, dependenciesToRemove):
+        self.depend = list(set(self.depend) - set(dependenciesToRemove))
 
-  def __repr__(self):
-    return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(self.evalcode) + "  depend: " + str(self.depend)
+    def __repr__(self):
+        return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(self.evalcode) + "  depend: " + str(self.depend)
 
 class InputVisitor(PTNodeVisitor):
 
@@ -80,40 +80,40 @@ class InputVisitor(PTNodeVisitor):
         return result("atom", children[0].code, children)
     def visit_identifier_list(self, node, children):
         if len(children) == 1:
-           return result("identifier_list", children[0].code, children)
+            return result("identifier_list", children[0].code, children)
         else:
-          return result("identifier_list", ", ".join(c if type(c) == unicode else c.code for c in children), children)
+            return result("identifier_list", ", ".join(c if type(c) == unicode else c.code for c in children), children)
     def visit_enumerated_list(self, node, children):
         return result("enumerated_list", "[" + ", ".join([c.code for c in children]) + "]", children)
     def visit_list_comprehension(self, node, children):
         if len(children) == 5:
-          res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + "]", children)
+            res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + "]", children)
         else:
-          res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "]", children)
+            res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "]", children)
         res.remove_dependencies(children[2].depend)
         return res
     def visit_private_list(self, node, children):
         return result("private_list", children[0].code, children)
-    
+
     def visit_bracketed_expression(self, node, children):
         return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
 
-    def visit_factor(self, node, children):                   
+    def visit_factor(self, node, children):
         if len(children) == 1:
-           return result("factor", children[0].code, children, evalcode = children[0].evalcode)
+            return result("factor", children[0].code, children, evalcode = children[0].evalcode)
         else:
-          code = " ".join(c if type(c) == unicode else c.code for c in children)
-          evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
-          return result("factor", code, children, evalcode=evalcode)
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("factor", code, children, evalcode=evalcode)
 
     def visit_term(self, node, children):
         if len(children) == 1:
-           return result("term", children[0].code, children, evalcode = children[0].evalcode)
+            return result("term", children[0].code, children, evalcode = children[0].evalcode)
         else:
-          code = " ".join(c if type(c) == unicode else c.code for c in children)
-          evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
-          return result("term", code, children, evalcode=evalcode)
-        
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("term", code, children, evalcode=evalcode)
+
     def visit_method_call(self, node, children):
         fn = children[0].code
         return result("method_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
@@ -128,28 +128,28 @@ class InputVisitor(PTNodeVisitor):
     def visit_function_call(self, node, children):
         fn = children[0].code
         if fn == "set":
-          fn = "frozenset"
+            fn = "frozenset"
         elif fn == "list":
-          fn = "tuple"
+            fn = "tuple"
         code = fn + "("+ ", ".join(c.code for c in children[1:]) + ")"
         evalcode = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
     def visit_simple_expression(self, node, children):
         if len(children) == 1:
-           return result("simple_expression", children[0].code, children, evalcode = children[0].evalcode)
+            return result("simple_expression", children[0].code, children, evalcode = children[0].evalcode)
         else:
-          code = " ".join(c if type(c) == unicode else c.code for c in children)
-          evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
-          return result("simple_expression", code, children, evalcode=evalcode)
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("simple_expression", code, children, evalcode=evalcode)
 
     def visit_expression(self, node, children):
         if len(children) == 1:
-           return result("expression", children[0].code, children, evalcode = children[0].evalcode)
+            return result("expression", children[0].code, children, evalcode = children[0].evalcode)
         else:
-          code = " ".join(c if type(c) == unicode else c.code for c in children)
-          evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
-          return result("expression", code, children, evalcode=evalcode)
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("expression", code, children, evalcode=evalcode)
 
     def visit_deterministic_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, evalcode=children[1].evalcode, dependson=children[1].depend)
@@ -157,9 +157,9 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_distribution_parameter(self, node, children):
         if len(children) == 1:
-          return result("distribution_parameter", children[0].code, children, pyMC3code= children[0].code)
+            return result("distribution_parameter", children[0].code, children, pyMC3code= children[0].code)
         else:
-          return result("distribution_parameter", children[0].code+"[" + children[1].code+"]", children, pyMC3code=children[0].code+"[__" + children[1].code+"_Indices]")
+            return result("distribution_parameter", children[0].code+"[" + children[1].code+"]", children, pyMC3code=children[0].code+"[__" + children[1].code+"_Indices]")
 
     def visit_distribution_call(self, node, children):
         fn = children[0].code
@@ -168,34 +168,34 @@ class InputVisitor(PTNodeVisitor):
         #  raise Exception("Unknown distribution: " + fn)
         pyMC3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.pyMC3code for c in children[1:]) + "%%s)"
         return result("distribution_call", private_code, children, pyMC3code=pyMC3_code)
- 
-    def visit_distribution_assignment(self, node, children): 
+
+    def visit_distribution_assignment(self, node, children):
         if len(children) > 2: # then we have a hierarchically defined variable
-          dependson = children[1].depend + children[2].depend
-          depGraph.define(children[0].code, children[2].code, dependson=dependson, prob = True, hier=children[1].code, pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
+            dependson = children[1].depend + children[2].depend
+            depGraph.define(children[0].code, children[2].code, dependson=dependson, prob = True, hier=children[1].code, pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
         else:
-          depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+            depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
         return result("distribution_assignment", children[0].code)
 
-    def visit_expression_assignment(self, node, children): 
+    def visit_expression_assignment(self, node, children):
         depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
         return result("expression_assignment", children[0].code)
 
-    def visit_probabilistic_assignment(self, node, children): 
+    def visit_probabilistic_assignment(self, node, children):
         return result("probabilistic_assignment", children[0].code)
 
     def visit_assignment(self, node, children):
         if len(children) > 1:
-          depGraph.add_comment(children[0].code, children[1].code)
+            depGraph.add_comment(children[0].code, children[1].code)
         #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
     def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
     def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
     def visit_show_values(self, node, children):              return result("show_values", depGraph.show_values())
     def visit_clear_variables(self, node, children):
-      global depGraph
-      depGraph = graph()
-      return result("clear_variables", "All variables removed.")
+        global depGraph
+        depGraph = graph()
+        return result("clear_variables", "All variables removed.")
     def visit_show_dependencies(self, node, children):        return result("show_dependencies", depGraph.show_dependencies())
     def visit_show_code(self, node, children):                return result("show_code", depGraph.show_code())
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", depGraph.show_eval_code())
@@ -239,26 +239,25 @@ del <name>: delete variable
 help: this message
 """
         return result("help", res)
-      
+
     def visit_comment(self, node, children):
         #_log.debug("comment: " + str(children))
         depGraph.add_comment(children[0].code, children[1].code)
 
     def visit_line(self, node, children):
-      if len(children) > 0:
-        return children[0].code
-      else:
-        return
+        if len(children) > 0:
+            return children[0].code
+        else:
+            return
 
     def visit_value(self, node, children):
-      print depGraph.getValue(node.value, longFormat=True)
-         
+        print depGraph.getValue(node.value, longFormat=True)
+
     def visit_command_line_expression(self, node, children):
-      return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
-      #print "Because expressions may take a long time to compute you must assign them to a variable"
-      #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
-      #print "t = 4*b+5 and then t."
+        return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
+        #print "Because expressions may take a long time to compute you must assign them to a variable"
+        #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
+        #print "t = 4*b+5 and then t."
 
 def PrivateSemanticAnalyser(parse_tree):
     return visit_parse_tree(parse_tree, InputVisitor())
- 
