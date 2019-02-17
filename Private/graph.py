@@ -692,7 +692,7 @@ class graph:
 
         def dfs(node):
             state[node] = GRAY
-            for k in self.dependson.get(node, ()):
+            for k in self.dependson.get(node, set()) | self.probdependson.get(node, set()):
                 sk = state.get(k, None)
                 if sk == GRAY: raise ValueError("cycle")
                 if sk == BLACK: continue
@@ -702,7 +702,9 @@ class graph:
             state[node] = BLACK
 
         while enter: dfs(enter.pop())
-        return [name for name in order if name in self.probabilistic - self.deterministic]
+        result =  [name for name in order if name in self.probabilistic - self.deterministic]
+        result.reverse()
+        return result
 
     def topological_sort_bak(self):
         result = []
@@ -721,14 +723,14 @@ class graph:
         return result
 
     def constructPyMC3code(self, user=None):
-        try:
+        #try:
             locals = {}
             loggingcode = """
 try:
     logging = __import__("logging")
     _log = logging.getLogger("Private")
     logging.disable(100)
-      """
+"""
 
             code = loggingcode
 
@@ -794,9 +796,10 @@ except Exception as e:
 
             return locals, code
 
-        except Exception as e:
-            self.log.debug("In constructMCcode user = " + user + " " + str(e))
-            self.log.debug("In constructMCcode user = " + user + " " + str(self.globals[user]))
+        #except Exception as e:
+        #    self.log.debug("In constructMCcode user = " + str(user) + " " + str(e.args))
+        #    if user:
+        #      self.log.debug("In constructMCcode user = " + str(user) + " " + str(self.globals[user]))
 
 
     def canRunSampler(self, user, verbose=False):
@@ -847,7 +850,6 @@ except Exception as e:
             sampler_names = self.variablesToBeSampled()
             self.log.debug("sampler names: " + str(sampler_names))
             for user in self.userids:
-                self.log.debug("stale names for user %s: " % user + str(self.stale[user]))
                 if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
                     self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
                     if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
