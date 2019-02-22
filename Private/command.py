@@ -19,7 +19,7 @@ def execute(line):
         try:
             parse_tree = parser.parse(line)
         except Exception as e:  # didn't parse
-            print("Syntax Error: " + str(e).split(") => ")[1])
+            print("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
         else:
             try:
                 result = PrivateSemanticAnalyser(parse_tree)
