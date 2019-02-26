@@ -25,6 +25,7 @@ logging.basicConfig(filename='private.log',level=logging.WARNING)
 numpy.set_printoptions(precision=3)
 
 PrivacyCriterion = 5.0   # percent
+display_precision = 3
 
 def ppset(s):
     """
@@ -478,6 +479,7 @@ class graph:
 
     def getValue(self, name, longFormat = False):
         res = ""
+        formatter_string = "%%.%sf" % display_precision
         if name in self.deterministic | self.probabilistic:
             if name in self.stale["All"]:
                 res += "Stale"
@@ -498,9 +500,10 @@ class graph:
                         res += str(self.globals["All"][name])
                     else:
                         s = self.globals["All"][name].shape
-                        res += "[" * len(s) + "%f" % self.globals["All"][name].ravel()[0] + " ... " + "%f" % self.globals["All"][name].ravel()[-1] + "]" * len(s)
+                        res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
+                            0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
                 elif type(self.globals["All"][name]) == float: # always display floats in full
-                    res += str(self.globals["All"][name])
+                    res += str((formatter_string % self.globals["All"][name]))
                 else:
                     if longFormat:
                         res += json.dumps(self.globals["All"][name], indent=4)
