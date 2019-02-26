@@ -1,0 +1,5 @@
+server.crt
+venv
+privateserver_shelf.db
+privateserver_shelf.db.lck
+*.pyc

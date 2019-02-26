@@ -1,18 +1,79 @@
-var serverAddress = "";
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
-createTerminal()
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+        <link rel="stylesheet" href="/static/css/xterm.css" />
+        <link rel="stylesheet" href="/static/css/mall.css" />
+        <script src="/static/js/xterm.js"></script>
+
+        <style>
+
+        #terminal-graph-container{
+            overflow:hidden;
+        }
+
+        #terminal-graph{
+            height:600px;
+            overflow-y:scroll;
+            //margin-top: 40px;
+        }
+
+        #terminal{
+            margin-top: 40px;
+        }
+
+        .figure{
+            margin-bottom:30px;
+        }
+
+        .figure-caption{
+            text-align:center;
+        }
+        </style>
+    </head>
+    <body>
+
+    <div class="col-lg-6" id="terminal"></div>
+    <div class="col-lg-6" id="terminal-graph-container">
+        <div class="" id="terminal-graph"></div>
+    </div>
+    <div id="size-not-lg" class="hidden-lg hidden-xl"></div> 
+<script type="text/javascript">
+term = null;
+// Need these to global as we might need to resize the terminal
+
+var input = "" // Current user input
+var saveInput = "" // Retain user input when using up/down arrow keys
+var inputHistory = [] // History of past inputs
+var historyIndex = 0 // Used to iterate through input history
+var cursorIndex = 0 // Where the cursor should be relative to input
+var post = "" // Segment of current user input located behind cursor
 
 function createTerminal() {
 
-    var input = "" // Current user input
-    var saveInput = "" // Retain user input when using up/down arrow keys
-    var inputHistory = [] // History of past inputs
-    var historyIndex = 0 // Used to iterate through input history
-    var cursorIndex = 0 // Where the cursor should be relative to input
-    var post = "" // Segment of current user input located behind cursor
 
+    // Terminal size
+    var cols = 70;
+    var rows = 25;
+
+    if (! $("#size-not-lg").is(":visible")){
+        // We have a large screen
+        console.log("We have large screen");
+        rows = 40;
+        $("#terminal-graph").height("800px");
+    }
+    
     // Initiate terminal
-    var term = new Terminal({cursorBlink: true, cursorStyle: "bar"})
+    term = new Terminal({cursorBlink: true, cursorStyle: "bar", cols:cols, rows:rows})
     term.open(document.getElementById('terminal'))
     term.writeln(" Welcome to Private")
 
@@ -34,14 +95,18 @@ function createTerminal() {
         if (!cmd) return;
 
         //write_cmd(cmd);
-        data = { 'cmd': cmd, 'uid': '1234567' };
+        data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
 
         $.ajax({
             type: "POST",
-            url: 'http://localhost:5000/analyze',
+            url: '/analyze',
             data: data,
             success: function(data){
-                if(data.response){
+                console.log(cmd);
+                console.log(data);
+                if(data.type == 'graph'){
+                    term.show_graph(cmd, data)
+                }else if(data.response){
                     term.write_response(data.response)
                 }
                 callback();
@@ -52,6 +117,32 @@ function createTerminal() {
             dataType: "json"
         });
     }
+
+    term.show_graph = function(cmd, data){
+        var graph_display = document.getElementById('terminal-graph');
+        while(graph_display.firstchild){
+            graph_display.removeChild(graph_display.firstChild);
+        }
+        var figure = document.createElement('div');
+        figure.classList.add('figure');
+
+        var img = document.createElement('img');
+        img.classList.add('center-block');
+        img.classList.add('img-responsive');
+        img.src = data.response;
+        figure.appendChild(img);
+    
+        var figure_caption = document.createElement('div');
+        figure_caption.innerHTML = cmd;
+        figure_caption.classList.add('figure-caption');
+        figure.appendChild(figure_caption);
+
+        graph_display.appendChild(figure);
+        graph_display.scrollTop = graph_display.scrollHeight;
+
+    }
+
+
 
     term.enter = function () {
         // Enter key has been pressed
@@ -98,6 +189,7 @@ function createTerminal() {
         cursorIndex = 0
     }
 
+
     term.bringCursorBackwards = function (n) {
         // Brings the cursor backwards by n
         for (var i = 0; i < n; i++) {
@@ -112,25 +204,35 @@ function createTerminal() {
         }
     }
 
-    term.on('paste', function (data, ev) {
 
-        // Save the stuff before and after the position at which we're
-        // pasting
-        pre = input.slice(0, cursorIndex)
-        pki = cursorIndex
+    term.on('paste', function (rawdata, ev) {
+        chunks = rawdata.split(/\r/)
+        
+        for (var i = 0; i < chunks.length; i++){
+            data = chunks[i];
+            if (! data) continue;
 
-        // Clear the line
-        term.deleteLine()
-        term.write('\b \b')
+            console.log(data);
+            // Save the stuff before and after the position at which we're
+            // pasting
+            pre = input.slice(0, cursorIndex)
+            pki = cursorIndex
 
-        // Write the new user input
-        input = pre + data + post
-        term.write(input)
+            // Clear the line
+            term.deleteLine()
+            term.write('\b \b')
 
-        // Bring the cursor back to where it should be after pasting
-        term.bringCursorBackwards(post.length)
-        cursorIndex = pre.length + data.length
+            // Write the new user input
+            input = pre + data + post
+            term.write(input)
+
+            // Bring the cursor back to where it should be after pasting
+            term.bringCursorBackwards(post.length)
+            cursorIndex = pre.length + data.length
+            //term.enter();
+        }
     });
+
 
     term.on('key', function (key, ev) {
 
@@ -179,7 +281,6 @@ function createTerminal() {
                 term.bringCursorBackwards(1)
                 post = input.slice(cursorIndex)
             }
-
         } else if (ev.key == 'ArrowRight') {
             // Right arrow key
             if (cursorIndex < input.length) {
@@ -211,7 +312,6 @@ function createTerminal() {
                 term.write(input)
                 cursorIndex = input.length
             }
-
         } else if (ev.key == 'ArrowDown') {
             // Down arrow key - go forwards in input command history
             ev.preventDefault()
@@ -247,7 +347,6 @@ function createTerminal() {
             input += "    "
             term.write("    ")
             cursorIndex += 4
-
         } else if (printable) {
             // regular input
             if (post.length > 0) {
@@ -274,3 +373,21 @@ function createTerminal() {
         }
     });
 };
+
+$(document).ready(function(){
+    createTerminal();
+});
+
+        var resize_timer;
+        $(window).on('resize', function(){
+            clearTimeout(resize_timer);
+            resize_timer = setTimeout(function(){
+                console.log("resizing");
+                $("#terminal").empty();            
+                createTerminal();
+            }, 250);
+        });
+</script>
+   
+</body>
+</html>
