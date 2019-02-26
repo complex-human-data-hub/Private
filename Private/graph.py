@@ -207,12 +207,15 @@ class graph:
         # if they are all empty then evaluate the expression
 
         if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
-            val = eval(code, self.globals[user], self.locals)
-            if type(val) == io.BytesIO:
-                #res += reprlib.repr(val)
-                result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
-            else:
-                result = str(val)
+            try:
+                val = eval(code, self.globals[user], self.locals)
+                if type(val) == io.BytesIO:
+                    #res += reprlib.repr(val)
+                    result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
+                else:
+                    result = str(val)
+            except Exception as e:
+                result = str(e)
 
         return result
 
