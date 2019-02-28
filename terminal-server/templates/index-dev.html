@@ -1,5 +1,6 @@
 <html>
     <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
         <!-- Latest compiled and minified CSS -->
@@ -35,6 +36,15 @@
             margin-bottom:30px;
         }
 
+        @media only screen and (max-width: 1200px) {
+            .figure{
+                margin-bottom:30px;
+                width: 250px;
+                float: left;
+            }
+
+        }
+
         .figure-caption{
             text-align:center;
         }
@@ -43,8 +53,10 @@
     </head>
     <body>
     <div class="loader"></div>
-    <div class="col-lg-6" id="terminal"></div>
-    <div class="col-lg-6" id="terminal-graph-container">
+    <div class="col-lg-9" id="terminal-container">
+        <div id="terminal"></div>
+    </div>
+    <div class="col-lg-3" id="terminal-graph-container">
         <div class="" id="terminal-graph"></div>
     </div>
     <div id="size-not-lg" class="hidden-lg hidden-xl"></div> 
@@ -62,8 +74,18 @@ var post = "" // Segment of current user input located behind cursor
 function createTerminal() {
 
     // Terminal size
-    var cols = 70;
     var rows = 25;
+    var cols = 95;
+
+    // The following is a messy hack to get the sizing 'sort-of' right
+    // looking forward to xterm.js doing the work here
+    var winwidth = $(window).width() ;
+    cols = Math.min(parseInt(winwidth/10, 10), 140);
+    if( winwidth > 1200) cols = 95;
+    if( winwidth > 1300) cols = 110;
+    if( winwidth > 1400) cols = 120;
+    if( winwidth > 1600) cols = 130;
+    if( winwidth > 1700) cols = 140;
 
     if (! $("#size-not-lg").is(":visible")){
         // We have a large screen
