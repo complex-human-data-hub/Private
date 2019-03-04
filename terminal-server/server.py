@@ -40,33 +40,41 @@ def get_rpc_stub(host, port):
     return rpc_stub
 
 def get_private_server(uid):
-    uid_str = str(uid)
-    server_shelf = shelvelock.open(config.privateserver_shelf)
     rpc_stub = None
-    #Check for current session
+    try:
+        uid_str = str(uid)
+        server_shelf = shelvelock.open(config.privateserver_shelf)
+        #Check for current session
 
 
-    if uid_str in server_shelf:
-        server = json.loads( server_shelf[uid_str] )
-        server['access_time'] = time.time()
-        server_shelf[uid_str] = json.dumps( server )
-        rpc_stub = get_rpc_stub(config.private_host, server.get('port')) 
-    #Lets try and assign a server
-    else:
-        for port in config.port_range:
-            inuse = False
-            for key in server_shelf.keys():
-                server = json.loads( server_shelf[key] )
-                if server.get('port') == port:
-                    inuse = True
-            if not inuse:
-                server_shelf[uid_str] = json.dumps({
-                        'uid': uid_str,
-                        'port': port,
-                        'access_time': time.time()
-                    })
-                rpc_stub = get_rpc_stub(config.private_host, port)
-    server_shelf.close()
+        if uid_str in server_shelf:
+            server = json.loads( server_shelf[uid_str] )
+            server['access_time'] = time.time()
+            server_shelf[uid_str] = json.dumps( server )
+            rpc_stub = get_rpc_stub(config.private_host, server.get('port')) 
+        #Lets try and assign a server
+        else:
+            for port in config.port_range:
+                inuse = False
+                for key in server_shelf.keys():
+                    server = json.loads( server_shelf[key] )
+                    if server.get('port') == port:
+                        inuse = True
+                if not inuse:
+                    server_shelf[uid_str] = json.dumps({
+                            'uid': uid_str,
+                            'port': port,
+                            'access_time': time.time()
+                        })
+                    rpc_stub = get_rpc_stub(config.private_host, port)
+    except Exception as e:
+        _debug(json.dumps({
+            'error': 'get_private_server',
+            'message': str(e)
+            }))
+    finally:
+        server_shelf.close()
+
     return rpc_stub
     
 
@@ -111,7 +119,7 @@ def run_analyze():
             rpc_stub = get_private_server(user_uid)
 
         if rpc_stub:
-            print "Making RPC request: {}".format(req)
+            _debug( "Making RPC request: {}".format(req) )
 
             response = rpc_stub.Private(service_pb2.PrivateParcel(json=json.dumps(req), project_uid=config.project_uid))
             res = json.loads(response.json)
