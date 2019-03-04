@@ -432,7 +432,7 @@ class graph:
 
             self.deterministic.discard(name)
             self.probabilistic.discard(name)
-            self.stale.discard(name)
+            self.stale[user].discard(name)
             self.private.discard(name)
             self.public.discard(name)
             self.unknown_privacy.discard(name)
