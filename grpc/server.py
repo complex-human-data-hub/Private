@@ -1,5 +1,5 @@
-PROJECT_UID = 12345
-DEBUG = True
+PROJECT_UID = '91b4e84e078c38b22a51fcc1c2c1ae62'
+DEBUG = False
 
 if DEBUG:
     import os,sys,inspect
@@ -16,7 +16,7 @@ import sys
 import io
 import traceback
 import logging
-
+import re
 
 
 import signal
@@ -28,6 +28,21 @@ import service_pb2
 import service_pb2_grpc
 import json
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-p", "--port", type=int, default=51135)
+args = parser.parse_args()
+
+
+# Regexes
+re_cmd = re.compile(r'\r')
+
+
+def _debug(msg):
+    with open('/tmp/private-debug.log', 'a') as fp:
+        if not isinstance(msg, basestring):
+            msg = json.dumps(msg)
+        fp.write("{}\n".format( msg ))
 
 
 class Private:
@@ -35,22 +50,24 @@ class Private:
     parser = PrivateParser()
     def __init__(self, project_uid):
         self.project_uid = project_uid
-        self._log = logging.getLogger("Private {}".format(PROJECT_UID))
-        logging.basicConfig(filename='/tmp/private-{}.log'.format(PROJECT_UID),level=logging.INFO)
 
     def execute(self, line):
         if line != "":
             try:
                 parse_tree = self.parser.parse(line)
+                _debug({'parse_tree': str(parse_tree)})
             except Exception as e:  # didn't parse
-                self._log.debug(e)
+                _debug({'error': str(e)})
+                raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:]) 
             else:
                 try:
                     result = PrivateSemanticAnalyser(parse_tree)
+                    _debug({'result': result})
                     return(result)
                 except Exception as e:
-                    self._log.debug(e)
+                    _debug({'error': str(e)})
                     traceback.print_exc(file=sys.stdout)
+                    return ( e )
     
 
 
@@ -64,18 +81,29 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
 
     def Private(self, request, context):
         try:
+            _debug("received request")
             if str(request.project_uid) != str(self.project_uid):
                 raise Exception("Incorrect project ID")
             req = json.loads(request.json)
-            res = self.private.execute(str(req.get('cmd')))
+            _debug({'req':req})
+
+            cmd = str(req.get('cmd'))
+            res = None
+            # Split on the carriage return
+            # separate cmds 
+            for c in re_cmd.split(cmd):
+                res = self.private.execute(c)
+
             ret = {'status': 'success', 'response': res}
+            _debug(ret)
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
         except Exception as err:
-            ret = {'status': 'failed'}
+            _debug({'error': str(err)})
+            ret = {'status': 'failed', 'response': str(err)}
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)
 
 def main():
-    port = '51134'
+    port = str( args.port )
 
     with open('server.key', 'rb') as f:
         private_key = f.read()
@@ -88,7 +116,8 @@ def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     service_pb2_grpc.add_ServerServicer_to_server(ServerServicer(), server)
 
-    server.add_secure_port('localhost:'+port, server_credentials)
+    #server.add_secure_port('localhost:'+port, server_credentials)
+    server.add_secure_port('[::]:'+port, server_credentials)
 
     server.start()
     try:
