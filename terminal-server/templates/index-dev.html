@@ -12,8 +12,8 @@
         <!-- Latest compiled and minified JavaScript -->
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
-        <link rel="stylesheet" href="https://static.mall-lab.com/static/css/xterm.css" />
-        <script src="https://static.mall-lab.com/static/js/xterm.js"></script>
+        <link rel="stylesheet" href="https://static.mall-lab.com/static/css/xterm-3.11.0.css" />
+        <script src="https://static.mall-lab.com/static/js/xterm-3.11.0.js"></script>
 
 
         <style>
@@ -49,6 +49,36 @@
             text-align:center;
         }
 
+        .modal-outer {
+            background-color: rgba(0, 0, 0, 0.5);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+        .modal-inner {
+            background-color: #fff;
+            width: 50%;
+            padding: 25px;
+            margin: 25% auto;
+            min-height: 260px;
+            z-index: 1000;
+            max-width: 700px;
+        }
+
+        .figures-close{
+            color:#CCC; 
+            float:right; 
+            font-size:2em;
+        }
+        .figures-close:hover{
+            color:#000; 
+            cursor: pointer;
+        }
+
+
         </style>
     </head>
     <body>
@@ -60,6 +90,18 @@
         <div class="" id="terminal-graph"></div>
     </div>
     <div id="size-not-lg" class="hidden-lg hidden-xl"></div> 
+
+
+
+<div style="display: none;" class="figures-outer modal-outer">
+    <div style="text-align:center;" class="figures-inner modal-inner">
+    <span class="glyphicon glyphicon-remove figures-close"></span>
+        <img class="img-responsive" id="figures-img" src="" />
+        <div id="figures-caption"></div>
+    </div>
+</div>
+
+
 <script type="text/javascript">
 term = null;
 // Need these to global as we might need to resize the terminal
@@ -70,6 +112,7 @@ var inputHistory = [] // History of past inputs
 var historyIndex = 0 // Used to iterate through input history
 var cursorIndex = 0 // Where the cursor should be relative to input
 var post = "" // Segment of current user input located behind cursor
+var figures = 0; 
 
 function createTerminal() {
 
@@ -78,7 +121,8 @@ function createTerminal() {
     var cols = 95;
 
     // The following is a messy hack to get the sizing 'sort-of' right
-    // looking forward to xterm.js doing the work here
+    // looking forward to xterm.js doing the work here with 'addons/fit'
+   
     var winwidth = $(window).width() ;
     cols = Math.min(parseInt(winwidth/10, 10), 140);
     if( winwidth > 1200) cols = 95;
@@ -145,13 +189,18 @@ function createTerminal() {
         while(graph_display.firstchild){
             graph_display.removeChild(graph_display.firstChild);
         }
+        var figid = "figure-" + figures++;
         var figure = document.createElement('div');
+        figure.id = figid + "-container";
+
         figure.classList.add('figure');
 
         var img = document.createElement('img');
         img.classList.add('center-block');
         img.classList.add('img-responsive');
         img.src = data.response;
+        img.id = figid;
+
         figure.appendChild(img);
     
         var figure_caption = document.createElement('div');
@@ -159,10 +208,23 @@ function createTerminal() {
         figure_caption.classList.add('figure-caption');
         figure.appendChild(figure_caption);
 
+        
         graph_display.appendChild(figure);
         graph_display.scrollTop = graph_display.scrollHeight;
 
+        $("#"+figid+"-container").on('touchstart click', function(event){
+            if(event.handled === false) return
+            event.stopPropagation();
+            event.preventDefault();
+            event.handled = true;
+           
+            $("#figures-img").prop("src", data.response);
+            $("#figures-caption").text(cmd);
+            $(".figures-outer").fadeIn('slow');
+            
+        });
     }
+
 
 
 
@@ -235,7 +297,6 @@ function createTerminal() {
                 data = chunks[i];
                 if (! data) continue;
 
-                console.log(data);
                 // Save the stuff before and after the position at which we're
                 // pasting
                 if (i == 0){
@@ -435,15 +496,26 @@ $(document).ready(function(){
     createTerminal();
 });
 
-        var resize_timer;
-        $(window).on('resize', function(){
-            clearTimeout(resize_timer);
-            resize_timer = setTimeout(function(){
-                console.log("resizing");
-                $("#terminal").empty();            
-                createTerminal();
-            }, 250);
-        });
+    var resize_timer;
+    $(window).on('resize', function(){
+        clearTimeout(resize_timer);
+        resize_timer = setTimeout(function(){
+            console.log("resizing");
+            $("#terminal").empty();            
+            createTerminal();
+        }, 250);
+    });
+
+    $(".figures-close").on('touchstart click', function(event){
+        if(event.handled === false) return
+        event.stopPropagation();
+        event.preventDefault();
+        event.handled = true;
+       
+        $(".figures-outer").hide();
+        $("#figures-img").prop("src", "");
+        $("#figures-caption").text("");
+    });
 </script>
    
 </body>
