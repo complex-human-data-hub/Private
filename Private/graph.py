@@ -18,9 +18,9 @@ import os
 import base64
 import time
 
-from config import ppservers
+from config import ppservers, logfile
 
-logging.basicConfig(filename='private.log',level=logging.WARNING)
+logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
 numpy.set_printoptions(precision=3)
 
@@ -838,7 +838,7 @@ except Exception as e:
 
 
     def compute(self):
-
+        self.log.debug("In compute") 
         self.acquire("compute")
 
         for user in self.userids:
@@ -866,7 +866,9 @@ except Exception as e:
                         myname = "__private_sampler__" + user
                         locals, sampler_code =  self.constructPyMC3code(user)
                         self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
-                        time.sleep(1)
+                        # Sleep was causing the hang, need to figure out if we
+                        # really need it
+                        #time.sleep(1)
                 self.SamplerParameterUpdated = False
         self.release()
 

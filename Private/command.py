@@ -3,12 +3,14 @@ import io
 import traceback
 import logging
 import argparse
+from config import logfile
+
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", nargs="?", default = None)
 args = parser.parse_args()
 
 _log = logging.getLogger("Private")
-logging.basicConfig(filename='private.log',level=logging.DEBUG)
+logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log.debug("============================= Starting new interpreter =============================")
 
 from parser import PrivateParser
