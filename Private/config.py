@@ -1,3 +1,5 @@
+logfile = "/tmp/private.log"
+
 
 ppservers = ()
 ppservers_list = []
