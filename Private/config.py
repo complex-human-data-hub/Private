@@ -1,5 +1,13 @@
 logfile = "/tmp/private.log"
 
+# socket timeout in seconds which is also the maximum time a remote job could be executed. Increase this value if you
+# have long running jobs or decrease if connectivity to remote ppservers is often lost. - {official documentation}
+
+# In our setting it's necessary to have a minimum possible timeout when working in the cluster with the network
+# failures. It's convenient to have a larger value for local setup as we don't expect any failure
+remote_socket_timeout = 60
+local_socket_timeout = 400000
+
 
 ppservers = ()
 ppservers_list = []
