@@ -1,0 +1,9 @@
+temperatures = [e.Temperature for e in Events if e.hasField("Temperature")]                                                         
+subjects = [e.UserId for e in Events if e.hasField("Temperature")]
+temperatures[subjects]~Normal(mu[subjects],sigma[subjects])
+muMu ~ Normal(0,100)
+sigmaSigma ~ HalfNormal(100)
+muSigma ~ HalfNormal(100)
+
+sigma[subjects]~HalfNormal(sigmaSigma)
+mu[subjects]~Normal(muMu, muSigma)
