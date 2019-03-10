@@ -11,6 +11,7 @@ import io
 import pymc3 as pm
 import copy
 import theano.tensor
+import math
 
 # Deterministic Continuous Distribution Definitions
 
@@ -326,6 +327,9 @@ def private_slice(x):
 def private_sorted(x):
     return sorted(x)
 
+def private_sqrt(x):
+    return math.sqrt(x)
+
 def private_str(x):
     return str(x)
 
@@ -481,6 +485,7 @@ builtins = {\
             "set": private_frozenset, \
             "slice":private_slice, \
             "sorted":private_sorted, \
+            "sqrt":private_sqrt, \
             "str":private_str, \
             "sum":private_sum, \
             "tuple":private_tuple, \
