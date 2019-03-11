@@ -55045,5 +55045,19 @@ data = [{ 'AccelerometryCount': 5,
                 2019,
                 'Autumn'],
   'type': 'SEMA'}]
+
+#for e in data:
+#    if e["type"] == "Button" and "Wednesday" in e["keywords"]:
+#        if "Happy" in e["keywords"]:
+#            e["keywords"].remove("Happy")
+#        if "Tired" in e["keywords"]:
+#            e["keywords"].remove("Tired")
+#        if "Anxious" not in e["keywords"]:
+#            e["keywords"].append("Anxious")
+
+#print ["Anxious" in e["keywords"] for e in data if e["type"] == "Button" and "Wednesday" in e["keywords"]]
+
+
 Events = [Event(d) for d in data]
+
 DemoEvents = Events
