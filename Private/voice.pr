@@ -1,0 +1,6 @@
+noise = ["audio_voice" in e.keywords for e in Events if e.hasField("keywords")]
+subjects = [e.UserId for e in Events]
+noise[subjects] ~ Bernoulli(rate[subjects])
+rate[subjects] ~ Beta(mu, 0.1)
+mu ~ Uniform(0,1)
+

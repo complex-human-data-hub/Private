@@ -1,0 +1,15 @@
+winter = [e.Temperature for e in Events if "winter" in e.keywords and e.hasField("Temperature")]
+summer = [e.Temperature for e in Events if "summer" in e.keywords and e.hasField("Temperature")]
+
+winter ~ Normal(muWinter, sigma)
+summer ~ Normal(muSummer, sigma)
+
+muWinter ~ Normal(0,100)
+muSummer ~ Normal(0,100)
+
+sigma ~ HalfNormal(100)
+
+diff = muSummer - muWinter
+
+CIlower = percentile(diff, 2.5)
+CIupper = percentile(diff, 97.5)

@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import io
 import pymc3 as pm
 import copy
+import theano.tensor
+import math
 
 # Deterministic Continuous Distribution Definitions
 
@@ -162,6 +164,12 @@ def DiscreteWeibull(q, beta, size):
 def Constant(c, size):
     y = pm.Constant.dist(c)
     return y.random(size=size)
+
+# Probabilistic Functions
+def Sigmoid(x):
+    return 1 / ( 1 + theano.tensor.exp( -x ) )
+
+
 
 # Plotting Function Definitions
 
@@ -319,6 +327,9 @@ def private_slice(x):
 def private_sorted(x):
     return sorted(x)
 
+def private_sqrt(x):
+    return math.sqrt(x)
+
 def private_str(x):
     return str(x)
 
@@ -402,6 +413,9 @@ builtins = {\
             "DiscreteWeibull": DiscreteWeibull, \
             "Constant": Constant, \
 
+            # Probilistic Function 
+            "Sigmoid": Sigmoid,
+
             # Plotting Functions
 
             "distplot": distplot, \
@@ -471,6 +485,7 @@ builtins = {\
             "set": private_frozenset, \
             "slice":private_slice, \
             "sorted":private_sorted, \
+            "sqrt":private_sqrt, \
             "str":private_str, \
             "sum":private_sum, \
             "tuple":private_tuple, \

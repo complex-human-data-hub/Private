@@ -18,7 +18,7 @@ import os
 import base64
 import time
 
-from config import ppservers, logfile
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
@@ -91,10 +91,10 @@ class graph:
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
-            self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = 400000)
+            self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
         else:
             # Set ncpus to 0 so that we only process on remote machines
-            self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = 400000)
+            self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
 
         print "Starting pp with", self.server.get_ncpus(), "workers"
         self.log = logging.getLogger("Private")
@@ -572,7 +572,10 @@ class graph:
         for name in self.code.keys():
             codebits.append(name + " = " + str(self.code[name]))
         for name in self.probcode.keys():
-            codebits.append(name + " ~ " + str(self.probcode[name]))
+            if name in self.hierarchical:
+                codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+            else:
+                codebits.append(name + " ~ " + str(self.probcode[name]))
         if len(codebits) > 0:
             commentbits = []
             for name in self.code.keys():
