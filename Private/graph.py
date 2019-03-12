@@ -864,6 +864,7 @@ except Exception as e:
                     if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
                         for name in sampler_names:
                             self.changeState(user, name, "computing")
+                            self.globals[user][name] = None  # remove any previous samples that had been calculated
                         self.samplerexception[user] = {}
 
                         myname = "__private_sampler__" + user
@@ -927,7 +928,7 @@ except Exception as e:
                 for name in names:
                     if name in value.varnames:
                         self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
-                    else:                                                              # manifold privacy is applied to individual variables
+                    else:                                                                # manifold privacy is applied to individual variables
                         self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
                                                                                          # that could be exploited
                 for name in names:
