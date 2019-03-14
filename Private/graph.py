@@ -66,7 +66,6 @@ class graph:
         self.private = set()
         self.public = set()
         self.unknown_privacy = set()
-        #self.sampler_chains = {}
         self.privacySamplerResults = {} # this holds results from privacy samplers so we know the difference between when
                                         # the privacy samplers haven't been run since last compute and when they have been run
 
@@ -118,10 +117,10 @@ class graph:
         result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
         result += "builtin: "+ ppset(self.builtins) + "\n"
         result += "\n"
-        result += "uptodate: "+ ppset(self.uptodate) + "\n"
-        result += "computing: "+ ppset(self.computing) + "\n"
-        result += "exception: "+ ppset(self.exception) + "\n"
-        result += "stale: "+ ppset(self.stale) + "\n"
+        result += "uptodate: "+ ppset(self.uptodate["All"]) + "\n"
+        result += "computing: "+ ppset(self.computing["All"]) + "\n"
+        result += "exception: "+ ppset(self.exception["All"]) + "\n"
+        result += "stale: "+ ppset(self.stale["All"]) + "\n"
         result += "\n"
         result += "private: "+ ppset(self.private) + "\n"
         result += "public: "+ ppset(self.public) + "\n"
@@ -294,9 +293,7 @@ class graph:
                 # check probabilistic variables to see if they are public because the variables above and below them are public
 
                 if name in self.probabilistic - self.deterministic:
-                    #self.log.debug( "check above and below " + name)
                     if self.checkPrivacyUp(name) and self.checkPrivacyDown(name):
-                        #self.log.debug( name + " is public")
                         self.setPrivacy(name, "public")
 
                 # determine if privacy changed
@@ -420,6 +417,7 @@ class graph:
             for user in self.userids:
                 self.changeState(user, name, "stale")
         self.release()
+        self.computePrivacy() # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute()
         self.computePrivacy() # every definition could change the privacy assignments
 
@@ -782,7 +780,10 @@ try:
                 obsname = "__private_%s_observed" % name
                 code += "        " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
                 if user:
-                    locals[obsname] = self.globals[user][name]
+                    if name in self.globals[user]:
+                        locals[obsname] = self.globals[user][name]
+                    else: 
+                        locals[obsname] = self.globals["All"][name]
                 else:
                     locals = None
 
@@ -844,36 +845,45 @@ except Exception as e:
         self.log.debug("In compute") 
         self.acquire("compute")
 
-        for user in self.userids:
-            for name in self.variablesToBeCalculated(user):
-                jobname = name + " " + user
-                if jobname not in self.jobs:
-                    self.changeState(user, name, "computing")
-                    self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                    self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
-                    #time.sleep(1)
-
-
-        #self.log.debug("self.jobs: " + str(self.jobs.keys()))
-        if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
-            sampler_names = self.variablesToBeSampled()
-            self.log.debug("sampler names: " + str(sampler_names))
+        try:
             for user in self.userids:
-                if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-                    self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
-                    if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
-                        for name in sampler_names:
+                for name in self.variablesToBeCalculated(user):
+                    #print name, name not in self.public, user == "All"
+                    if name not in self.public or user == "All":
+                        jobname = name + " " + user
+                        if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
-                            self.globals[user][name] = None  # remove any previous samples that had been calculated
-                        self.samplerexception[user] = {}
+                            self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+                            self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
+                            #time.sleep(1)
 
-                        myname = "__private_sampler__" + user
-                        locals, sampler_code =  self.constructPyMC3code(user)
-                        self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
-                        # Sleep was causing the hang, need to figure out if we
-                        # really need it
-                        #time.sleep(1)
-                self.SamplerParameterUpdated = False
+
+            #self.log.debug("self.jobs: " + str(self.jobs.keys()))
+            if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
+                sampler_names = self.variablesToBeSampled()
+                self.log.debug("sampler names: " + str(sampler_names))
+                for user in self.userids:
+                    #print user, user == "All", sampler_names - self.public != set()
+                    if user == "All" or sampler_names - self.public != set():
+                        if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+                            self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
+                            if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
+                                for name in sampler_names:
+                                    self.changeState(user, name, "computing")
+                                    if name in self.globals[user]:
+                                        self.globals[user][name] = None  # remove any previous samples that have been calculated
+                                self.samplerexception[user] = {}
+
+                                myname = "__private_sampler__" + user
+                                locals, sampler_code =  self.constructPyMC3code(user)
+                                self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
+                                # Sleep was causing the hang, need to figure out if we
+                                # really need it
+                                #time.sleep(1)
+                    self.SamplerParameterUpdated = False
+        except Exception as e:
+            print("in compute " + str(e))
+            traceback.print_exc()
         self.release()
 
     def callback(self, returnvalue):
@@ -904,6 +914,7 @@ except Exception as e:
             self.log.debug(str(e))
 
         self.release()
+        self.computePrivacy()
         self.compute()
         self.computePrivacy()
 
@@ -940,7 +951,6 @@ except Exception as e:
 
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
-                # if we don't have samples from All then do nothing
                 if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
@@ -990,6 +1000,7 @@ except Exception as e:
             self.log.debug("trying to del job " + str(e))
         self.release()
 
+        self.computePrivacy()
         self.compute()
 
         self.computePrivacy()
