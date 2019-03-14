@@ -878,22 +878,22 @@ except Exception as e:
 
     def callback(self, returnvalue):
         self.acquire("callback")
-        name, user, value = returnvalue
-        if isinstance(value, Exception):
-            if user == "All":
-                self.globals[user][name] = str(value)
-                self.changeState(user, name, "exception")
-        else:
-            self.globals[user][name] = value
-            self.changeState(user, name, "uptodate")
-            if user == "All":
-                if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
-                    self.SamplerParameterUpdated = True
-                if type(value) == io.BytesIO:   # write image to file
-                    value.seek(0)
-                    with open(name+'.png', 'wb') as f:
-                        shutil.copyfileobj(value, f)
         try:
+            name, user, value = returnvalue
+            if isinstance(value, Exception):
+                if user == "All":
+                    self.globals[user][name] = str(value)
+                    self.changeState(user, name, "exception")
+            else:
+                self.globals[user][name] = value
+                self.changeState(user, name, "uptodate")
+                if user == "All":
+                    if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+                        self.SamplerParameterUpdated = True
+                    if type(value) == io.BytesIO:   # write image to file
+                        value.seek(0)
+                        with open(name+'.png', 'wb') as f:
+                            shutil.copyfileobj(value, f)
             jobname = name + " " + user
             if jobname in self.jobs:
                 del self.jobs[name + " " + user]
@@ -906,6 +906,11 @@ except Exception as e:
         self.release()
         self.compute()
         self.computePrivacy()
+
+    def haveSamples(self, user):
+        # have to allow for possibility that some probabilistic variables are not retained and therefore won't have samples
+        # so see if any of the probabilistic variables have samples
+        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
 
     def samplercallback(self, returnvalue):
         self.acquire("samplercallback")
@@ -930,47 +935,59 @@ except Exception as e:
                         self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
                     else:                                                                # manifold privacy is applied to individual variables
                         self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
-                                                                                         # that could be exploited
-                for name in names:
                     self.changeState(user, name, "uptodate")
 
-                # if all variables in all globals have been computed then calculate manifold privacy
-                aname = list(names)[0]
-                whichsamplersarecomplete = [isinstance(self.globals[u].get(aname, None), numpy.ndarray) for u in self.userids]
-                if all(whichsamplersarecomplete):
-                    #self.log.debug("sampling all done")
-                    # calculate manifold privacy
-                    # results are stored in self.privacySamplerResults (privacy of variables is not set directly)
-                    self.log.debug("Have samples and calculating manifold privacy")
 
-                    for name in names:
-                        if name in value.varnames:
 
-                            if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
-                                self.privacySamplerResults[name] = "private"
-                            else:
-                                allPublic = True
-                                for usr in [u for u in self.userids if u != "All"]:
-                                    try:
-                                        d = distManifold(self.globals[usr][name], self.globals["All"][name]) * 100.
-                                    except Exception as e:
-                                        self.log.debug(str(e))
-                                    self.log.debug(usr + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-                                    allPublic = allPublic and d < PrivacyCriterion
-                                if allPublic:
-                                    self.privacySamplerResults[name] = "public"
-                                else:
-                                    self.privacySamplerResults[name] = "private"
-                else:
-                    self.log.debug("still more samples to compute " + str(whichsamplersarecomplete))
+                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
+                # if we don't have samples from All then do nothing
+                if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
+                    for u in whichsamplersarecomplete:
+                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
+                        for name in value.varnames:
+                            if self.privacySamplerResults.get(name, None) != "private":
+                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
+                                   if self.globals[u][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
+                                       self.privacySamplerResults[name] = "private"
+                                   else:
+                                       d = distManifold(self.globals[u][name], self.globals["All"][name]) * 100.
+                                       self.log.debug(u + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                                       if d > PrivacyCriterion:
+                                           self.privacySamplerResults[name] = "private"
+                                       else: 
+                                           self.privacySamplerResults[name] = "unknown"
+
+                else: # else compare All to this users samples using manifold privacy calculation
+                    if self.haveSamples("All"):
+                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
+                        for name in value.varnames:
+                            if self.privacySamplerResults.get(name, None) != "private":
+                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
+                                    if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
+                                        self.privacySamplerResults[name] = "private"
+                                    else:
+                                        d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
+                                        self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                                        if d > PrivacyCriterion:
+                                            self.privacySamplerResults[name] = "private"
+                                        else: 
+                                            self.privacySamplerResults[name] = "unknown"
+                                         
+                # if we have all sampling results back and there are variables that have not been set to private they are public
+                if len(whichsamplersarecomplete) == len(self.userids) -1:
+                    for variable in self.privacySamplerResults.keys():
+                        if self.privacySamplerResults[variable] != "private":
+                            self.privacySamplerResults[variable] = "public"
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
+                #print("in samplercallback when assigning values " + str(e))
+                #traceback.print_exc()
 
 
         try:
             del self.jobs[myname]
         except Exception as e:
-            self.log.debug("trying ot del job " + str(e))
+            self.log.debug("trying to del job " + str(e))
         self.release()
 
         self.compute()
