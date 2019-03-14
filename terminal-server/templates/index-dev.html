@@ -213,8 +213,8 @@ function createTerminal() {
         figure.appendChild(figure_caption);
 
         
-        graph_display.appendChild(figure);
-        graph_display.scrollTop = graph_display.scrollHeight;
+        graph_display.insertBefore(figure, graph_display.firstChild);
+        //graph_display.scrollTop = graph_display.scrollHeight;
 
         $("#"+figid+"-container").on('touchstart click', function(event){
             if(event.handled === false) return
