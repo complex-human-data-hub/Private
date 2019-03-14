@@ -153,11 +153,13 @@ function createTerminal() {
     // ---------------- Needs to send and receive data via ajax ----------------- //
 
     term.write_response = function(res) {
+      console.log("term.write_response", res);
       term.write("\r\n   ")
       term.writeln(res.replace(/\n/g, "\r\n   "));
     }
 
     term.send_cmd = function(cmd) {
+      console.log("term.send_cmd", cmd);
         if (!cmd) return;
 
         //write_cmd(cmd);
@@ -168,8 +170,7 @@ function createTerminal() {
             url: '/analyze',
             data: data,
             success: function(data){
-                console.log(cmd);
-                console.log(data);
+                console.log("ajax:success:cmd", cmd, data);
                 if(data.type == 'graph'){
                     term.show_graph(cmd, data)
                 }else if(data.response){
@@ -178,6 +179,7 @@ function createTerminal() {
                 callback();
             },
             fail: function(xhr, textStatus, errorThrown) {
+              console.log("ajax:fail:cmd", cmd);
               callback()
             },
             dataType: "json"
@@ -185,6 +187,8 @@ function createTerminal() {
     }
 
     term.show_graph = function(cmd, data){
+        
+        console.log("term.show_graph", cmd, data);
         var graph_display = document.getElementById('terminal-graph');
         while(graph_display.firstchild){
             graph_display.removeChild(graph_display.firstChild);
@@ -231,6 +235,7 @@ function createTerminal() {
     term.enter = function () {
         // Enter key has been pressed
 
+        console.log("term.enter", input);
         var cmd = $.trim(input);
         term.send_cmd(cmd);
         $("#cmd").val("");
@@ -239,6 +244,7 @@ function createTerminal() {
 
     callback = function() {
         // Call this function after ajax processes are complete
+        console.log("callback");
 
         // Save the input
         if (input != inputHistory[inputHistory.length - 1]) {
@@ -260,6 +266,7 @@ function createTerminal() {
     term.deleteLine = function () {
         // Deletes all of the text (asides from the prompt) on the current
         // line
+        console.log("term.deleteLine");
 
         while (cursorIndex < input.length + 1) {
             // Make sure we're at the end of the line
@@ -275,6 +282,7 @@ function createTerminal() {
 
 
     term.bringCursorBackwards = function (n) {
+        console.log("term.bringCursorBackwards");
         // Brings the cursor backwards by n
         for (var i = 0; i < n; i++) {
             term.write('\x1b[D')
@@ -282,6 +290,7 @@ function createTerminal() {
     }
 
     term.bringCursorForwards = function (n) {
+        console.log("term.bringCursorForwards");
         // Brings the cursor forward by n
         for (var i = 0; i < n; i++) {
             term.write('\x1b[C')
@@ -290,6 +299,7 @@ function createTerminal() {
 
 
     term.on('paste', function (rawdata, ev) {
+        console.log("paste", rawdata);
         chunks = rawdata.split(/\r/)
         if (chunks.length > 1){
             paste_input = input
@@ -353,17 +363,18 @@ function createTerminal() {
 
 
     term.on('key', function (key, ev) {
-
         var printable = (
             !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
         );
 
         if (ev.key == 'Enter') {
             // enter
+            console.log("key: Enter"); 
             term.enter()
 
         } else if (ev.key == 'Backspace') {
             // backspace
+            console.log("key: Backspace"); 
             if (input.slice(0, cursorIndex).length > 0) {
                 // So we don't delete the prompt
                 term.write('\b \b')
@@ -393,6 +404,7 @@ function createTerminal() {
             }
 
         } else if (ev.key == 'ArrowLeft') {
+            console.log("key: ArrowLeft"); 
             // Left arrow key
             if (cursorIndex > 0) {
                 cursorIndex -= 1
@@ -400,6 +412,7 @@ function createTerminal() {
                 post = input.slice(cursorIndex)
             }
         } else if (ev.key == 'ArrowRight') {
+            console.log("key: ArrowRight"); 
             // Right arrow key
             if (cursorIndex < input.length) {
                 cursorIndex += 1
@@ -408,6 +421,7 @@ function createTerminal() {
             }
 
         } else if (ev.key == 'ArrowUp'){
+            console.log("key: ArrowUp"); 
             // Up arrow key - go backwards in input command history
             ev.preventDefault()
             if (historyIndex == inputHistory.length) {
@@ -431,6 +445,7 @@ function createTerminal() {
                 cursorIndex = input.length
             }
         } else if (ev.key == 'ArrowDown') {
+            console.log("key: ArrowDown"); 
             // Down arrow key - go forwards in input command history
             ev.preventDefault()
             if (historyIndex < inputHistory.length - 1) {
@@ -446,6 +461,7 @@ function createTerminal() {
                 cursorIndex = input.length
 
             } else if (historyIndex == inputHistory.length - 1) {
+                console.log("key: historyIndex == inputHistory.length - 1"); 
                 // User has come back to (what was) their current input
                 historyIndex += 1
 
@@ -460,14 +476,18 @@ function createTerminal() {
             }
 
         } else if (ev.key == 'Tab') {
+
+            console.log("key: Tab"); 
             // Tab - 4 spaces to make backspaces easier
             ev.preventDefault()
             input += "    "
             term.write("    ")
             cursorIndex += 4
         } else if (printable) {
+            console.log("key: printable"); 
             // regular input
             if (post.length > 0) {
+                console.log("    post.length > 0"); 
                 // We have to re-position post, or else we'll write over it
 
                 // Save the stuff that we want to keep
@@ -484,6 +504,7 @@ function createTerminal() {
                 term.bringCursorBackwards(post.length)
                 cursorIndex = pki
             } else {
+                console.log("    post.length <= 0"); 
                 input += key
                 term.write(key);
             }
@@ -498,6 +519,7 @@ $(document).ready(function(){
 
     var resize_timer;
     $(window).on('resize', function(){
+
         clearTimeout(resize_timer);
         resize_timer = setTimeout(function(){
             console.log("resizing");
@@ -507,6 +529,7 @@ $(document).ready(function(){
     });
 
     $(".figures-close").on('touchstart click', function(event){
+        console.log(".figures-close: touchstart click");
         if(event.handled === false) return
         event.stopPropagation();
         event.preventDefault();

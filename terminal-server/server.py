@@ -11,6 +11,15 @@ import uuid
 import time
 from datetime import datetime
 from flask_compress import Compress
+import logging
+FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
+logging.basicConfig(filename='/tmp/private-terminal.log',level=logging.DEBUG, format=FORMAT)
+
+#formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%Y-%m-%d %H:%M:%S")
+#logging.setFormatter(formatter)
+
+
+_log = logging.getLogger("Private Server")
 
 app = Flask("Testing_Server")
 Compress(app)
@@ -40,20 +49,25 @@ def get_rpc_stub(host, port):
     return rpc_stub
 
 def get_private_server(uid):
+    _log.debug("[{}] get_private_server".format(uid))
     rpc_stub = None
     try:
         uid_str = str(uid)
+        _log.debug("[{}] opening shelf".format(uid))
         server_shelf = shelvelock.open(config.privateserver_shelf)
         #Check for current session
 
 
         if uid_str in server_shelf:
+
+            _log.debug("[{}]   uid IN shelf".format(uid))
             server = json.loads( server_shelf[uid_str] )
             server['access_time'] = time.time()
             server_shelf[uid_str] = json.dumps( server )
             rpc_stub = get_rpc_stub(config.private_host, server.get('port')) 
         #Lets try and assign a server
         else:
+            _log.debug("[{}]   uid NOT IN shelf".format(uid))
             for port in config.port_range:
                 inuse = False
                 for key in server_shelf.keys():
@@ -67,13 +81,23 @@ def get_private_server(uid):
                             'access_time': time.time()
                         })
                     rpc_stub = get_rpc_stub(config.private_host, port)
+
+                    _log.debug("[{}]     found available RPC connection".format(uid))
+                    break
+
     except Exception as e:
-        _debug(json.dumps({
+        _log.debug(json.dumps({
             'error': 'get_private_server',
             'message': str(e)
             }))
     finally:
         server_shelf.close()
+        _log.debug("[{}] closing shelf".format(uid))
+
+    if rpc_stub:    
+        _log.debug("[{}] HAVE rpc_stub".format(uid))
+    else:
+        _log.debug("[{}] DON'T HAVE rpc_stub".format(uid))
 
     return rpc_stub
     
@@ -95,18 +119,22 @@ def index():
     else:
         resp = make_response( render_template('index.html', uid=user_uid))
     resp.set_cookie('uid', value=user_uid)
+    
+    _log.debug("[{}] /".format(user_uid))
     return resp
     
 
 @app.route('/analyze', methods=['POST'])
 def run_analyze():
     try:
+        _log.debug('/analyze')
         req = {
             'cmd': request.form.get('cmd')
         }
-
+        res = {}
         #user_uid = request.form.get('uid')
         user_uid = request.cookies.get('uid')
+        _log.debug('[{}] /analyze'.format(user_uid))
 
 
         #project is going to remain static 
@@ -114,25 +142,31 @@ def run_analyze():
         # The user's permissions to access
         # expt_uid would now be tested
         if 'debug' in request.cookies:
+            _log.debug("[{}] cookie.debug".format(user_uid))
             rpc_stub = get_rpc_stub(config.private_host, config.debug_port)
         else:
+            _log.debug("[{}] NO cookie.debug".format(user_uid))
             rpc_stub = get_private_server(user_uid)
 
         if rpc_stub:
-            _debug( "Making RPC request: {}".format(req) )
+            _log.debug("[{}] rpc_stub".format(user_uid))
+            _log.debug( "[{}] Making RPC request: {}".format(req, user_uid) )
 
             response = rpc_stub.Private(service_pb2.PrivateParcel(json=json.dumps(req), project_uid=config.project_uid))
+
+            _log.debug("[{}] ...Request RETURNED".format(user_uid))
             res = json.loads(response.json)
             dest = classify_terminal_response(res)
             res['type'] = dest
         else:
+            _log.debug("[{}] NO rpc_stub".format(user_uid))
             res = {
                 'response': 'No private connection is available, please try again later.',
                 'type': 'terminal'
             }
 
     except Exception as err:
-        _debug({"error": err})
+        _log.debug("[{}] /analyse error: {}".format(user_uid, str(err)))
     return jsonify(res)
 
 
@@ -141,7 +175,7 @@ def run_webserver():
     ''' Run web server '''
     host = "0.0.0.0"
     port = 5000
-    print "Serving on ", "http://" +  host + ":" + str(port)
+    _log.info( "Serving on ", "http://" +  host + ":" + str(port) )
     app.run(debug=True, host=host, port=port)
 
 
