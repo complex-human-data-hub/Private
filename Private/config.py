@@ -1,4 +1,9 @@
-logfile = "/tmp/private.log"
+import os 
+
+mypid = os.getpid()
+
+print "PID = ", mypid
+logfile = "/tmp/private-%d.log" % mypid
 
 # socket timeout in seconds which is also the maximum time a remote job could be executed. Increase this value if you
 # have long running jobs or decrease if connectivity to remote ppservers is often lost. - {official documentation}
