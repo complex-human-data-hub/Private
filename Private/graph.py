@@ -850,11 +850,11 @@ except Exception as e:
                 for name in self.variablesToBeCalculated(user):
                     #print name, name not in self.public, user == "All"
                     if name not in self.public or user == "All":
-                        jobname = name + " " + user
+                        jobname = "Compute:  " + user + " " + name
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            self.jobs[name + " " + user] = self.server.submit(job, (name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -874,9 +874,9 @@ except Exception as e:
                                         self.globals[user][name] = None  # remove any previous samples that have been calculated
                                 self.samplerexception[user] = {}
 
-                                myname = "__private_sampler__" + user
+                                jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
-                                self.jobs[myname] = self.server.submit(samplerjob, (myname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -889,7 +889,7 @@ except Exception as e:
     def callback(self, returnvalue):
         self.acquire("callback")
         try:
-            name, user, value = returnvalue
+            jobname, name, user, value = returnvalue
             if isinstance(value, Exception):
                 if user == "All":
                     self.globals[user][name] = str(value)
@@ -904,9 +904,8 @@ except Exception as e:
                         value.seek(0)
                         with open(name+'.png', 'wb') as f:
                             shutil.copyfileobj(value, f)
-            jobname = name + " " + user
             if jobname in self.jobs:
-                del self.jobs[name + " " + user]
+                del self.jobs[jobname]
             else:
                 self.log.debug("Trying to delete job %s that is not in self.jobs" % jobname)
                 self.log.debug(self.jobs)
@@ -957,31 +956,23 @@ except Exception as e:
                         for name in value.varnames:
                             if self.privacySamplerResults.get(name, None) != "private":
                                 if name in self.globals[u].keys() and name in self.globals["All"].keys():
-                                   if self.globals[u][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
-                                       self.privacySamplerResults[name] = "private"
-                                   else:
-                                       d = distManifold(self.globals[u][name], self.globals["All"][name]) * 100.
-                                       self.log.debug(u + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-                                       if d > PrivacyCriterion:
-                                           self.privacySamplerResults[name] = "private"
-                                       else: 
-                                           self.privacySamplerResults[name] = "unknown"
+                                     if self.globals[u][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
+                                          self.privacySamplerResults[name] = "private"
+                                     else:
+                                          jobname = "Manifold: " + u + " " + name
+                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
 
                 else: # else compare All to this users samples using manifold privacy calculation
                     if self.haveSamples("All"):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
                             if self.privacySamplerResults.get(name, None) != "private":
-                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
+                                if name in self.globals[user].keys() and name in self.globals["All"].keys():
                                     if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
                                         self.privacySamplerResults[name] = "private"
                                     else:
-                                        d = distManifold(self.globals[user][name], self.globals["All"][name]) * 100.
-                                        self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-                                        if d > PrivacyCriterion:
-                                            self.privacySamplerResults[name] = "private"
-                                        else: 
-                                            self.privacySamplerResults[name] = "unknown"
+                                        jobname = "Manifold: " + user + " " + name
+                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
                                          
                 # if we have all sampling results back and there are variables that have not been set to private they are public
                 if len(whichsamplersarecomplete) == len(self.userids) -1:
@@ -1005,25 +996,46 @@ except Exception as e:
 
         self.computePrivacy()
 
+    def manifoldprivacycallback(self, returnvalue):
+        self.acquire("manifoldprivacycallback")
+        jobname, name, user, d = returnvalue
+        self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+        if self.privacySamplerResults.get(name, None) != "private":
+            if d > PrivacyCriterion:
+                self.privacySamplerResults[name] = "private"
+            else: 
+                self.privacySamplerResults[name] = "unknown_privacy"
+        
+        try:
+            del self.jobs[jobname]
+        except Exception as e:
+            self.log.debug("trying to del job " + str(e))
+        self.release()
+
     def showSamplerResults(self):
         res = str(len(self.privacySamplerResults)) + " results\n"
         for k,v in self.privacySamplerResults.items():
             res += k + ": " + v + "\n"
         return res
 
-def job(name, user, code, globals, locals):
+def job(jobname, name, user, code, globals, locals):
     try:
         value = eval(code, globals, locals)
-        return((name, user, value))
+        return((jobname, name, user, value))
     except Exception as e:
-        return((name, user, e))
+        return((jobname, name, user, e))
 
-def samplerjob(myname, user, names, code, globals, locals):
+def samplerjob(jobname, user, names, code, globals, locals):
     try:
         exec(code, globals, locals)
         value, exception_variable = locals["__private_result__"]
-        return (myname, user, names, value, exception_variable)
+        return (jobname, user, names, value, exception_variable)
     except Exception as e:
-        return (myname, user, names, e, "No Exception Variable")
+        return (jobname, user, names, e, "No Exception Variable")
+
+def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
+    from Private.manifoldprivacy import distManifold
+    d = distManifold(firstarray, secondarray) * 100.
+    return jobname, name, user, d
 
 depGraph = graph()
