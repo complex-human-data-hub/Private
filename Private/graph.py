@@ -5,6 +5,8 @@ import numpy
 import numpy.random
 from collections import OrderedDict, deque
 import logging
+
+from Private import s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
 import copy
 from Private.manifoldprivacy import distManifold
@@ -17,6 +19,7 @@ import dill as pickle
 import os
 import base64
 import time
+import uuid
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
 
@@ -854,7 +857,8 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals), callback=self.callback)
+                            job_id = str(uuid.uuid4())
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("s3_helper",), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -876,7 +880,8 @@ except Exception as e:
 
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals), callback=self.samplercallback)
+                                job_id = str(uuid.uuid4())
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("s3_helper",), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -889,7 +894,7 @@ except Exception as e:
     def callback(self, returnvalue):
         self.acquire("callback")
         try:
-            jobname, name, user, value = returnvalue
+            jobname, name, user, value = s3_helper.read_results_s3(returnvalue)
             if isinstance(value, Exception):
                 if user == "All":
                     self.globals[user][name] = str(value)
@@ -924,7 +929,7 @@ except Exception as e:
 
     def samplercallback(self, returnvalue):
         self.acquire("samplercallback")
-        myname, user, names, value, exception_variable = returnvalue
+        myname, user, names, value, exception_variable = s3_helper.read_results_s3(returnvalue)
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1018,18 +1023,21 @@ except Exception as e:
             res += k + ": " + v + "\n"
         return res
 
-def job(jobname, name, user, code, globals, locals):
+def job(jobname, name, user, code, globals, locals, uuid):
     try:
         value = eval(code, globals, locals)
-        return((jobname, name, user, value))
+        s3_helper.save_results_s3(uuid, (jobname, name, user, value))
+        print uuid
+        return uuid
     except Exception as e:
         return((jobname, name, user, e))
 
-def samplerjob(jobname, user, names, code, globals, locals):
+def samplerjob(jobname, user, names, code, globals, locals, uuid):
     try:
         exec(code, globals, locals)
         value, exception_variable = locals["__private_result__"]
-        return (jobname, user, names, value, exception_variable)
+        s3_helper.save_results_s3(uuid, (jobname, user, names, value, exception_variable))
+        return uuid
     except Exception as e:
         return (jobname, user, names, e, "No Exception Variable")
 
