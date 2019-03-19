@@ -1,4 +1,5 @@
-import os 
+import logging
+import os
 
 mypid = os.getpid()
 
@@ -12,6 +13,10 @@ logfile = "/tmp/private-%d.log" % mypid
 # failures. It's convenient to have a larger value for local setup as we don't expect any failure
 remote_socket_timeout = 60
 local_socket_timeout = 400000
+
+# s3 config
+s3_bucket_name = 'chdhprivate'
+s3_log_level = logging.CRITICAL
 
 
 ppservers = ()

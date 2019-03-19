@@ -1,10 +1,17 @@
+import logging
+
 import dill as pickle
 import boto3
 
 # s3 config
+from Private import config
 from botocore.exceptions import ClientError
 
-s3_bucket_name = 'chdhprivate'
+# Set the s3 related logging level
+logging.getLogger('boto3').setLevel(config.s3_log_level)
+logging.getLogger('botocore').setLevel(config.s3_log_level)
+logging.getLogger('s3transfer').setLevel(config.s3_log_level)
+logging.getLogger('urllib3').setLevel(config.s3_log_level)
 
 
 def save_results_s3(key, value):
@@ -15,7 +22,7 @@ def save_results_s3(key, value):
     """
     s3 = boto3.resource('s3')
     pickle_byte_obj = pickle.dumps(value)
-    s3.Object(s3_bucket_name, key).put(Body=pickle_byte_obj)
+    s3.Object(config.s3_bucket_name, key).put(Body=pickle_byte_obj)
 
 
 def read_results_s3(key):
@@ -25,7 +32,7 @@ def read_results_s3(key):
     :return: result set as a tuple
     """
     s3 = boto3.resource('s3')
-    return pickle.loads(s3.Object(s3_bucket_name, key).get()['Body'].read())
+    return pickle.loads(s3.Object(config.s3_bucket_name, key).get()['Body'].read())
 
 
 def if_exist(key):
@@ -36,7 +43,7 @@ def if_exist(key):
     """
     s3 = boto3.resource('s3')
     try:
-        s3.Object(s3_bucket_name, key).load()
+        s3.Object(config.s3_bucket_name, key).load()
     except ClientError as e:
         if e.response['Error']['Code'] == "404":
             return False
