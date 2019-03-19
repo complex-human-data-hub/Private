@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 # s3 config
+# todo move to config
 s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 
