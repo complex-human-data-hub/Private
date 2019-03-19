@@ -88,6 +88,9 @@ class graph:
         self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
 
+        # numpy options
+        numpy.set_printoptions(threshold=10000)
+
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
             self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
