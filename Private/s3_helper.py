@@ -4,7 +4,7 @@ import dill as pickle
 import boto3
 
 # s3 config
-from Private import config
+import config
 from botocore.exceptions import ClientError
 
 # Set the s3 related logging level
