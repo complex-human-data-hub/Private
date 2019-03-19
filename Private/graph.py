@@ -857,7 +857,7 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            job_id = str(uuid.uuid4())
+                            job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
                             self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("s3_helper",), callback=self.callback)
                             #time.sleep(1)
 
@@ -880,7 +880,7 @@ except Exception as e:
 
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
-                                job_id = str(uuid.uuid4())
+                                job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
                                 self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("s3_helper",), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
@@ -1023,21 +1023,20 @@ except Exception as e:
             res += k + ": " + v + "\n"
         return res
 
-def job(jobname, name, user, code, globals, locals, uuid):
+def job(jobname, name, user, code, globals, locals, job_id):
     try:
         value = eval(code, globals, locals)
-        s3_helper.save_results_s3(uuid, (jobname, name, user, value))
-        print uuid
-        return uuid
+        s3_helper.save_results_s3(job_id, (jobname, name, user, value))
+        return job_id
     except Exception as e:
         return((jobname, name, user, e))
 
-def samplerjob(jobname, user, names, code, globals, locals, uuid):
+def samplerjob(jobname, user, names, code, globals, locals, job_id):
     try:
         exec(code, globals, locals)
         value, exception_variable = locals["__private_result__"]
-        s3_helper.save_results_s3(uuid, (jobname, user, names, value, exception_variable))
-        return uuid
+        s3_helper.save_results_s3(job_id, (jobname, user, names, value, exception_variable))
+        return job_id
     except Exception as e:
         return (jobname, user, names, e, "No Exception Variable")
 
@@ -1045,5 +1044,10 @@ def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
     d = distManifold(firstarray, secondarray) * 100.
     return jobname, name, user, d
+
+
+def getJobId(jobname, user, names, code, globals, locals):
+    # todo generate a unique id for the job
+    return str(uuid.uuid4())
 
 depGraph = graph()
