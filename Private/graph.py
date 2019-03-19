@@ -1,3 +1,4 @@
+import hashlib
 import multiprocessing
 import pp
 import reprlib
@@ -1025,17 +1026,19 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     try:
-        value = eval(code, globals, locals)
-        Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
+        if not Private.s3_helper.if_exist(job_id):
+            value = eval(code, globals, locals)
+            Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
         return job_id
     except Exception as e:
         return((jobname, name, user, e))
 
 def samplerjob(jobname, user, names, code, globals, locals, job_id):
     try:
-        exec(code, globals, locals)
-        value, exception_variable = locals["__private_result__"]
-        Private.s3_helper.save_results_s3(job_id, (jobname, user, names, value, exception_variable))
+        if not Private.s3_helper.if_exist(job_id):
+            exec(code, globals, locals)
+            value, exception_variable = locals["__private_result__"]
+            Private.s3_helper.save_results_s3(job_id, (jobname, user, names, value, exception_variable))
         return job_id
     except Exception as e:
         return (jobname, user, names, e, "No Exception Variable")

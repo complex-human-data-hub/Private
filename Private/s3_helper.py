@@ -2,6 +2,8 @@ import pickle
 import boto3
 
 # s3 config
+from botocore.exceptions import ClientError
+
 s3_bucket_name = 'chdhprivate'
 
 
@@ -24,3 +26,21 @@ def read_results_s3(key):
     """
     s3 = boto3.resource('s3')
     return pickle.loads(s3.Object(s3_bucket_name, key).get()['Body'].read())
+
+
+def if_exist(key):
+    """
+    Check if key already exist in the bucket
+    :param key:
+    :return:
+    """
+    s3 = boto3.resource('s3')
+    try:
+        s3.Object(s3_bucket_name, key).load()
+    except ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return False
+        else:
+            raise e
+    else:
+        return True
