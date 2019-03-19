@@ -89,7 +89,7 @@ class graph:
         self.jobs = {}
 
         # numpy options
-        numpy.set_printoptions(threshold=10000)
+        numpy.set_printoptions(threshold=5000)
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
