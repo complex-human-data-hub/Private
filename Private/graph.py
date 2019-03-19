@@ -1,4 +1,3 @@
-import hashlib
 import multiprocessing
 import pp
 import reprlib
