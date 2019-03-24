@@ -479,6 +479,10 @@ class graph:
 #              # Incomplete
 #              return True
 
+    def set_output_threshold(self, value):
+        numpy.set_printoptions(threshold=int(value))
+        return "Print output threshold set to " + str(value)
+
     def getValue(self, name, longFormat = False):
         res = ""
         formatter_string = "%%.%sf" % display_precision

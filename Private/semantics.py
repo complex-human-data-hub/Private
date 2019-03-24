@@ -215,6 +215,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_stats(self, node, children):               return result("show_stats", str(depGraph.server.print_stats()))
     def visit_comment_line(self, node, children):             return result("comment_line", "")
     def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[1].code))
+    def visit_set_output_threshold(self, node, children):     return result("set_threshold", depGraph.set_output_threshold(children[1].code))
     def visit_help(self, node, children):
         res = """
 clear: remove all variables and restart
@@ -236,6 +237,7 @@ sb: show builtins
 spb: show probabilistic builtins
 sncpus: show number of cpus
 del <name>: delete variable
+sot <threshold>: set the print output threshold for arrays
 help: this message
 """
         return result("help", res)
