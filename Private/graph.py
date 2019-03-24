@@ -68,6 +68,7 @@ class graph:
         self.unknown_privacy = set()
         self.privacySamplerResults = {} # this holds results from privacy samplers so we know the difference between when
                                         # the privacy samplers haven't been run since last compute and when they have been run
+        self.numberOfManifoldPrivacyProcessesComplete = {}
 
         # code associated with variables
 
@@ -870,6 +871,7 @@ except Exception as e:
                     if user == "All" or sampler_names - self.public != set():
                         if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
                             self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
+                            self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
                             if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
                                 for name in sampler_names:
                                     self.changeState(user, name, "computing")
@@ -977,11 +979,6 @@ except Exception as e:
                                         jobname = "Manifold: " + user + " " + name
                                         self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
                                          
-                # if we have all sampling results back and there are variables that have not been set to private they are public
-                if len(whichsamplersarecomplete) == len(self.userids) -1:
-                    for variable in self.privacySamplerResults.keys():
-                        if self.privacySamplerResults[variable] != "private":
-                            self.privacySamplerResults[variable] = "public"
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
                 #print("in samplercallback when assigning values " + str(e))
@@ -996,29 +993,43 @@ except Exception as e:
 
         self.computePrivacy()
         self.compute()
-
         self.computePrivacy()
 
     def manifoldprivacycallback(self, returnvalue):
-        self.acquire("manifoldprivacycallback")
-        jobname, name, user, d = returnvalue
-        self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-        if self.privacySamplerResults.get(name, None) != "private":
-            if d > PrivacyCriterion:
-                self.privacySamplerResults[name] = "private"
-            else: 
-                self.privacySamplerResults[name] = "unknown_privacy"
+        try:
+            self.acquire("manifoldprivacycallback")
+            jobname, name, user, d = returnvalue
+            self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+            self.numberOfManifoldPrivacyProcessesComplete[name] = self.numberOfManifoldPrivacyProcessesComplete.get(name, 0) + 1
+            if self.privacySamplerResults.get(name, None) != "private":
+                if d > PrivacyCriterion:
+                    self.privacySamplerResults[name] = "private"
+                else: 
+                    self.privacySamplerResults[name] = "unknown_privacy"
+        
+            # if we have all manifold processes back and there are variables that have not been set to private they are public
+            for variable in self.numberOfManifoldPrivacyProcessesComplete.keys():
+                if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
+                    if self.privacySamplerResults[variable] != "private":
+                        self.privacySamplerResults[variable] = "public"
+        except Exception as e:
+            self.log.debug("manifold privacy " + str(e))
+            print("manifold privacy " + str(e))
         
         try:
             del self.jobs[jobname]
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
         self.release()
+        self.computePrivacy()
 
     def showSamplerResults(self):
         res = str(len(self.privacySamplerResults)) + " results\n"
         for k,v in self.privacySamplerResults.items():
-            res += k + ": " + v + "\n"
+            if k in self.numberOfManifoldPrivacyProcessesComplete:
+                res += k + ": " + v + " " + str(self.numberOfManifoldPrivacyProcessesComplete[k]) + "\n"
+            else:
+                res += k + ": " + v + "\n"
         return res
 
 def job(jobname, name, user, code, globals, locals):
