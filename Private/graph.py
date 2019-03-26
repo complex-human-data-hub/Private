@@ -871,7 +871,7 @@ except Exception as e:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper",), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper","Private.config"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -895,7 +895,7 @@ except Exception as e:
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
                                 job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper",), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper", "Private.config"), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -1051,10 +1051,10 @@ except Exception as e:
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
     try:
-        if not (s3_integration and Private.s3_helper.if_exist(job_id)):
+        if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
             data = (jobname, name, user, value)
-            if s3_integration:
+            if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
             else:
                 return_value = data
@@ -1065,11 +1065,11 @@ def job(jobname, name, user, code, globals, locals, job_id):
 def samplerjob(jobname, user, names, code, globals, locals, job_id):
     return_value = job_id
     try:
-        if not (s3_integration and Private.s3_helper.if_exist(job_id)):
+        if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             exec (code, globals, locals)
             value, exception_variable = locals["__private_result__"]
             data = (jobname, user, names, value, exception_variable)
-            if s3_integration:
+            if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, data)
             else:
                 return_value = data
