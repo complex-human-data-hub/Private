@@ -241,7 +241,8 @@ sb: show builtins
 spb: show probabilistic builtins
 sncpus: show number of cpus
 del <name>: delete variable
-sc <config_name> <config_value>: set configuration parameter
+config <config_name> <config_value>: set configuration parameter
+config <config_name>: print configuration parameter
 help: this message
 """
         return result("help", res)
