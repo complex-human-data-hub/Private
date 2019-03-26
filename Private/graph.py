@@ -17,6 +17,7 @@ import dill as pickle
 import os
 import base64
 import time
+from config_manager import ConfigManager
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
 
@@ -88,6 +89,9 @@ class graph:
         self.whohaslock = None
         self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
+
+        # initialize config manager
+        self.config_manager = ConfigManager()
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
@@ -476,9 +480,11 @@ class graph:
 #              # Incomplete
 #              return True
 
-    def set_output_threshold(self, value):
-        numpy.set_printoptions(threshold=int(value))
-        return "Print output threshold set to " + str(value)
+    def config(self, config_name, value=None):
+        if not value is None:
+            return self.config_manager.set_config(config_name, value)
+        else:
+            return self.config_manager.get_config(config_name)
 
     def getValue(self, name, longFormat = False):
         res = ""

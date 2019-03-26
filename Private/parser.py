@@ -15,7 +15,7 @@ from arpeggio import RegExMatch as _
 # - Dependencies in list comprehensions?
 
 def command():                  return [delete, \
-                                        set_output_threshold, \
+                                        config, \
                                         comment, \
                                         draw_tree, \
                                         show_variables, \
@@ -41,7 +41,7 @@ def command():                  return [delete, \
                                         help]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
-def set_output_threshold():     return "sot", number
+def config():                   return "config", identifier, Optional(number)
 def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
 def draw_tree():                return "dt"
 def show_variables():           return "sv"
