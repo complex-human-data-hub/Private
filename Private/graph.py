@@ -24,7 +24,7 @@ import uuid
 from config_manager import ConfigManager
 
 
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, s3_integration
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
@@ -909,7 +909,7 @@ except Exception as e:
         self.acquire("callback")
         try:
             jobname, name, user, value = Private.s3_helper.read_results_s3(
-                returnvalue) if s3_integration else returnvalue
+                returnvalue) if Private.s3_helper.s3_integration else returnvalue
             if isinstance(value, Exception):
                 if user == "All":
                     self.globals[user][name] = str(value)
@@ -945,7 +945,7 @@ except Exception as e:
     def samplercallback(self, returnvalue):
         self.acquire("samplercallback")
         myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
-            returnvalue) if s3_integration else returnvalue
+            returnvalue) if Private.s3_helper.s3_integration else returnvalue
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
