@@ -14,11 +14,6 @@ logfile = "/tmp/private-%d.log" % mypid
 remote_socket_timeout = 60
 local_socket_timeout = 400000
 
-# S3 configs
-s3_integration = True
-s3_bucket_name = 'chdhprivate'
-s3_log_level = logging.CRITICAL
-
 ppservers = ()
 ppservers_list = []
 with open('ppserver.conf', 'r') as f:
