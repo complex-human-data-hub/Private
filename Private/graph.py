@@ -24,7 +24,7 @@ import uuid
 from config_manager import ConfigManager
 
 
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, s3_integration
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
@@ -908,7 +908,8 @@ except Exception as e:
     def callback(self, returnvalue):
         self.acquire("callback")
         try:
-            jobname, name, user, value = Private.s3_helper.read_results_s3(returnvalue)
+            jobname, name, user, value = Private.s3_helper.read_results_s3(
+                returnvalue) if s3_integration else returnvalue
             if isinstance(value, Exception):
                 if user == "All":
                     self.globals[user][name] = str(value)
@@ -943,7 +944,8 @@ except Exception as e:
 
     def samplercallback(self, returnvalue):
         self.acquire("samplercallback")
-        myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(returnvalue)
+        myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
+            returnvalue) if s3_integration else returnvalue
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1047,21 +1049,32 @@ except Exception as e:
         return res
 
 def job(jobname, name, user, code, globals, locals, job_id):
+    return_value = job_id
     try:
-        if not Private.s3_helper.if_exist(job_id):
+        if not (s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
-            Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
-        return job_id
+            data = (jobname, name, user, value)
+            if s3_integration:
+                Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
+            else:
+                return_value = data
+        return return_value
     except Exception as e:
         return((jobname, name, user, e))
 
 def samplerjob(jobname, user, names, code, globals, locals, job_id):
+    return_value = job_id
     try:
-        if not Private.s3_helper.if_exist(job_id):
-            exec(code, globals, locals)
+        if not (s3_integration and Private.s3_helper.if_exist(job_id)):
+            exec (code, globals, locals)
             value, exception_variable = locals["__private_result__"]
-            Private.s3_helper.save_results_s3(job_id, (jobname, user, names, value, exception_variable))
-        return job_id
+            data = (jobname, user, names, value, exception_variable)
+            if s3_integration:
+                Private.s3_helper.save_results_s3(job_id, data)
+            else:
+                return_value = data
+        return return_value
+
     except Exception as e:
         return (jobname, user, names, e, "No Exception Variable")
 

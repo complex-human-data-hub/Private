@@ -14,6 +14,8 @@ logfile = "/tmp/private-%d.log" % mypid
 remote_socket_timeout = 60
 local_socket_timeout = 400000
 
+# S3 Switch, can be set to True or False
+s3_integration = True
 
 ppservers = ()
 ppservers_list = []
