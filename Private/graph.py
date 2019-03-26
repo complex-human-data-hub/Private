@@ -21,6 +21,9 @@ import base64
 import time
 import uuid
 
+from config_manager import ConfigManager
+
+
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
@@ -91,6 +94,9 @@ class graph:
         self.whohaslock = None
         self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
+
+        # initialize config manager
+        self.config_manager = ConfigManager()
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
@@ -478,6 +484,12 @@ class graph:
 #          else:
 #              # Incomplete
 #              return True
+
+    def config(self, config_name, value=None):
+        if not value is None:
+            return self.config_manager.set_config(config_name, value)
+        else:
+            return self.config_manager.get_config(config_name)
 
     def getValue(self, name, longFormat = False):
         res = ""
