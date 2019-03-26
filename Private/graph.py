@@ -871,7 +871,7 @@ except Exception as e:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper",), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -895,7 +895,7 @@ except Exception as e:
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
                                 job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper"), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper",), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
