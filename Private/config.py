@@ -1,5 +1,4 @@
 import os
-import logging
 
 mypid = os.getpid()
 
@@ -13,6 +12,7 @@ logfile = "/tmp/private-%d.log" % mypid
 # failures. It's convenient to have a larger value for local setup as we don't expect any failure
 remote_socket_timeout = 60
 local_socket_timeout = 400000
+
 
 ppservers = ()
 ppservers_list = []
