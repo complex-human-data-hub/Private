@@ -2,13 +2,7 @@ import logging
 import dill as pickle
 import boto3
 from botocore.exceptions import ClientError
-from config import s3_integration, s3_log_level, s3_bucket_name
-
-
-# S3 configs
-# s3_integration = True
-# s3_bucket_name = 'chdhprivate'
-# s3_log_level = logging.CRITICAL
+from config import s3_log_level, s3_bucket_name
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
