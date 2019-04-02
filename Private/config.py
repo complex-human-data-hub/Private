@@ -11,7 +11,7 @@ logfile = "/tmp/private-%d.log" % mypid
 
 # In our setting it's necessary to have a minimum possible timeout when working in the cluster with the network
 # failures. It's convenient to have a larger value for local setup as we don't expect any failure
-remote_socket_timeout = 60
+remote_socket_timeout = 90
 local_socket_timeout = 400000
 
 # S3 configs
