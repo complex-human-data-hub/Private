@@ -15,7 +15,7 @@ remote_socket_timeout = 90
 local_socket_timeout = 400000
 
 # S3 configs
-s3_integration = True
+s3_integration = False
 s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 
