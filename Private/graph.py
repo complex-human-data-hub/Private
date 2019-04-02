@@ -7,7 +7,7 @@ from collections import OrderedDict, deque
 import logging
 
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins
 import copy
 from Private.manifoldprivacy import distManifold
 import shutil
@@ -20,8 +20,6 @@ import os
 import base64
 import time
 import uuid
-
-from config_manager import ConfigManager
 
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
@@ -94,9 +92,6 @@ class graph:
         self.whohaslock = None
         self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
-
-        # initialize config manager
-        self.config_manager = ConfigManager()
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
@@ -484,12 +479,6 @@ class graph:
 #          else:
 #              # Incomplete
 #              return True
-
-    def config(self, config_name, value=None):
-        if not value is None:
-            return self.config_manager.set_config(config_name, value)
-        else:
-            return self.config_manager.get_config(config_name)
 
     def getValue(self, name, longFormat = False):
         res = ""
@@ -918,6 +907,8 @@ except Exception as e:
                 self.globals[user][name] = value
                 self.changeState(user, name, "uptodate")
                 if user == "All":
+                    if name in config_builtins:
+                        builtins.get(name)(value)
                     if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
                         self.SamplerParameterUpdated = True
                     if type(value) == io.BytesIO:   # write image to file

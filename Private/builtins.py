@@ -357,6 +357,9 @@ def private_xrange(x):
 def private_zip(x):
     return zip(x)
 
+def array_output_threshold(x):
+    numpy.set_printoptions(threshold=int(x))
+
 
 builtins = {\
 
@@ -494,10 +497,15 @@ builtins = {\
             "unicode":private_unicode, \
             "vars":private_vars, \
             "xrange":private_xrange, \
-            "zip":private_zip}
+            "zip":private_zip, \
+
+            # config builtins
+            "ArrayOutputThreshold": array_output_threshold
+    }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
+config_builtins = ("ArrayOutputThreshold",)
 
 def setBuiltinPrivacy(graph):
     for name in builtins:
