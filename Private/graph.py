@@ -5,7 +5,7 @@ import numpy
 import numpy.random
 from collections import OrderedDict, deque
 import logging
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins
 import copy
 from Private.manifoldprivacy import distManifold
 import shutil
@@ -900,6 +900,8 @@ except Exception as e:
                 self.globals[user][name] = value
                 self.changeState(user, name, "uptodate")
                 if user == "All":
+                    if name in config_builtins:
+                        builtins.get(name)(value)
                     if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
                         self.SamplerParameterUpdated = True
                     if type(value) == io.BytesIO:   # write image to file
