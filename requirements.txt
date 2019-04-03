@@ -30,3 +30,4 @@ subprocess32
 text-unidecode
 Theano
 tqdm
+boto3
