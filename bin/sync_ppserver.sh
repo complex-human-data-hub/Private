@@ -5,6 +5,8 @@ do
 	echo $s
 	rsync -avuzpor --exclude .git --exclude .gitignore . ubuntu@$s:/home/ubuntu/venv/lib/python2.7/site-packages/Private
 	ssh -oStrictHostKeyChecking=no $s /bin/bash <<EOF
+cd Private
+git pull
 sudo systemctl restart ppserver.service
 EOF
 done < ppserver.conf

@@ -9,7 +9,7 @@ import pydot
 import graphviz
 import logging
 import importlib
-from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins
+from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins, commands
 
 from networkx.drawing.nx_pydot import write_dot
 from Private.graph import *
@@ -56,6 +56,8 @@ class result:
 class InputVisitor(PTNodeVisitor):
 
     def visit_identifier(self, node, children):
+        if node.value in commands:
+            raise Exception("Illegal Identifier " + node.value)
         return result("identifier", node.value, node.value)
 
     def visit_distribution_name(self, node, children):
