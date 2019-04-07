@@ -550,12 +550,12 @@ class graph:
                 commentbits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
                 commentbits.append(self.comment.get(name, ""))
-            undefined_depends = []
+            unsatisfied_depends = []
             for name in self.code.keys():
-                undefined_depends.append(", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins) - self.stale["All"])))
+                unsatisfied_depends.append(", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins) - self.stale["All"])))
             for name in self.probcode.keys():
-                undefined_depends.append(", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins) - self.stale["All"])))
-            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for codebit, valuebit, commentbit, unsatisfied_depend in zip(newcodebits, valuebits, commentbits, undefined_depends))
+                unsatisfied_depends.append(", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins) - self.stale["All"])))
+            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for codebit, valuebit, commentbit, unsatisfied_depend in zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
         else:
             return ""
 
