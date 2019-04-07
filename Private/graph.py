@@ -398,11 +398,26 @@ class graph:
     def add_comment(self, name, the_comment):
         self.comment[name] = the_comment
 
+    def check_cyclic_dependencies(self, name, dependents):
+        if dependents == set():
+            return False
+        elif name in dependents:
+            return True
+        else:
+            for dependent in dependents:
+                dependent_dependents = self.getChildren(dependent)
+                if self.check_cyclic_dependencies(name, dependent_dependents):
+                    return True
+
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         self.acquire("define " + name)
         if not dependson:
             dependson = []
+        else:
+            if self.check_cyclic_dependencies(name, set(dependson) - self.builtins):
+                self.release()
+                raise Exception("Cyclic Dependency Found")
         if prob:
             self.probabilistic.add(name)
             self.probcode[name] = code
