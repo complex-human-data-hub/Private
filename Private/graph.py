@@ -777,6 +777,8 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
+    np = __import__("numpy")
+    numpy.random.seed(8623574)
 
 
     basic_model = pymc3.Model()
