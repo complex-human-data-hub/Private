@@ -22,7 +22,7 @@ import time
 import uuid
 
 
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
@@ -954,6 +954,7 @@ except Exception as e:
         return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
 
     def samplercallback(self, returnvalue):
+        numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
         myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
