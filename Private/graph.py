@@ -411,6 +411,8 @@ class graph:
 
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
+        if name in prob_builtins:
+            raise Exception("Illegal Identifier " + name)
         self.acquire("define " + name)
         if not dependson:
             dependson = []
