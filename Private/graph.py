@@ -777,8 +777,6 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
-    np = __import__("numpy")
-    numpy.random.seed(8623574)
 
 
     basic_model = pymc3.Model()
@@ -994,7 +992,7 @@ except Exception as e:
                                           self.privacySamplerResults[name] = "private"
                                      else:
                                           jobname = "Manifold: " + u + " " + name
-                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
+                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), modules=("numpy",), callback=self.manifoldprivacycallback)
 
                 else: # else compare All to this users samples using manifold privacy calculation
                     if self.haveSamples("All"):
@@ -1006,7 +1004,7 @@ except Exception as e:
                                         self.privacySamplerResults[name] = "private"
                                     else:
                                         jobname = "Manifold: " + user + " " + name
-                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
+                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), modules=("numpy",), callback=self.manifoldprivacycallback)
                                          
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
@@ -1093,6 +1091,7 @@ def samplerjob(jobname, user, names, code, globals, locals, job_id):
         return (jobname, user, names, e, "No Exception Variable")
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
+    numpy.random.seed(Private.config.numpy_seed)
     from Private.manifoldprivacy import distManifold
     d = distManifold(firstarray, secondarray) * 100.
     return jobname, name, user, d
