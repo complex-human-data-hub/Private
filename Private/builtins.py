@@ -12,9 +12,10 @@ import pymc3 as pm
 import copy
 import theano.tensor
 import math
+from config import numpy_seed
 
 # Deterministic Continuous Distribution Definitions
-numpy.random.seed(8623574)
+numpy.random.seed(numpy_seed)
 
 def Uniform(lower, upper, size):
     y = pm.Uniform.dist(lower, upper)
