@@ -14,6 +14,7 @@ import theano.tensor
 import math
 
 # Deterministic Continuous Distribution Definitions
+numpy.random.seed(8623574)
 
 def Uniform(lower, upper, size):
     y = pm.Uniform.dist(lower, upper)
