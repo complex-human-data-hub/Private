@@ -22,7 +22,7 @@ import time
 import uuid
 
 
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed
 
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
@@ -906,7 +906,7 @@ except Exception as e:
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
                                 job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper", "Private.config"), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -956,6 +956,7 @@ except Exception as e:
         return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
 
     def samplercallback(self, returnvalue):
+        numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
         myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
@@ -1077,6 +1078,7 @@ def job(jobname, name, user, code, globals, locals, job_id):
 
 def samplerjob(jobname, user, names, code, globals, locals, job_id):
     return_value = job_id
+    numpy.random.seed(Private.config.numpy_seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             exec (code, globals, locals)

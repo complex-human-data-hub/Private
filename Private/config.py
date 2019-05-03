@@ -19,6 +19,9 @@ s3_integration = False
 s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 
+# numpy seed
+numpy_seed = 8623574
+
 ppservers = ()
 ppservers_list = []
 
