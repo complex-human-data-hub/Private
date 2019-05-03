@@ -733,6 +733,7 @@ class graph:
                     stack.append(k)
         nx.draw_networkx(G)
         buf = io.BytesIO()
+        plt.axis('off')
         plt.savefig(buf, format="png")
         result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
         plt.close()
