@@ -191,7 +191,7 @@ class InputVisitor(PTNodeVisitor):
             depGraph.add_comment(children[0].code, children[1].code)
         #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
-    def visit_draw_tree(self, node, children):                write_dot(depGraph.graph, "VariableDependencyGraph.dot")
+    def visit_draw_tree(self, node, children):                return result("draw_tree", depGraph.draw_dependency_graph())
     def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
     def visit_show_values(self, node, children):              return result("show_values", depGraph.show_values())
     def visit_clear_variables(self, node, children):
