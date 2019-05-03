@@ -5,8 +5,8 @@ import numpy
 import numpy.random
 from collections import OrderedDict, deque
 import logging
+import matplotlib.pyplot as plt
 import networkx as nx
-from networkx.drawing.nx_pydot import write_dot
 
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins
@@ -721,7 +721,6 @@ class graph:
             return any(self.isAncestor(name1, parent) for parent in parents)
 
     def draw_dependency_graph(self):
-        file_name = "VariableDependencyGraph.dot"
         G = nx.DiGraph()
         visited, stack = set(), list(self.probabilistic | self.deterministic)
         while stack:
@@ -732,8 +731,12 @@ class graph:
                 for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
                     G.add_edge(vertex, k)
                     stack.append(k)
-        write_dot(G, file_name)
-        return "Graph: " + file_name
+        nx.draw_networkx(G)
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
+        plt.close()
+        return result
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
