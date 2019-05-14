@@ -13,6 +13,7 @@ import copy
 import theano.tensor
 import math
 from config import numpy_seed
+import preprocessing as pre
 
 # Deterministic Continuous Distribution Definitions
 numpy.random.seed(numpy_seed)
@@ -359,6 +360,12 @@ def private_xrange(x):
 def private_zip(x):
     return zip(x)
 
+def private_fft(x):
+    return pre.fft(x)
+
+def private_mfcc(x):
+    return pre.mfcc(x)
+
 def array_output_threshold(x):
     numpy.set_printoptions(threshold=int(x))
 
@@ -500,6 +507,11 @@ builtins = {\
             "vars":private_vars, \
             "xrange":private_xrange, \
             "zip":private_zip, \
+
+            # Pre-processing builtins
+
+            "fft": private_fft, \
+            "mfcc": private_mfcc, \
 
             # config builtins
             "ArrayOutputThreshold": array_output_threshold
