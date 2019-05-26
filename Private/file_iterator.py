@@ -1,3 +1,6 @@
+from datetime import datetime
+import os
+
 import s3_helper
 
 
@@ -5,6 +8,7 @@ class FileIterator:
     def __init__(self, datafile_list):
         self.file_id = -1
         self.file_list = datafile_list
+        self.file_list.sort()
 
     def __iter__(self):
         return self
@@ -19,3 +23,7 @@ class FileIterator:
     def get_file_count(self):
         return len(self.file_list)
 
+    def get_file_datetime(self):
+        file_name = os.path.basename(self.file_list[0])
+        file_name_parts = file_name.split('_')
+        return datetime.strptime(file_name_parts[1], '%Y%m%d%H%M%SZ')
