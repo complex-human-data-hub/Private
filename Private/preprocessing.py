@@ -13,6 +13,12 @@ def fft(file_itr, segment_size):
     :param segment_size: size of the segment
     :return: dict of fft arrays for each segment
     """
+    '''
+    todo - Finalize on the segment start point (start of the file or start of the hour?)
+    todo - Timestamp is from the uptime. And if we know the exact time of the first event we can estimate time for all 
+    events. However, there is no way find that. We can estimate the first event time from the file name, which can be 
+    wrong. Going forward we might need to change the code from the android application end.
+    '''
     output_length = 512
     file_arrays = []
     file_datetime = file_itr.get_file_datetime()
