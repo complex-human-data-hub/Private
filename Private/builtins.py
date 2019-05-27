@@ -18,6 +18,7 @@ import preprocessing as pre
 
 # Deterministic Continuous Distribution Definitions
 numpy.random.seed(numpy_seed)
+# todo - remove this
 Events = EventsIterator(['DataFiles/events_1.data', 'DataFiles/events_2.data'])
 DemoEvents = EventsIterator(['DataFiles/events_1.data', 'DataFiles/events_2.data'])
 
