@@ -4,6 +4,9 @@ from event import Event
 
 
 class EventsIterator:
+    """
+    Returns the event iterator for given list of s3 keys (files). This assumes that the file are in the JSON format
+    """
 
     def __init__(self, datafile_list):
         self.i = -1
@@ -29,12 +32,3 @@ class EventsIterator:
             else:
                 raise StopIteration
         return event
-
-# y = EventsIterator(['DataFiles/events_1.data', 'DataFiles/events_2.data'])
-# e1 = y.next()
-# print y.next()
-# print y.next()
-# print y.next()
-# print y.next()
-# print y.next()
-# print y.next()
