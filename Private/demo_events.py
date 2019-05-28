@@ -73193,8 +73193,9 @@ data = [{ 'AccelerometryCount': 5,
 #            e["keywords"].append("Anxious")
 
 #print ["Anxious" in e["keywords"] for e in data if e["type"] == "Button" and "Wednesday" in e["keywords"]]
-
-
-Events = [Event(d) for d in data]
+import s3_helper
+import json
+data = s3_helper.read_file('DataFiles/events_1.data')
+Events = [Event(d) for d in json.loads(data)]
 
 DemoEvents = Events

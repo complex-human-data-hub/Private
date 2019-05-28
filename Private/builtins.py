@@ -4,7 +4,7 @@
 import numpy.random
 import numpy
 from event import Event
-# from demo_events import Events, DemoEvents
+from demo_events import Events, DemoEvents
 from event_iterator import EventsIterator
 import seaborn
 import matplotlib.pyplot as plt
@@ -18,9 +18,6 @@ import preprocessing as pre
 
 # Deterministic Continuous Distribution Definitions
 numpy.random.seed(numpy_seed)
-# todo - remove this
-Events = EventsIterator(['DataFiles/events_1.data'])
-DemoEvents = EventsIterator(['DataFiles/events_1.data'])
 
 def Uniform(lower, upper, size):
     y = pm.Uniform.dist(lower, upper)
