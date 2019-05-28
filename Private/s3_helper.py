@@ -48,3 +48,13 @@ def if_exist(key):
             raise e
     else:
         return True
+
+
+def read_file(key):
+    """
+    Reads a file set from s3
+    :param key: s3 key
+    :return: result set as a tuple
+    """
+    s3 = boto3.resource('s3')
+    return s3.Object(s3_bucket_name, key).get()['Body'].read()
