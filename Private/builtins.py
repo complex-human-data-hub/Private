@@ -364,7 +364,7 @@ def private_xrange(x):
 def private_zip(x):
     return zip(x)
 
-def private_fft(x, seg_size):
+def private_fft(x, seg_size=-1):
     return pre.fft(x, seg_size)
 
 def private_mfcc(x):
