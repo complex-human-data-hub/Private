@@ -300,6 +300,7 @@ function createTerminal() {
 
     term.on('paste', function (rawdata, ev) {
         console.log("paste", rawdata);
+        rawdata = $.trim(rawdata);
         chunks = rawdata.split(/\r/)
         if (chunks.length > 1){
             paste_input = input
