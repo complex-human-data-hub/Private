@@ -731,10 +731,16 @@ class graph:
                 for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
                     G.add_edge(vertex, k)
                     stack.append(k)
-        nx.draw_networkx(G)
+        pos = nx.spring_layout(G, scale=2)
+        nx.draw_networkx(G, pos, node_color='cornflowerblue', node_size=100, with_labels=False)
+        if len(pos) > 1:
+            for p in pos:  # raise text positions
+                pos[p][1] += 0.15
+        nx.draw_networkx_labels(G, pos, font_size=10)
         buf = io.BytesIO()
         plt.axis('off')
         plt.savefig(buf, format="png")
+        plt.show()
         result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
         plt.close()
         return result
