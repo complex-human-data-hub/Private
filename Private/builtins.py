@@ -5,7 +5,6 @@ import numpy.random
 import numpy
 from event import Event
 from demo_events import Events, DemoEvents
-from event_iterator import EventsIterator
 import seaborn
 import matplotlib.pyplot as plt
 import io
