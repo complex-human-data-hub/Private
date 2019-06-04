@@ -16,6 +16,14 @@ _log.debug("============================= Starting new interpreter =============
 from parser import PrivateParser
 from semantics import PrivateSemanticAnalyser
 
+#from private_data import Source
+#from graph import graph
+
+#data_source = Source()
+#events = data_source.get_events()
+#current_graph = graph(events=events)
+current_graph = None
+
 def execute(line):
     if line != "":
         try:
@@ -24,7 +32,10 @@ def execute(line):
             print("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
         else:
             try:
-                result = PrivateSemanticAnalyser(parse_tree)
+                #if not current_graph:
+                #    global current_graph 
+                #    current_graph = graph(events=events)
+                result = PrivateSemanticAnalyser(parse_tree, update_graph=current_graph)
                 if result:
                     print(result)
             except Exception as e:
