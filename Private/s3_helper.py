@@ -11,36 +11,39 @@ logging.getLogger('s3transfer').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
 
 
-def save_results_s3(key, value):
+def save_results_s3(key, value, bucket_name=s3_bucket_name):
     """
     Saves a result set in s3
     :param key: s3 key
+    :param bucket_name: s3 bucket name
     :param value: result set as a tuple
     """
     s3 = boto3.resource('s3')
     pickle_byte_obj = pickle.dumps(value)
-    s3.Object(s3_bucket_name, key).put(Body=pickle_byte_obj)
+    s3.Object(bucket_name, key).put(Body=pickle_byte_obj)
 
 
-def read_results_s3(key):
+def read_results_s3(key, bucket_name=s3_bucket_name):
     """
     Reads a result set from s3
     :param key: s3 key
+    :param bucket_name: s3 bucket name
     :return: result set as a tuple
     """
     s3 = boto3.resource('s3')
-    return pickle.loads(s3.Object(s3_bucket_name, key).get()['Body'].read())
+    return pickle.loads(s3.Object(bucket_name, key).get()['Body'].read())
 
 
-def if_exist(key):
+def if_exist(key, bucket_name=s3_bucket_name):
     """
     Check if key already exist in the bucket
-    :param key:
+    :param key:s3 key
+    :param bucket_name: s3 bucket name
     :return:
     """
     s3 = boto3.resource('s3')
     try:
-        s3.Object(s3_bucket_name, key).load()
+        s3.Object(bucket_name, key).load()
     except ClientError as e:
         if e.response['Error']['Code'] == "404":
             return False
@@ -50,11 +53,12 @@ def if_exist(key):
         return True
 
 
-def read_file(key):
+def read_file(key, bucket_name=s3_bucket_name):
     """
     Reads a file set from s3
     :param key: s3 key
+    :param bucket_name: s3 bucket name
     :return: result set as a tuple
     """
     s3 = boto3.resource('s3')
-    return s3.Object(s3_bucket_name, key).get()['Body'].read()
+    return s3.Object(bucket_name, key).get()['Body'].read()
