@@ -4,7 +4,6 @@
 import numpy.random
 import numpy
 from event import Event
-from demo_events import Events, DemoEvents
 import seaborn
 import matplotlib.pyplot as plt
 import io
@@ -13,6 +12,19 @@ import copy
 import theano.tensor
 import math
 from config import numpy_seed
+
+#from demo_events import Events, DemoEvents
+
+# Import our source data 
+# defaults to DemoEvents, but this class
+# can be replace by a custom Source class to suit 
+# the researchers purposes
+
+from private_data import Source
+
+data_source = Source()
+Events = data_source.get_events()
+DemoEvents = data_source.get_demo_events()
 
 # Deterministic Continuous Distribution Definitions
 numpy.random.seed(numpy_seed)
@@ -540,10 +552,27 @@ def showProbBuiltins():
     res += showNames(list(prob_builtins))
     return res
 
-def setUserIds():
+def setUserIds(events=None):
+    if events:
+        builtins["Events"] = events
+        builtins["DemoEvents"] = events
+    else:
+        builtins["Events"] = Events
+        builtins["DemoEvents"] = DemoEvents
+
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
-def setGlobals():
+def setGlobals(events=None):
+    print "HERE"
+    print events
+    if events:
+        builtins["Events"] = events
+        builtins["DemoEvents"] = events
+    else:
+        builtins["Events"] = Events
+        builtins["DemoEvents"] = DemoEvents
+        print len(DemoEvents)
+
     # create a new set of globals with data that removes each user
 
     result = {}

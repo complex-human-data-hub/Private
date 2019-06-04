@@ -43,7 +43,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self):
+    def __init__(self, events=None):
 
         # variable types
 
@@ -58,8 +58,8 @@ class graph:
 
         # variables related to values
 
-        self.globals = setGlobals()
-        self.userids = setUserIds()
+        self.globals = setGlobals(events=events)
+        self.userids = setUserIds(events=events)
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
         self.computing = dict([(u, set() ) for u in self.userids])
