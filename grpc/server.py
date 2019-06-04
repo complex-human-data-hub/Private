@@ -89,7 +89,7 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
     def __init__(self):
         self.private = None
         self.initializing = False
-
+        self.skipped = False #Skip the first return after initializing so we can set our first value
     def Foo(self, request, context):
         return service_pb2.Empty()
 
@@ -108,10 +108,15 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
                         return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
                     else:
                         self.private = Private(request.project_uid)
-
-                ret = {'status': 'success', 'response': 'Initializing dataset [2]'}
-                return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
-
+                if self.skipped:
+                    #Keep this so that user who keep clicking keep getting an intialising message
+                    ret = {'status': 'success', 'response': 'Initializing dataset [2]'}
+                    return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
+                else:
+                    #Want to skip the parent of the fork coming through
+                    #So that after the data is loaded we will issue the 
+                    #first incoming command
+                    self.skipped = True
 
             #if str(request.project_uid) != str(self.project_uid):
             #    raise Exception("Incorrect project ID")
