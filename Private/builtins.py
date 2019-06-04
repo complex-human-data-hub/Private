@@ -228,20 +228,20 @@ def private_array(x):
     return numpy.array(x, numpy.float)
 
 
-def private_mean(x):
-    return numpy.mean(x)
+def private_mean(x, **kwargs):
+    return numpy.mean(x, **kwargs)
 
 
-def private_median(x):
-    return numpy.median(x)
+def private_median(x, **kwargs):
+    return numpy.median(x, **kwargs)
 
 
 def private_percentile(x, percent):
     return numpy.percentile(x, percent)
 
 
-def private_std(x):
-    return numpy.std(x)
+def private_std(x, **kwargs):
+    return numpy.std(x, **kwargs)
 
 
 def private_abs(x):
