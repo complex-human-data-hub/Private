@@ -33,6 +33,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--port", type=int, default=51135)
 args = parser.parse_args()
 
+
+#Setup logging 
+logfile = "/tmp/private-{}.log".format(args.port)
+logging.basicConfig(filename=logfile,level=logging.DEBUG)
+
 #Import DataSource
 #from Private.unforgettable_data import Source
 from Private.private_data import Source

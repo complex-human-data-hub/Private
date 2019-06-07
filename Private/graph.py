@@ -26,7 +26,7 @@ import uuid
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed
 
-logging.basicConfig(filename=logfile,level=logging.DEBUG)
+#logging.basicConfig(filename=logfile,level=logging.DEBUG)
 
 numpy.set_printoptions(precision=3)
 
