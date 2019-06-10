@@ -788,7 +788,8 @@ class graph:
 try:
     logging = __import__("logging")
     _log = logging.getLogger("Private")
-    logging.disable(100)
+    #logging.disable(100)
+    _log.debug("Running PyMC3 Code")
 """
 
             code = loggingcode
@@ -841,9 +842,11 @@ try:
 
             code += """
         __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+        _log.debug("Finished PyMC3 Code")
 
 except Exception as e:
     # remove stuff after the : as that sometimes reveals private information
+    _log.debug("PyMC3 Code Exception: " + str(e))
     ind = e.args[0].find(":")
     if ind != -1:
         estring = e.args[0][0:ind]
