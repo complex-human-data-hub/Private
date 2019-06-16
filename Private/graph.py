@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names
 import copy
 from Private.manifoldprivacy import distManifold
 import shutil
@@ -22,6 +22,7 @@ import os
 import base64
 import time
 import uuid
+import pymc3 as pm
 
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed
@@ -413,7 +414,7 @@ class graph:
 
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-        if name in prob_builtins:
+        if name in prob_builtins | illegal_variable_names:
             raise Exception("Illegal Identifier " + name)
         self.acquire("define " + name)
         if not dependson:
@@ -841,7 +842,7 @@ try:
                     locals = None
 
             code += """
-        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
         _log.debug("Finished PyMC3 Code")
 
 except Exception as e:
@@ -986,8 +987,13 @@ except Exception as e:
     def samplercallback(self, returnvalue):
         numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
-        myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
+        myname, user, names, value, exception_variable, model = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
+        if user == "All":
+            self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
+            self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
+            self.globals[user]['waic'] =  pm.stats.waic(value, model)
+            self.globals[user]['loo'] =  pm.stats.loo(value, model)
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1110,8 +1116,8 @@ def samplerjob(jobname, user, names, code, globals, locals, job_id):
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             exec (code, globals, locals)
-            value, exception_variable = locals["__private_result__"]
-            data = (jobname, user, names, value, exception_variable)
+            value, exception_variable, model = locals["__private_result__"]
+            data = (jobname, user, names, value, exception_variable, model)
             if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, data)
             else:
