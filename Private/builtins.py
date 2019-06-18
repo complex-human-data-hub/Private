@@ -344,6 +344,26 @@ def regplot(column_names, x, y, **kwargs):
     return buf
 
 
+def jointplot(column_names, x, y, **kwargs):
+    """
+    Can be used to plot  two variables with bivariate and univariate graphs.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.jointplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def private_array(x):
     return numpy.array(x, numpy.float)
 
@@ -649,6 +669,7 @@ builtins = {\
             # Plotting Functions
 
             "distplot": distplot, \
+            "jointplot": jointplot, \
             "relplot": relplot, \
             "catplot": catplot, \
             "regplot": regplot, \
