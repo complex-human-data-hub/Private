@@ -281,6 +281,49 @@ def relplot(column_names, *args, **kwargs):
     return buf
 
 
+def catplot(column_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn categorical plots. The kind parameter selects between different categorical plots:
+
+    Categorical scatterplots:
+
+    stripplot (with kind="strip"; the default)
+    swarmplot (with kind="swarm")
+
+    Categorical distribution plots:
+
+    boxplot (with kind="box")
+    violinplot (with kind="violin")
+    boxenplot (with kind="boxen")
+
+    Categorical estimate plots:
+
+    pointplot (with kind="point")
+    barplot (with kind="bar")
+    countplot (with kind="count")
+
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        if len(args) == 3:
+            seaborn.catplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.catplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        else:
+            seaborn.catplot(x=column_names[0], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def private_array(x):
     return numpy.array(x, numpy.float)
 
@@ -587,6 +630,7 @@ builtins = {\
 
             "distplot": distplot, \
             "relplot": relplot, \
+            "catplot": catplot, \
 
             # Control of Sampler
 
