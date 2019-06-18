@@ -126,7 +126,7 @@ class graph:
             self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
 
         self.last_server_connect = ctime
-        self.log.debug( "Starting pp with", self.server.get_ncpus(), "workers" )
+        self.log.debug( "Starting pp with" + str(self.server.get_ncpus()) + "workers" )
         return None
 
     def acquire(self, who):
