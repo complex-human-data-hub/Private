@@ -226,17 +226,7 @@ def Sigmoid(x):
 
 # Plotting Function Definitions
 
-def distplot(a, **kwargs):  # have to stop this plotting if x is Private
-    try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
-        seaborn.distplot(a, **kwargs)
-    except Exception as e:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.close()
-    return buf
-
-
+# plotting helper method
 def create_data_frame(column_names, *args):
     """
     Creates a pandas data frame from given set of lists and column names. Each list will be taken as a column.
@@ -254,6 +244,39 @@ def create_data_frame(column_names, *args):
     return df
 
 
+#   Distribution plots
+def distplot(a, **kwargs):  # have to stop this plotting if x is Private
+    try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
+        seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def jointplot(column_names, x, y, **kwargs):
+    """
+    Can be used to plot  two variables with bivariate and univariate graphs.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.jointplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+#   Relational plots
 def relplot(column_names, *args, **kwargs):
     """
     Can be used to draw all seaborn relational plots. The kind parameter selects between different relational plots:
@@ -281,6 +304,7 @@ def relplot(column_names, *args, **kwargs):
     return buf
 
 
+#   Categorical plots
 def catplot(column_names, *args, **kwargs):
     """
     Can be used to draw all seaborn categorical plots. The kind parameter selects between different categorical plots:
@@ -324,12 +348,13 @@ def catplot(column_names, *args, **kwargs):
     return buf
 
 
+# Regression plots
 def regplot(column_names, x, y, **kwargs):
     """
     Can be used to plot data and a linear regression model fit.
 
     :param column_names: String list of column names. Should be in the same order as data lists
-    :param args: data lists
+    :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
@@ -344,18 +369,18 @@ def regplot(column_names, x, y, **kwargs):
     return buf
 
 
-def jointplot(column_names, x, y, **kwargs):
+def residplot(column_names, x, y, **kwargs):
     """
-    Can be used to plot  two variables with bivariate and univariate graphs.
+    Plot the residuals of a linear regression.
 
     :param column_names: String list of column names. Should be in the same order as data lists
-    :param args: data lists
+    :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
     df = create_data_frame(column_names, *[x, y])
     try:
-        seaborn.jointplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        seaborn.residplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -673,6 +698,7 @@ builtins = {\
             "relplot": relplot, \
             "catplot": catplot, \
             "regplot": regplot, \
+            "residplot": residplot, \
 
             # Control of Sampler
 
