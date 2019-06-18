@@ -13,6 +13,7 @@ import theano.tensor
 import math
 from config import numpy_seed
 import preprocessing as pre
+import pandas as pd
 
 #from demo_events import Events, DemoEvents
 
@@ -228,6 +229,50 @@ def Sigmoid(x):
 def distplot(a, **kwargs):  # have to stop this plotting if x is Private
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def create_data_frame(column_names, *args):
+    """
+    Creates a pandas data frame from given set of lists and column names. Each list will be taken as a column.
+    It's a must to keep the same order in column names as well as the data lists.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :return: pandas data frame
+    """
+    args = [arg for arg in args if arg is not None]
+    if len(column_names) != len(args):
+        raise Exception("Expected exactly" + str(len(args)) + "column names")
+    zipped_list = list(zip(*args))
+    df = pd.DataFrame(zipped_list, columns=column_names)
+    return df
+
+
+def relplot(column_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn relational plots. The kind parameter selects between different relational plots:
+    scatterplot (with kind="scatter"; the default)
+    lineplot (with kind="line")
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        if len(args) == 3:
+            seaborn.relplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.relplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        else:
+            seaborn.relplot(x=column_names[0], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -541,6 +586,7 @@ builtins = {\
             # Plotting Functions
 
             "distplot": distplot, \
+            "relplot": relplot, \
 
             # Control of Sampler
 
