@@ -324,6 +324,26 @@ def catplot(column_names, *args, **kwargs):
     return buf
 
 
+def regplot(column_names, x, y, **kwargs):
+    """
+    Can be used to plot data and a linear regression model fit.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.regplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def private_array(x):
     return numpy.array(x, numpy.float)
 
@@ -631,6 +651,7 @@ builtins = {\
             "distplot": distplot, \
             "relplot": relplot, \
             "catplot": catplot, \
+            "regplot": regplot, \
 
             # Control of Sampler
 
