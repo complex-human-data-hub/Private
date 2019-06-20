@@ -48,7 +48,7 @@ def get_rpc_stub(host, port):
     rpc_stub = service_pb2_grpc.ServerStub(channel)
     return rpc_stub
 
-def get_private_server(uid):
+def get_private_server(uid, uip, uua):
     _log.debug("[{}] get_private_server".format(uid))
     rpc_stub = None
     try:
@@ -63,6 +63,8 @@ def get_private_server(uid):
             _log.debug("[{}]   uid IN shelf".format(uid))
             server = json.loads( server_shelf[uid_str] )
             server['access_time'] = time.time()
+            server['ip'] = uip
+            server['ua'] = uua
             server_shelf[uid_str] = json.dumps( server )
             rpc_stub = get_rpc_stub(config.private_host, server.get('port')) 
         #Lets try and assign a server
@@ -78,6 +80,8 @@ def get_private_server(uid):
                     server_shelf[uid_str] = json.dumps({
                             'uid': uid_str,
                             'port': port,
+                            'ip': uip,
+                            'ua': uua,
                             'access_time': time.time()
                         })
                     rpc_stub = get_rpc_stub(config.private_host, port)
@@ -134,8 +138,10 @@ def run_analyze():
         res = {}
         #user_uid = request.form.get('uid')
         user_uid = request.cookies.get('uid')
-        _log.debug('[{}] /analyze'.format(user_uid))
+        user_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+        user_ua = request.environ.get('HTTP_USER_AGENT', "") # Having troubles getting the IP, so using UA as a reference
 
+        _log.debug('[{}] {} /analyze2'.format(user_uid, user_ip))
 
         #project is going to remain static 
         #project_uid = '91b4e84e078c38b22a51fcc1c2c1ae62'
@@ -146,7 +152,7 @@ def run_analyze():
             rpc_stub = get_rpc_stub(config.private_host, config.debug_port)
         else:
             _log.debug("[{}] NO cookie.debug".format(user_uid))
-            rpc_stub = get_private_server(user_uid)
+            rpc_stub = get_private_server(user_uid, user_ip, user_ua)
 
         if rpc_stub:
             _log.debug("[{}] rpc_stub".format(user_uid))
