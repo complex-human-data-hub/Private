@@ -19,6 +19,12 @@ from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 #_log = logging.getLogger("Private")
 #logging.basicConfig(filename='private.log',level=logging.WARNING)
 
+def _debug(msg):
+    with open('/tmp/private-debug.log', 'a') as fp:
+        if not isinstance(msg, basestring):
+            msg = json.dumps(msg)
+        fp.write("{}\n".format( msg ))
+
 
 #debug = False
 
@@ -54,6 +60,9 @@ class result:
         return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(self.evalcode) + "  depend: " + str(self.depend)
 
 class InputVisitor(PTNodeVisitor):
+    def __init__(self, defaults=True, **kwargs):
+        self.depGraph = kwargs.get('depGraph')
+        super(InputVisitor, self).__init__()
 
     def visit_identifier(self, node, children):
         if node.value in commands:
@@ -154,7 +163,7 @@ class InputVisitor(PTNodeVisitor):
             return result("expression", code, children, evalcode=evalcode)
 
     def visit_deterministic_assignment(self, node, children):
-        depGraph.define(children[0].code, children[1].code, evalcode=children[1].evalcode, dependson=children[1].depend)
+        self.depGraph.define(children[0].code, children[1].code, evalcode=children[1].evalcode, dependson=children[1].depend)
         return result("deterministic_assignment", children[0].code, evalcode=children[0].evalcode)
 
     def visit_distribution_parameter(self, node, children):
@@ -174,13 +183,13 @@ class InputVisitor(PTNodeVisitor):
     def visit_distribution_assignment(self, node, children):
         if len(children) > 2: # then we have a hierarchically defined variable
             dependson = children[1].depend + children[2].depend
-            depGraph.define(children[0].code, children[2].code, dependson=dependson, prob = True, hier=children[1].code, pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
+            self.depGraph.define(children[0].code, children[2].code, dependson=dependson, prob = True, hier=children[1].code, pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
         else:
-            depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+            self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children):
-        depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
+        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
         return result("expression_assignment", children[0].code)
 
     def visit_probabilistic_assignment(self, node, children):
@@ -188,35 +197,34 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_assignment(self, node, children):
         if len(children) > 1:
-            depGraph.add_comment(children[0].code, children[1].code)
+            self.depGraph.add_comment(children[0].code, children[1].code)
         #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
-    def visit_draw_tree(self, node, children):                return result("draw_tree", depGraph.draw_dependency_graph())
-    def visit_show_variables(self, node, children):           return result("show_variables", str(depGraph))
-    def visit_show_values(self, node, children):              return result("show_values", depGraph.show_values())
+    def visit_draw_tree(self, node, children):                return result("draw_tree", self.depGraph.draw_dependency_graph())
+    def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
+    def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
-        global depGraph
-        depGraph = graph()
+        self.depGraph.__init__()
         return result("clear_variables", "All variables removed.")
-    def visit_show_dependencies(self, node, children):        return result("show_dependencies", depGraph.show_dependencies())
-    def visit_show_code(self, node, children):                return result("show_code", depGraph.show_code())
-    def visit_show_eval_code(self, node, children):           return result("show_eval_code", depGraph.show_eval_code())
-    def visit_show_mccode(self, node, children):              return result("show_mccode", depGraph.constructPyMC3code()[1])
-    def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", depGraph.canRunSampler(verbose=True))
-    #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", depGraph.showSamplerChains())
-    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", depGraph.showSamplerResults())
-    def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(depGraph.server.get_stats()['local']))
-    def visit_show_sets(self, node, children):                return result("show_sets", depGraph.show_sets())
-    def visit_show_globals(self, node, children):             return result("show_globals", depGraph.showGlobals())
-    def visit_show_jobs(self, node, children):                return result("show_jobs", depGraph.show_jobs())
-    def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", depGraph.variablesToBeCalculated())
-    def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", depGraph.variablesToBeSampled())
+    def visit_show_dependencies(self, node, children):        return result("show_dependencies", self.depGraph.show_dependencies())
+    def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
+    def visit_show_eval_code(self, node, children):           return result("show_eval_code", self.depGraph.show_eval_code())
+    def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.constructPyMC3code()[1])
+    def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler(verbose=True))
+    #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", self.depGraph.showSamplerChains())
+    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.showSamplerResults())
+    def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(self.depGraph.server.get_stats()['local']))
+    def visit_show_sets(self, node, children):                return result("show_sets", self.depGraph.show_sets())
+    def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.showGlobals())
+    def visit_show_jobs(self, node, children):                return result("show_jobs", self.depGraph.show_jobs())
+    def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", self.depGraph.variablesToBeCalculated())
+    def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", self.depGraph.variablesToBeSampled())
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
-    def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(depGraph.server.get_ncpus()))
-    def visit_show_stats(self, node, children):               return result("show_stats", str(depGraph.server.print_stats()))
+    def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(self.depGraph.server.get_ncpus()))
+    def visit_show_stats(self, node, children):               return result("show_stats", str(self.depGraph.server.print_stats()))
     def visit_comment_line(self, node, children):             return result("comment_line", "")
-    def visit_delete(self, node, children):                   return result("show_delete", depGraph.delete(children[1].code))
+    def visit_delete(self, node, children):                   return result("show_delete", self.depGraph.delete(children[1].code))
     def visit_help(self, node, children):
         res = """
 clear: remove all variables and restart
@@ -244,7 +252,7 @@ help: this message
 
     def visit_comment(self, node, children):
         #_log.debug("comment: " + str(children))
-        depGraph.add_comment(children[0].code, children[1].code)
+        self.depGraph.add_comment(children[0].code, children[1].code)
 
     def visit_line(self, node, children):
         if len(children) > 0:
@@ -253,13 +261,19 @@ help: this message
             return
 
     def visit_value(self, node, children):
-        print depGraph.getValue(node.value, longFormat=True)
+        print self.depGraph.getValue(node.value, longFormat=True)
 
     def visit_command_line_expression(self, node, children):
-        return result("command_line_expression", str(depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
+        return result("command_line_expression", str(self.depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
         #print "Because expressions may take a long time to compute you must assign them to a variable"
         #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
         #print "t = 4*b+5 and then t."
 
-def PrivateSemanticAnalyser(parse_tree):
-    return visit_parse_tree(parse_tree, InputVisitor())
+#def PrivateSemanticAnalyser(parse_tree):
+#    return visit_parse_tree(parse_tree, InputVisitor())
+
+def PrivateSemanticAnalyser(parse_tree, update_graph=None):
+    if not update_graph:
+        update_graph = depGraph
+    return visit_parse_tree(parse_tree, InputVisitor(depGraph=update_graph))
+

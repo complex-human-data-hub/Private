@@ -54983,7 +54983,38 @@ data = [{ 'AccelerometryCount': 5,
                 'Saturday',
                 2019,
                 'Autumn'],
-  'type': 'SEMA'}, { 'Angry': 6,
+  'type': 'SEMA',
+                    'AccelerometryDataFiles': [{
+                        'type': 's3',
+                        'bucket': 'chdhprivate',
+                        'key': 'DataFiles/accel_20190323021805Z_252b64e9-01ac-45c2-85af-91b5ea1dc40a.bin'
+                    },
+                        {
+                            'type': 's3',
+                            'bucket': 'chdhprivate',
+                            'key': 'DataFiles/accel_20190323022821Z_b4d3807a-4802-4691-a243-4b0992e5df67.bin'
+                        },
+                        {
+                            'type': 's3',
+                            'bucket': 'chdhprivate',
+                            'key': 'DataFiles/accel_20190323023913Z_31bc0ec8-87e1-4e3c-97aa-0da82fbcb50e.bin'
+                        }],
+                    'AudioProcessedDataFiles': [{
+                        'type': 's3',
+                        'bucket': 'chdhprivate',
+                        'key': 'DataFiles/audio_20190323141540Z_dcf1df30-23c9-4f07-abbd-b2abecdce39d.mfcc'
+                    },
+                        {
+                            'type': 's3',
+                            'bucket': 'chdhprivate',
+                            'key': 'DataFiles/audio_20190323230637Z_a26b78d0-d1b9-47ee-946c-77ca1feb6246.mfcc'
+                        },
+                        {
+                            'type': 's3',
+                            'bucket': 'chdhprivate',
+                            'key': 'DataFiles/audio_20190323231714Z_c7231c2a-60c6-4ddf-bbf1-a04e71240a33.mfcc'
+                        }]
+                    }, { 'Angry': 6,
   'AngryRT': 2805,
   'Anxious': 10,
   'AnxiousRT': 5149,
@@ -55024,7 +55055,38 @@ data = [{ 'AccelerometryCount': 5,
                 'Saturday',
                 2019,
                 'Autumn'],
-  'type': 'SEMA'}, { 'EndDateTime': '2019-02-09 10:46:00',
+  'type': 'SEMA',
+  	'AccelerometryDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/accel_20190323021805Z_252b64e9-01ac-45c2-85af-91b5ea1dc40a.bin'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/accel_20190323022821Z_b4d3807a-4802-4691-a243-4b0992e5df67.bin'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/accel_20190323023913Z_31bc0ec8-87e1-4e3c-97aa-0da82fbcb50e.bin'
+    }],
+	'AudioProcessedDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/audio_20190323141540Z_dcf1df30-23c9-4f07-abbd-b2abecdce39d.mfcc'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/audio_20190323230637Z_a26b78d0-d1b9-47ee-946c-77ca1feb6246.mfcc'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/audio_20190323231714Z_c7231c2a-60c6-4ddf-bbf1-a04e71240a33.mfcc'
+    }]
+                     }, { 'EndDateTime': '2019-02-09 10:46:00',
   'EndDateTimeLocal': '2019-02-09 21:46:00',
   'ParticipantTimeZone': 'Australia/Melbourne',
   'SEMAParticipantId': '140112592',
@@ -55044,7 +55106,38 @@ data = [{ 'AccelerometryCount': 5,
                 'Saturday',
                 2019,
                 'Autumn'],
-  'type': 'SEMA'}]
+  'type': 'SEMA',
+	'AccelerometryDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/accel_20190323021805Z_252b64e9-01ac-45c2-85af-91b5ea1dc40a.bin'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/accel_20190323022821Z_b4d3807a-4802-4691-a243-4b0992e5df67.bin'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/accel_20190323023913Z_31bc0ec8-87e1-4e3c-97aa-0da82fbcb50e.bin'
+    }],
+	'AudioProcessedDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/audio_20190323141540Z_dcf1df30-23c9-4f07-abbd-b2abecdce39d.mfcc'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/audio_20190323230637Z_a26b78d0-d1b9-47ee-946c-77ca1feb6246.mfcc'
+    },
+	{
+        'type': 's3',
+        'bucket': 'chdhprivate',  
+        'key': 'DataFiles/audio_20190323231714Z_c7231c2a-60c6-4ddf-bbf1-a04e71240a33.mfcc'
+    }]
+ }]
 
 #for e in data:
 #    if e["type"] == "Button" and "Wednesday" in e["keywords"]:

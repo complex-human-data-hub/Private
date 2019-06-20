@@ -24,9 +24,10 @@ import time
 import uuid
 
 
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed
+from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
 
-logging.basicConfig(filename=logfile,level=logging.DEBUG)
+#logging.basicConfig(filename=logfile,level=logging.DEBUG)
+_log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
 
@@ -43,7 +44,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self):
+    def __init__(self, events=None):
 
         # variable types
 
@@ -58,8 +59,8 @@ class graph:
 
         # variables related to values
 
-        self.globals = setGlobals()
-        self.userids = setUserIds()
+        self.globals = setGlobals(events=events)
+        self.userids = setUserIds(events=events)
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
         self.computing = dict([(u, set() ) for u in self.userids])
@@ -94,6 +95,28 @@ class graph:
         self.whohaslock = None
         self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
+        self.log = logging.getLogger("Private")
+        self.last_server_connect = 0
+        self.server = None
+        self.check_ppserver_connection()
+
+        #if not ppservers:
+        #    # Running locally, let ncpus default to the number of system processors
+        #    self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
+        #else:
+        #    # Set ncpus to 0 so that we only process on remote machines
+        #    self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
+
+        #print "Starting pp with", self.server.get_ncpus(), "workers"
+        #self.nxgraph = nx.DiGraph()
+        self.SamplerParameterUpdated = False
+        setBuiltinPrivacy(self) # set privacy of builtins
+
+    def check_ppserver_connection(self):
+        ctime = time.time()
+        cbuffer = 0.9   # Allow a buffer 
+        if (ctime - self.last_server_connect) < (tcp_keepalive_time * cbuffer):
+            return None      #no need to reconnect
 
         if not ppservers:
             # Running locally, let ncpus default to the number of system processors
@@ -102,11 +125,9 @@ class graph:
             # Set ncpus to 0 so that we only process on remote machines
             self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
 
-        print "Starting pp with", self.server.get_ncpus(), "workers"
-        self.log = logging.getLogger("Private")
-        #self.nxgraph = nx.DiGraph()
-        self.SamplerParameterUpdated = False
-        setBuiltinPrivacy(self) # set privacy of builtins
+        self.last_server_connect = ctime
+        self.log.debug( "Starting pp with" + str(self.server.get_ncpus()) + "workers" )
+        return None
 
     def acquire(self, who):
         self.lock.acquire()
@@ -731,10 +752,16 @@ class graph:
                 for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
                     G.add_edge(vertex, k)
                     stack.append(k)
-        nx.draw_networkx(G)
+        pos = nx.spring_layout(G, scale=2)
+        nx.draw_networkx(G, pos, node_color='cornflowerblue', node_size=100, with_labels=False)
+        if len(pos) > 1:
+            for p in pos:  # raise text positions
+                pos[p][1] += 0.15
+        nx.draw_networkx_labels(G, pos, font_size=10)
         buf = io.BytesIO()
         plt.axis('off')
         plt.savefig(buf, format="png")
+        plt.show()
         result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
         plt.close()
         return result
@@ -747,7 +774,14 @@ class graph:
             state[node] = GRAY
             for k in self.dependson.get(node, set()) | self.probdependson.get(node, set()):
                 sk = state.get(k, None)
-                if sk == GRAY: raise ValueError("cycle")
+                try:
+                    if sk == GRAY: raise ValueError("cycle")
+                except Exception as e:
+                    _log.debug("topological_sort GREY")
+                    _log.debug(self.node)
+                    _log.debug(self.dependson.get(node ))
+                    _log.debug(self.probdependson.get(node))
+                    raise ValueError("cycle 2")
                 if sk == BLACK: continue
                 enter.discard(k)
                 dfs(k)
@@ -782,7 +816,11 @@ class graph:
 try:
     logging = __import__("logging")
     _log = logging.getLogger("Private")
-    logging.disable(100)
+    #logging.disable(100)
+    _log.debug("Running PyMC3 Code")
+    with open("/tmp/private-worker.log", "a") as fp:
+        fp.write("Running PyMC3 Code\\n")
+
 """
 
             code = loggingcode
@@ -835,9 +873,15 @@ try:
 
             code += """
         __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+        _log.debug("Finished PyMC3 Code")
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished PyMC3 Code\\n")
 
 except Exception as e:
     # remove stuff after the : as that sometimes reveals private information
+    _log.debug("PyMC3 Code Exception: " + str(e))
+    with open("/tmp/private-worker.log", "a") as fp:
+        fp.write("Error " + str(e) + "\\n")
     ind = e.args[0].find(":")
     if ind != -1:
         estring = e.args[0][0:ind]
@@ -888,6 +932,10 @@ except Exception as e:
 
 
     def compute(self):
+        # Need to reconnect if we are close to the tcp_keep_alive timout
+        # otherwise OS will dropout connection
+        self.check_ppserver_connection()
+
         self.log.debug("In compute") 
         self.acquire("compute")
 

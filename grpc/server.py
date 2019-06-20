@@ -1,4 +1,3 @@
-PROJECT_UID = '91b4e84e078c38b22a51fcc1c2c1ae62'
 DEBUG = False
 
 if DEBUG:
@@ -17,7 +16,7 @@ import io
 import traceback
 import logging
 import re
-
+import os
 
 import signal
 from concurrent import futures
@@ -27,12 +26,24 @@ import grpc
 import service_pb2
 import service_pb2_grpc
 import json
+from datetime import datetime
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--port", type=int, default=51135)
 args = parser.parse_args()
 
+
+#Setup logging 
+logfile = "/tmp/private-{}.log".format(args.port)
+logging.basicConfig(filename=logfile,level=logging.DEBUG)
+
+#Import DataSource
+#from Private.unforgettable_data import Source
+from Private.private_data import Source
+from Private.graph import graph
+
+import os 
 
 # Regexes
 re_cmd = re.compile(r'\r')
@@ -42,14 +53,22 @@ def _debug(msg):
     with open('/tmp/private-debug.log', 'a') as fp:
         if not isinstance(msg, basestring):
             msg = json.dumps(msg)
-        fp.write("{}\n".format( msg ))
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 
 class Private:
     project_uid = None
     parser = PrivateParser()
+    data_source = None
     def __init__(self, project_uid):
         self.project_uid = project_uid
+        self.graph = None 
+        if args.port > 51150:
+            self.data_source = Source(args, project_uid=project_uid)
+            events = self.data_source.get_events()
+            self.graph = graph(events=events)
+        _debug("Loading Private")
 
     def execute(self, line):
         if line != "":
@@ -61,7 +80,7 @@ class Private:
                 raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:]) 
             else:
                 try:
-                    result = PrivateSemanticAnalyser(parse_tree)
+                    result = PrivateSemanticAnalyser(parse_tree, update_graph=self.graph)
                     _debug({'result': result})
                     return(result)
                 except Exception as e:
@@ -72,18 +91,40 @@ class Private:
 
 
 class ServerServicer(service_pb2_grpc.ServerServicer):
-    project_uid = PROJECT_UID
     def __init__(self):
-        self.private = Private(self.project_uid)
-
+        self.private = None
+        self.initializing = False
+        self.skipped = False #Skip the first return after initializing so we can set our first value
     def Foo(self, request, context):
         return service_pb2.Empty()
 
     def Private(self, request, context):
         try:
             _debug("received request")
-            if str(request.project_uid) != str(self.project_uid):
-                raise Exception("Incorrect project ID")
+
+            if not self.private:
+                if not self.initializing:
+                    self.initializing = True
+                    newpid = os.fork()
+                    if newpid == 0:
+                        # Not sure if this is okay returning from the child, 
+                        # But seems to work
+                        ret = {'status': 'success', 'response': 'Initializing dataset [1]'}
+                        return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
+                    else:
+                        self.private = Private(request.project_uid)
+                if self.skipped:
+                    #Keep this so that user who keep clicking keep getting an intialising message
+                    ret = {'status': 'success', 'response': 'Initializing dataset [2]'}
+                    return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
+                else:
+                    #Want to skip the parent of the fork coming through
+                    #So that after the data is loaded we will issue the 
+                    #first incoming command
+                    self.skipped = True
+
+            #if str(request.project_uid) != str(self.project_uid):
+            #    raise Exception("Incorrect project ID")
             req = json.loads(request.json)
             _debug({'req':req})
 
