@@ -466,6 +466,47 @@ def residplot(column_names, x, y, **kwargs):
     return buf
 
 
+# Matrix plots
+def heatmap(column_names, *args, **kwargs):
+    """
+    Plot rectangular data as a color-encoded matrix.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists, 2D dataset that can be coerced into an ndarray.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.heatmap(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def clustermap(column_names, *args, **kwargs):
+    """
+    Plot a matrix dataset as a hierarchically-clustered heatmap.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists, Rectangular data for clustering. Cannot contain NAs.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.clustermap(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def private_array(x):
     return numpy.array(x, numpy.float)
 
