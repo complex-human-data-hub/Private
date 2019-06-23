@@ -296,18 +296,20 @@ def distplot(a, **kwargs):  # have to stop this plotting if x is Private
     return buf
 
 
-def kdeplot(column_names, *args, **kwargs):
+def kdeplot(x, y=None, **kwargs):
     """
     Fit and plot a univariate or bivariate kernel density estimate.
 
     :param column_names: String list of column names. Should be in the same order as data lists
-    :param args: data lists
+    :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
     try:
-        seaborn.kdeplot(df, **kwargs)
+        if y is None:
+            seaborn.kdeplot(x, **kwargs)
+        else:
+            seaborn.kdeplot(x, y, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
