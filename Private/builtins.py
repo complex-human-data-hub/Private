@@ -245,17 +245,6 @@ def create_data_frame(column_names, *args):
 
 
 #   Distribution plots
-def distplot(a, **kwargs):  # have to stop this plotting if x is Private
-    try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
-        seaborn.distplot(a, **kwargs)
-    except Exception as e:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.close()
-    return buf
-
-
 def jointplot(column_names, x, y, **kwargs):
     """
     Can be used to plot  two variables with bivariate and univariate graphs.
@@ -275,6 +264,74 @@ def jointplot(column_names, x, y, **kwargs):
     plt.close()
     return buf
 
+
+def pairplot(column_names, *args, **kwargs):
+    """
+    Plot pairwise relationships in a dataset.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.pairplot(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def distplot(a, **kwargs):  # have to stop this plotting if x is Private
+    try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
+        seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def kdeplot(column_names, *args, **kwargs):
+    """
+    Fit and plot a univariate or bivariate kernel density estimate.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.kdeplot(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def rugplot(a, **kwargs):
+    """
+    Plot datapoints in an array as sticks on an axis.
+
+    :param a: vector
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    try:
+        seaborn.rugplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
 
 #   Relational plots
 def relplot(column_names, *args, **kwargs):
@@ -349,6 +406,26 @@ def catplot(column_names, *args, **kwargs):
 
 
 # Regression plots
+def lmplot(column_names, x, y, **kwargs):
+    """
+    Plot data and regression model fits across a FacetGrid.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.lmplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def regplot(column_names, x, y, **kwargs):
     """
     Can be used to plot data and a linear regression model fit.
@@ -692,13 +769,25 @@ builtins = {\
             "Sigmoid": Sigmoid,
 
             # Plotting Functions
-
-            "distplot": distplot, \
+            #   Distribution plots
             "jointplot": jointplot, \
+            "pairplot": pairplot, \
+            "distplot": distplot, \
+            "kdeplot": kdeplot, \
+            "rugplot": rugplot, \
+
+            #   Relational and Categorical plots
             "relplot": relplot, \
             "catplot": catplot, \
+
+            #   Regression plots
+            "lmplot": lmplot, \
             "regplot": regplot, \
             "residplot": residplot, \
+
+            # Matrix plots
+            "heatmap": heatmap, \
+            "clustermap": clustermap, \
 
             # Control of Sampler
 
