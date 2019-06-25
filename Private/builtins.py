@@ -13,6 +13,7 @@ import theano.tensor
 import math
 from config import numpy_seed
 import preprocessing as pre
+import pandas as pd
 
 #from demo_events import Events, DemoEvents
 
@@ -225,9 +226,281 @@ def Sigmoid(x):
 
 # Plotting Function Definitions
 
+# plotting helper method
+def create_data_frame(column_names, *args):
+    """
+    Creates a pandas data frame from given set of lists and column names. Each list will be taken as a column.
+    It's a must to keep the same order in column names as well as the data lists.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :return: pandas data frame
+    """
+    args = [arg for arg in args if arg is not None]
+    if len(column_names) != len(args):
+        raise Exception("Expected exactly" + str(len(args)) + "column names")
+    zipped_list = list(zip(*args))
+    df = pd.DataFrame(zipped_list, columns=column_names)
+    return df
+
+
+#   Distribution plots
+def jointplot(column_names, x, y, **kwargs):
+    """
+    Can be used to plot  two variables with bivariate and univariate graphs.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.jointplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def pairplot(column_names, *args, **kwargs):
+    """
+    Plot pairwise relationships in a dataset.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.pairplot(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
 def distplot(a, **kwargs):  # have to stop this plotting if x is Private
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def kdeplot(x, y=None, **kwargs):
+    """
+    Fit and plot a univariate or bivariate kernel density estimate.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    try:
+        if y is None:
+            seaborn.kdeplot(x, **kwargs)
+        else:
+            seaborn.kdeplot(x, y, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def rugplot(a, **kwargs):
+    """
+    Plot datapoints in an array as sticks on an axis.
+
+    :param a: vector
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    try:
+        seaborn.rugplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+#   Relational plots
+def relplot(column_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn relational plots. The kind parameter selects between different relational plots:
+    scatterplot (with kind="scatter"; the default)
+    lineplot (with kind="line")
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        if len(args) == 3:
+            seaborn.relplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.relplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        else:
+            seaborn.relplot(x=column_names[0], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+#   Categorical plots
+def catplot(column_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn categorical plots. The kind parameter selects between different categorical plots:
+
+    Categorical scatterplots:
+
+    stripplot (with kind="strip"; the default)
+    swarmplot (with kind="swarm")
+
+    Categorical distribution plots:
+
+    boxplot (with kind="box")
+    violinplot (with kind="violin")
+    boxenplot (with kind="boxen")
+
+    Categorical estimate plots:
+
+    pointplot (with kind="point")
+    barplot (with kind="bar")
+    countplot (with kind="count")
+
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        if len(args) == 3:
+            seaborn.catplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.catplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        else:
+            seaborn.catplot(x=column_names[0], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+# Regression plots
+def lmplot(column_names, x, y, **kwargs):
+    """
+    Plot data and regression model fits across a FacetGrid.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.lmplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def regplot(column_names, x, y, **kwargs):
+    """
+    Can be used to plot data and a linear regression model fit.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.regplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def residplot(column_names, x, y, **kwargs):
+    """
+    Plot the residuals of a linear regression.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *[x, y])
+    try:
+        seaborn.residplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+# Matrix plots
+def heatmap(column_names, *args, **kwargs):
+    """
+    Plot rectangular data as a color-encoded matrix.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists, 2D dataset that can be coerced into an ndarray.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.heatmap(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def clustermap(column_names, *args, **kwargs):
+    """
+    Plot a matrix dataset as a hierarchically-clustered heatmap.
+
+    :param column_names: String list of column names. Should be in the same order as data lists
+    :param args: data lists, Rectangular data for clustering. Cannot contain NAs.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(column_names, *args)
+    try:
+        seaborn.clustermap(df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -539,8 +812,25 @@ builtins = {\
             "Sigmoid": Sigmoid,
 
             # Plotting Functions
-
+            #   Distribution plots
+            "jointplot": jointplot, \
+            "pairplot": pairplot, \
             "distplot": distplot, \
+            "kdeplot": kdeplot, \
+            "rugplot": rugplot, \
+
+            #   Relational and Categorical plots
+            "relplot": relplot, \
+            "catplot": catplot, \
+
+            #   Regression plots
+            "lmplot": lmplot, \
+            "regplot": regplot, \
+            "residplot": residplot, \
+
+            # Matrix plots
+            "heatmap": heatmap, \
+            "clustermap": clustermap, \
 
             # Control of Sampler
 
@@ -624,13 +914,20 @@ builtins = {\
             "mfcc": private_mfcc, \
 
             # config builtins
-            "ArrayOutputThreshold": array_output_threshold
+            "ArrayOutputThreshold": array_output_threshold, \
+
+            # stat and diagnostic built-ins
+            "gelmanRubin": None, \
+            "effectiveN": None, \
+            "waic": None, \
+            "loo": None
     }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
+illegal_variable_names = prob_builtins | set(["fft", "mfcc"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
 
 
 def setBuiltinPrivacy(graph):
