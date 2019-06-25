@@ -449,7 +449,7 @@ class graph:
             self.pyMC3code[name] = pyMC3code
             if dependson != []:
                 self.probdependson[name] = set(dependson)
-            for n in self.probabilistic - self.deterministic:
+            for n in self.get_ancestors(name) - self.deterministic:
                 for user in self.userids:
                     self.changeState(user, n, "stale")
             if hier:
@@ -740,6 +740,18 @@ class graph:
             return True
         else:
             return any(self.isAncestor(name1, parent) for parent in parents)
+
+    def get_ancestors(self, name):
+        ancestors = set()
+        parents = self.getParents(name)
+        ancestors = ancestors | parents
+        while parents != set():
+            parent = parents.pop()
+            ancestors.add(parent)
+            parents = parents | self.getParents(parent)
+
+        return ancestors
+
 
     def draw_dependency_graph(self):
         G = nx.DiGraph()
