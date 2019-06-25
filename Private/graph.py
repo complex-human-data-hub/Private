@@ -440,9 +440,9 @@ class graph:
         if not dependson:
             dependson = []
         else:
-            if self.check_cyclic_dependencies(name, set(dependson) - self.builtins):
+            if self.check_cyclic_dependencies(name, set(dependson)):
                 self.release()
-                raise Exception("Cyclic Dependency Found")
+                raise Exception("Cyclic Dependency Found, " + name)
         if prob:
             self.probabilistic.add(name)
             self.probcode[name] = code
