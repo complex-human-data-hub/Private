@@ -816,6 +816,7 @@ class graph:
             loggingcode = """
 try:
     logging = __import__("logging")
+    logging.basicConfig(level=logging.DEBUG)
     _log = logging.getLogger("Private")
     #logging.disable(100)
     _log.debug("Running PyMC3 Code")
@@ -837,6 +838,7 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
+    traceback = __import__("traceback")
 
 
     basic_model = pymc3.Model()
@@ -879,19 +881,32 @@ try:
             fp.write("Finished PyMC3 Code\\n")
 
 except Exception as e:
-    # remove stuff after the : as that sometimes reveals private information
-    _log.debug("PyMC3 Code Exception: " + str(e))
-    with open("/tmp/private-worker.log", "a") as fp:
-        fp.write("Error " + str(e) + "\\n")
-    ind = e.args[0].find(":")
-    if ind != -1:
-        estring = e.args[0][0:ind]
-    else:
-        estring = e.args[0]
+    try:
+        # remove stuff after the : as that sometimes reveals private information
+        _log.debug("PyMC3 Code Exception: " + str(e))
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error " + str(e) + "\\n")
+            fp.write(traceback.format_exc() + "\\n")
+        ind = e.args[0].find(":")
+        if ind != -1:
+            estring = e.args[0][0:ind]
+        else:
+            estring = e.args[0]
 
-    newErrorString = estring   # do we need to do this?
-    e.args = (newErrorString,)
-    __private_result__ = (e, exception_variable)
+        newErrorString = estring   # do we need to do this?
+        e.args = (newErrorString,)
+        __private_result__ = (e, exception_variable)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished processing Error \\n")
+    except Exception as e2:
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error2 " + str(e2) + "\\n")
+            fp.write(traceback.format_exc() + "\\n")
+        __private_result__ = (e2, exception_variable)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished processing Error2 \\n")
+
+        
 
 """.format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
 
