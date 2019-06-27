@@ -86,7 +86,7 @@ class Private:
                 except Exception as e:
                     _debug({'error': str(e)})
                     traceback.print_exc(file=sys.stdout)
-                    return ( e )
+                    return ( str(e) )
     
 
 
