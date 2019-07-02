@@ -98,13 +98,18 @@ class InputVisitor(PTNodeVisitor):
         return result("enumerated_list", "[" + ", ".join([c.code for c in children]) + "]", children)
     def visit_list_comprehension(self, node, children):
         if len(children) == 5:
-            res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + "]", children)
+            evalcode = "poolmap(lambda " + children[2].code + ": " + children[0].code + ",[" + children[2].code + " for " + children[2].code + " in " + children[4].code + "])"
+            code = "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + "]"
+            res = result("list_comprehension", code, children, evalcode=evalcode)
         else:
-            res = result("list_comprehension", "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "]", children)
+            evalcode = "poolmap(lambda " + children[2].code + ": " + children[0].code + ",[" + children[2].code + " for " + children[2].code + " in " + children[4].code + " if " + children[6].code + "])"
+            code = "[" + children[0].code + " for " + children[2].code + " in " + children[4].code + " if " + \
+                       children[6].code + "]"
+            res = result("list_comprehension", code, children, evalcode=evalcode)
         res.remove_dependencies(children[2].depend)
         return res
     def visit_private_list(self, node, children):
-        return result("private_list", children[0].code, children)
+        return result("private_list", children[0].code, children, evalcode=children[0].evalcode)
 
     def visit_bracketed_expression(self, node, children):
         return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)

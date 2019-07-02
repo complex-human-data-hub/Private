@@ -14,6 +14,8 @@ import math
 from config import numpy_seed
 import preprocessing as pre
 import pandas as pd
+from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 
 #from demo_events import Events, DemoEvents
 
@@ -637,6 +639,11 @@ def private_map(function, iterable):  # cannot use as we can't take functions in
     return map(function, iterable)
 
 
+def private_pool_map(function, iterable):  # cannot use as we can't take functions in Private
+    pool = ThreadPool()
+    return pool.map(function, iterable)
+
+
 def private_min(*args, **kwargs):
     return min(*args, **kwargs)
 
@@ -881,6 +888,7 @@ builtins = {\
             "list":private_tuple, \
             "long":private_long, \
             "map":private_map, \
+            "poolmap":private_pool_map, \
             "min":private_min, \
             "max":private_max, \
             "object":private_object, \
