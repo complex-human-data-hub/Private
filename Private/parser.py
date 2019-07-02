@@ -87,14 +87,16 @@ def enumerated_list():          return "[", ZeroOrMore(expression, ","), express
 def private_list():             return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
 def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), private_list, atom], Optional(leftsquarebrack, expression, colon, expression, rightsquarebrack)
-def term():                     return factor, ZeroOrMore(["*","/", "or"], factor)
-def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-", "and"], term)
+def term():                     return factor, ZeroOrMore(["*","/"], factor)
+def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-"], term)
+def comparison():               return simple_expression, ZeroOrMore(relation, simple_expression)
+def boolean_expression():       return comparison, ZeroOrMore(["and","or"], comparison)
 def named_argument():           return identifier, "=", expression
 def argument():                 return [named_argument, expression]
 def function_call():            return identifier, "(", ZeroOrMore(argument, ","), argument, ")"
 def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
 def indexed_variable():         return dottedidentifier, "[", ZeroOrMore(expression, ","), expression, "]"
-def expression():               return simple_expression, Optional(relation, simple_expression)
+def expression():               return [boolean_expression, simple_expression]
 def deterministic_assignment(): return identifier, "=", expression
 def distribution_name():        return ["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal", "Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]
 def distribution_parameter():   return [number, (identifier, Optional("[", identifier, "]"))]
