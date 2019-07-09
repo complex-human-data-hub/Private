@@ -88,19 +88,19 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
                 # item in list 2
                 item_added = True
                 if time_after is None:
-                    if item_time - time_before < max_distance_time:
+                    if time_before - item_time <= max_distance_time:
                         zipped_list[main_id].append(secondary_list[before_key])
                 # item below and after both is greater than the item time, this mean below should be the closest one
                 elif item_time <= time_before:
-                    if item_time - time_before < max_distance_time:
+                    if time_before - item_time <= max_distance_time:
                         zipped_list[main_id].append(secondary_list[before_key])
                 # if item time is between time before and time after, then one of these should be the closest one
                 elif time_before <= item_time <= time_after:
                     if item_time - time_before > time_after - item_time:
-                        if time_after - item_time < max_distance_time:
+                        if time_after - item_time <= max_distance_time:
                             zipped_list[main_id].append(secondary_list[after_key])
                     else:
-                        if item_time - time_before < max_distance_time:
+                        if item_time - time_before <= max_distance_time:
                             zipped_list[main_id].append(secondary_list[before_key])
                 # if both below and after is less than the item time we need to increase the pointer positions
                 else:
