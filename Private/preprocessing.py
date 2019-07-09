@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import spatial
-from datetime import datetime, timedelta
+from datetime import timedelta
+from dateutil.parser import parse
 
 
 def fft(file_itr, segment_size):
@@ -64,21 +65,20 @@ def calculate_similarity(vector1, vector2):
 
 def zip_date(lists, keys, max_distances, keep_unmatched=True):
     zipped_list = {}
-    dt_format = '%Y-%m-%d %H:%M:%S'
 
     main_list = lists[0]
     if isinstance(keys, list):
         main_date_key = keys[0]
     else:
         main_date_key = keys
-    main_list.sort(key=lambda r: datetime.strptime(r[main_date_key], dt_format))
+    main_list.sort(key=lambda r: parse(r[main_date_key]))
     secondary_lists = lists[1:]
     for secondary_id, secondary_list in enumerate(secondary_lists):
         if isinstance(keys, list):
             secondary_date_key = keys[secondary_id]
         else:
             secondary_date_key = keys
-        secondary_list.sort(key=lambda r: datetime.strptime(r[secondary_date_key], dt_format))
+        secondary_list.sort(key=lambda r: parse(r[secondary_date_key]))
         if isinstance(max_distances, list):
             max_distance = max_distances[secondary_id]
         else:
@@ -86,12 +86,12 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
         max_distance_time = timedelta(**{max_distance[0]: max_distance[1]})
         before_key = 0
         after_key = 1
-        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
-        time_after = datetime.strptime(secondary_list[after_key][secondary_date_key], dt_format)
+        time_before = parse(secondary_list[before_key][secondary_date_key])
+        time_after = parse(secondary_list[after_key][secondary_date_key])
         for main_id, main_item in enumerate(main_list):
             if secondary_id == 0:
                 zipped_list[main_id] = [main_item]
-            item_time = datetime.strptime(main_item[main_date_key], dt_format)
+            item_time = parse(main_item[main_date_key])
             item_added = False
             while not item_added:
                 # if list 2 is over (time_after will be None) then we will group everything else in list 1 with the last
@@ -119,10 +119,10 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
                     after_key += 1
                     # we might go off the array if list 2 is over, so check fo the length
                     if after_key < len(secondary_list):
-                        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
-                        time_after = datetime.strptime(secondary_list[after_key][secondary_date_key], dt_format)
+                        time_before = parse(secondary_list[before_key][secondary_date_key])
+                        time_after = parse(secondary_list[after_key][secondary_date_key])
                     else:
-                        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
+                        time_before = parse(secondary_list[before_key][secondary_date_key])
                         time_after = None
     zipped_tuple_list = []
     for main_id in zipped_list:
