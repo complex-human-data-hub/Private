@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import spatial
+from datetime import datetime
 
 
 def fft(file_itr, segment_size):
@@ -59,3 +60,57 @@ def mfcc(file_itr):
 
 def calculate_similarity(vector1, vector2):
     return spatial.distance.cosine(vector1, vector2)
+
+
+def zip_date(lists, keys):
+    zipped_list = {}
+    dt_format = '%Y-%m-%d %H:%M:%S'
+    for idx, event_list in enumerate(lists):
+        event_list.sort(key=lambda r: datetime.strptime(r[keys[idx]], dt_format))
+
+    main_list = lists[0]
+    main_date_key = keys[0]
+    secondary_lists = lists[1:]
+    for secondary_id, secondary_list in enumerate(secondary_lists):
+        secondary_date_key = keys[secondary_id]
+        before_key = 0
+        after_key = 1
+        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
+        time_after = datetime.strptime(secondary_list[after_key][secondary_date_key], dt_format)
+        for main_id, main_item in enumerate(main_list):
+            if secondary_id == 0:
+                zipped_list[main_id] = [main_item]
+            item_time = datetime.strptime(main_item[main_date_key], dt_format)
+            item_added = False
+            while not item_added:
+                # if list 2 is over (time_after will be None) then we will group everything else in list 1 with the last
+                # item in list 2
+                item_added = True
+                if time_after is None:
+                    zipped_list[main_id].append(secondary_list[before_key])
+                # item below and after both is greater than the item time, this mean below should be the closest one
+                elif item_time <= time_before:
+                    zipped_list[main_id].append(secondary_list[before_key])
+                # if item time is between time before and time after, then one of these should be the closest one
+                elif time_before <= item_time <= time_after:
+                    if item_time - time_before > time_after - item_time:
+                        zipped_list[main_id].append(secondary_list[after_key])
+                    else:
+                        zipped_list[main_id].append(secondary_list[before_key])
+                # if both below and after is less than the item time we need to increase the pointer positions
+                else:
+                    item_added = False
+                    before_key += 1
+                    after_key += 1
+                    # we might go off the array if list 2 is over, so check fo the length
+                    if after_key < len(secondary_list):
+                        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
+                        time_after = datetime.strptime(secondary_list[after_key][secondary_date_key], dt_format)
+                    else:
+                        time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
+                        time_after = None
+    zipped_tuple_list = []
+    for main_id in zipped_list:
+        zipped_tuple_list.append(tuple(zipped_list[main_id]))
+
+    return zipped_tuple_list
