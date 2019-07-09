@@ -64,6 +64,17 @@ def calculate_similarity(vector1, vector2):
 
 
 def zip_date(lists, keys, max_distances, keep_unmatched=True):
+    """
+    Merge 2 or more events list based on the time. Close events will be merged to a tuple and will compose a list of
+    tuples of such events.
+
+    :param lists: list of event lists
+    :param keys: list of keys / single key (each key points to the date time attribute in the object)
+    :param max_distances: max distance from main event list events to events in other list
+    :param keep_unmatched: If the item in list 1 doesn't have a close event in any of the list, we can decide if we
+    need to keep it in the output list with this flag
+    :return: list of tuples, tuple will have close events from different lists
+    """
     zipped_list = {}
 
     main_list = lists[0]
