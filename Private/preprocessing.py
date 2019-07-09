@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import spatial
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def fft(file_itr, segment_size):
@@ -62,7 +62,7 @@ def calculate_similarity(vector1, vector2):
     return spatial.distance.cosine(vector1, vector2)
 
 
-def zip_date(lists, keys):
+def zip_date(lists, keys, max_distances, keep_unmatched=True):
     zipped_list = {}
     dt_format = '%Y-%m-%d %H:%M:%S'
     for idx, event_list in enumerate(lists):
@@ -73,6 +73,7 @@ def zip_date(lists, keys):
     secondary_lists = lists[1:]
     for secondary_id, secondary_list in enumerate(secondary_lists):
         secondary_date_key = keys[secondary_id]
+        max_distance_time = timedelta(**{max_distances[secondary_id][0]: max_distances[secondary_id][1]})
         before_key = 0
         after_key = 1
         time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
@@ -87,16 +88,20 @@ def zip_date(lists, keys):
                 # item in list 2
                 item_added = True
                 if time_after is None:
-                    zipped_list[main_id].append(secondary_list[before_key])
+                    if item_time - time_before < max_distance_time:
+                        zipped_list[main_id].append(secondary_list[before_key])
                 # item below and after both is greater than the item time, this mean below should be the closest one
                 elif item_time <= time_before:
-                    zipped_list[main_id].append(secondary_list[before_key])
+                    if item_time - time_before < max_distance_time:
+                        zipped_list[main_id].append(secondary_list[before_key])
                 # if item time is between time before and time after, then one of these should be the closest one
                 elif time_before <= item_time <= time_after:
                     if item_time - time_before > time_after - item_time:
-                        zipped_list[main_id].append(secondary_list[after_key])
+                        if time_after - item_time < max_distance_time:
+                            zipped_list[main_id].append(secondary_list[after_key])
                     else:
-                        zipped_list[main_id].append(secondary_list[before_key])
+                        if item_time - time_before < max_distance_time:
+                            zipped_list[main_id].append(secondary_list[before_key])
                 # if both below and after is less than the item time we need to increase the pointer positions
                 else:
                     item_added = False
@@ -111,6 +116,8 @@ def zip_date(lists, keys):
                         time_after = None
     zipped_tuple_list = []
     for main_id in zipped_list:
-        zipped_tuple_list.append(tuple(zipped_list[main_id]))
+        tup = tuple(zipped_list[main_id])
+        if (keep_unmatched or len(tup)>1):
+            zipped_tuple_list.append(tup)
 
     return zipped_tuple_list
