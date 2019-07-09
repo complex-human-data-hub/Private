@@ -65,15 +65,25 @@ def calculate_similarity(vector1, vector2):
 def zip_date(lists, keys, max_distances, keep_unmatched=True):
     zipped_list = {}
     dt_format = '%Y-%m-%d %H:%M:%S'
-    for idx, event_list in enumerate(lists):
-        event_list.sort(key=lambda r: datetime.strptime(r[keys[idx]], dt_format))
 
     main_list = lists[0]
-    main_date_key = keys[0]
+    if isinstance(keys, list):
+        main_date_key = keys[0]
+    else:
+        main_date_key = keys
+    main_list.sort(key=lambda r: datetime.strptime(r[main_date_key], dt_format))
     secondary_lists = lists[1:]
     for secondary_id, secondary_list in enumerate(secondary_lists):
-        secondary_date_key = keys[secondary_id]
-        max_distance_time = timedelta(**{max_distances[secondary_id][0]: max_distances[secondary_id][1]})
+        if isinstance(keys, list):
+            secondary_date_key = keys[secondary_id]
+        else:
+            secondary_date_key = keys
+        secondary_list.sort(key=lambda r: datetime.strptime(r[secondary_date_key], dt_format))
+        if isinstance(max_distances, list):
+            max_distance = max_distances[secondary_id]
+        else:
+            max_distance = max_distances
+        max_distance_time = timedelta(**{max_distance[0]: max_distance[1]})
         before_key = 0
         after_key = 1
         time_before = datetime.strptime(secondary_list[before_key][secondary_date_key], dt_format)
@@ -121,3 +131,4 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
             zipped_tuple_list.append(tup)
 
     return zipped_tuple_list
+
