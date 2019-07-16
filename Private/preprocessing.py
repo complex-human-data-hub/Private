@@ -146,7 +146,7 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
     return zipped_tuple_list
 
 
-def bucket_date(lists, keys, time_interval, bucket_start_str=None):
+def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_buckets=False):
     bucketed_list = {}
 
     # sort all lists
@@ -188,10 +188,14 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None):
                     item_added = True
 
         # if there are no items added this round we move to next bucket
-        if len(bucketed_list[bucket_start]) == 0:
+        if len(bucketed_list[bucket_start]) == 0 and not keep_empty_buckets:
             bucketed_list.pop(bucket_start)
         if not lists_bucketed:
             bucket_start = bucket_start + bucket_length
             bucketed_list[bucket_start] = []
 
-    return bucketed_list
+    bucketed_tuple_list = []
+    for bucket_start in bucketed_list:
+        bucketed_tuple_list.append(tuple(bucketed_list[bucket_start]))
+
+    return bucketed_tuple_list
