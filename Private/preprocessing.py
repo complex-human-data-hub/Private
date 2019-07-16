@@ -147,7 +147,24 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
 
 
 def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_buckets=False):
+    """
+    merge multiple lists in to a single list of tuples. This create buckets from the start time with given interval.
+    If the start time is not give it takes the start of that time interval.
+
+    :param lists: list of lists
+    :param keys: list of keys, or single key
+    :param time_interval: time interval as a list
+    :param bucket_start_str: start time
+    :param keep_empty_buckets: whether to keep empty buckets in the output
+    :return: list of tuples
+    """
     bucketed_list = OrderedDict()
+    time_granularities = [("microseconds", 0), ("seconds", 0), ("minutes", 0), ("hours", 0), ("days", 1)]
+    time_truncate = {}
+    for time_granularity in time_granularities:
+        time_truncate[time_granularity[0][:-1]] = time_granularity[1]
+        if time_interval[0] == time_granularity[0]:
+            break
 
     # sort all lists
     total_items = 0
@@ -167,15 +184,13 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_bu
     # Start bucketing
     lists_bucketed = False
     if bucket_start_str is None:
-        bucket_start = min_date.replace(microsecond=0, second=0, minute=0)
+        bucket_start = min_date.replace(**time_truncate)
     else:
         bucket_start = parse(bucket_start_str)
     bucketed_list[bucket_start] = []
     counts = [0] * len(lists)
     bucket_length = timedelta(**{time_interval[0]: time_interval[1]})
     while not lists_bucketed:
-        if sum(counts) == total_items:
-            lists_bucketed = True
         for list_id, event_list in enumerate(lists):
             item_added = True
             while item_added and counts[list_id] < len(event_list):
@@ -186,6 +201,8 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_bu
                 if temp_date < bucket_start + bucket_length:
                     counts[list_id] += 1
                     item_added = True
+        if sum(counts) == total_items:
+            lists_bucketed = True
 
         # if there are no items added this round we move to next bucket
         if len(bucketed_list[bucket_start]) == 0 and not keep_empty_buckets:
