@@ -753,8 +753,8 @@ def zip_date(lists, keys, max_distances, unmatched=True):
     return pre.zip_date(lists, keys, max_distances, keep_unmatched=unmatched)
 
 
-def bucket_date(lists, keys, interval):
-    return pre.bucket_date(lists, keys, interval)
+def bucket_date(lists, keys, interval, bucket_start=None):
+    return pre.bucket_date(lists, keys, interval, bucket_start_str=bucket_start)
 
 
 def array_output_threshold(x):
