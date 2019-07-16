@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import OrderedDict
 
 import numpy as np
 from scipy import spatial
@@ -77,7 +77,7 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
     need to keep it in the output list with this flag
     :return: list of tuples, tuple will have close events from different lists
     """
-    zipped_list = {}
+    zipped_list = OrderedDict()
 
     main_list = lists[0]
     if isinstance(keys, list):
@@ -147,7 +147,7 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
 
 
 def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_buckets=False):
-    bucketed_list = {}
+    bucketed_list = OrderedDict()
 
     # sort all lists
     total_items = 0
@@ -183,7 +183,7 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_bu
                 item_added = False
                 if bucket_start <= temp_date < bucket_start + bucket_length:
                     bucketed_list[bucket_start].append(event_list[counts[list_id]])
-                elif temp_date < bucket_start + bucket_length:
+                if temp_date < bucket_start + bucket_length:
                     counts[list_id] += 1
                     item_added = True
 
