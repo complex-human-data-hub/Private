@@ -146,11 +146,13 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
     return zipped_tuple_list
 
 
-def bucket_date(lists, keys, time_interval):
+def bucket_date(lists, keys, time_interval, bucket_start_str=None):
     bucketed_list = {}
 
     # sort all lists
     total_items = 0
+    if not isinstance(keys, list):
+        keys = [keys] * len(lists)
     for list_id, event_list in enumerate(lists):
         event_list.sort(key=lambda r: parse(getattr(r, keys[list_id])))
         total_items += len(event_list)
@@ -164,7 +166,10 @@ def bucket_date(lists, keys, time_interval):
 
     # Start bucketing
     lists_bucketed = False
-    bucket_start = min_date.replace(microsecond=0, second=0, minute=0)
+    if bucket_start_str is None:
+        bucket_start = min_date.replace(microsecond=0, second=0, minute=0)
+    else:
+        bucket_start = parse(bucket_start_str)
     bucketed_list[bucket_start] = []
     counts = [0] * len(lists)
     bucket_length = timedelta(**{time_interval[0]: time_interval[1]})
@@ -176,15 +181,17 @@ def bucket_date(lists, keys, time_interval):
             while item_added and counts[list_id] < len(event_list):
                 temp_date = parse(getattr(event_list[counts[list_id]], keys[list_id]))
                 item_added = False
-                if temp_date < bucket_start + bucket_length:
+                if bucket_start <= temp_date < bucket_start + bucket_length:
                     bucketed_list[bucket_start].append(event_list[counts[list_id]])
+                elif temp_date < bucket_start + bucket_length:
                     counts[list_id] += 1
                     item_added = True
 
         # if there are no items added this round we move to next bucket
         if len(bucketed_list[bucket_start]) == 0:
             bucketed_list.pop(bucket_start)
-        bucket_start = bucket_start + bucket_length
-        bucketed_list[bucket_start] = []
+        if not lists_bucketed:
+            bucket_start = bucket_start + bucket_length
+            bucketed_list[bucket_start] = []
 
     return bucketed_list
