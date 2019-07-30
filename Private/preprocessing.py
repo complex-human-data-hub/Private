@@ -216,3 +216,39 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_bu
         bucketed_tuple_list.append(tuple(bucketed_list[bucket_start]))
 
     return bucketed_tuple_list
+
+
+def all_pair_euclidean_distance(vector_dict1, vector_dict2):
+    """
+    It can be used to calculate the all pair euclidean distance between two list of vectors. This will return a
+    histogram of the distances.
+
+    :param vector_dict1: vector dict/array one
+    :param vector_dict2: vector dict/array two
+    :return: list of distances
+    """
+    hist = []
+    if isinstance(vector_dict1, dict) and isinstance(vector_dict2, dict):
+        vector_list1 = vector_dict1.values()
+        vector_list2 = vector_dict2.values()
+    elif isinstance(vector_dict1, np.ndarray) and isinstance(vector_dict2, np.ndarray):
+        vector_list1 = vector_dict1
+        vector_list2 = vector_dict2
+    else:
+        raise Exception("Incompatible types" + str(type(vector_dict1)))
+
+    for v1 in vector_list1:
+        for v2 in vector_list2:
+            hist.append(np.linalg.norm(v1 - v2))
+    return hist
+
+
+def euclidean_distance(v1, v2):
+    """
+    It can be used to calculate the euclidean distance between two vectors.
+
+    :param v1: vector one
+    :param v2: vector two
+    :return: distance
+    """
+    return np.linalg.norm(v1 - v2)
