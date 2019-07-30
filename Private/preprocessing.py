@@ -222,7 +222,7 @@ def bucket_date(lists, keys, time_interval, bucket_start_str=None, keep_empty_bu
 def all_pair_euclidean_distance(vector_dict1, vector_dict2):
     """
     It can be used to calculate the all pair euclidean distance between two list of vectors. This will return a
-    histogram of the distances.
+    distribution of the distances.
 
     :param vector_dict1: vector dict/array one
     :param vector_dict2: vector dict/array two
