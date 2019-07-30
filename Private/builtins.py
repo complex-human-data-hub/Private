@@ -749,6 +749,14 @@ def private_mfcc(x):
     return pre.mfcc(x)
 
 
+def zip_date(lists, keys, max_distances, unmatched=True):
+    return pre.zip_date(lists, keys, max_distances, keep_unmatched=unmatched)
+
+
+def bucket_date(lists, keys, interval, start=None, empty=False):
+    return pre.bucket_date(lists, keys, interval, bucket_start_str=start, keep_empty_buckets=empty)
+
+
 def array_output_threshold(x):
     numpy.set_printoptions(threshold=int(x))
 
@@ -912,6 +920,8 @@ builtins = {\
 
             "fft": private_fft, \
             "mfcc": private_mfcc, \
+            "zipDate": zip_date, \
+            "bucketDate": bucket_date, \
 
             # config builtins
             "ArrayOutputThreshold": array_output_threshold, \
@@ -927,7 +937,7 @@ prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "K
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
-illegal_variable_names = prob_builtins | set(["fft", "mfcc"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
+illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
 
 
 def setBuiltinPrivacy(graph):
