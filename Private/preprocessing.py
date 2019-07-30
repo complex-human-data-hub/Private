@@ -1,3 +1,4 @@
+import math
 from collections import OrderedDict
 
 import numpy as np
@@ -252,3 +253,41 @@ def euclidean_distance(v1, v2):
     :return: distance
     """
     return np.linalg.norm(v1 - v2)
+
+
+def degrees_to_radians(degrees):
+    return degrees * math.pi / 180
+
+
+def get_distance_km(lat1, lon1, lat2, lon2):
+    """
+    This return the distance between two location on earth in kilo meters
+    :param lat1: latitude of location 1
+    :param lon1: longitude of location 1
+    :param lat2: latitude of location 2
+    :param lon2: latitude of location 2
+    :return: distance as a float
+    """
+    earth_radius_km = 6371
+    d_lat = degrees_to_radians(lat2-lat1)
+    d_lon = degrees_to_radians(lon2-lon1)
+    lat1 = degrees_to_radians(lat1)
+    lat2 = degrees_to_radians(lat2)
+    a = math.sin(d_lat/2) * math.sin(d_lat/2) + math.sin(d_lon/2) * math.sin(d_lon/2) * math.cos(lat1) * math.cos(lat2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return earth_radius_km * c
+
+
+def get_all_pair_loc_distance(loc_list1, loc_list2):
+    """
+    Return the all pair location distribution of 2 location traces. Locations are found as list of dictionaries
+
+    :param loc_list1: list of dictionaries with location information
+    :param loc_list2: list of dictionaries with location information
+    :return: location distribution list
+    """
+    hist = []
+    for l1 in loc_list1:
+        for l2 in loc_list2:
+            hist.append(get_distance_km(l1['lat'], l1['lon'], l2['lat'], l2['lon']))
+    return hist
