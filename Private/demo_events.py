@@ -54937,7 +54937,69 @@ data = [{ 'AccelerometryCount': 5,
                 'waxing_gibbous'],
   'latitude': -37.82654211791193,
   'longitude': 143.07521887165967,
-  'type': 'App'}, { 'AccelerometryCount': 8,
+  'type': 'App',
+    "GpsLocations": [
+        {
+            "lat": -41.277848,
+            "time_local": "2019-05-30 21:10:52",
+            "lon": 174.7763921,
+            "time": "2019-05-30 11:10:52Z"
+        },
+        {
+            "lat": -41.278848,
+            "time_local": "2019-05-30 21:22:59",
+            "lon": 174.7773921,
+            "time": "2019-05-30 11:22:59Z"
+        },
+        {
+            "lat": -41.279848,
+            "time_local": "2019-05-30 21:34:14",
+            "lon": 174.7763921,
+            "time": "2019-05-30 11:34:14Z"
+        },
+        {
+            "lat": -41.2775848,
+            "time_local": "2019-05-30 21:45:16",
+            "lon": 174.7783921,
+            "time": "2019-05-30 11:45:16Z"
+        },
+        {
+            "lat": -41.280848,
+            "time_local": "2019-05-30 21:56:28",
+            "lon": 174.7793921,
+            "time": "2019-05-30 11:56:28Z"
+        }
+    ],
+    'AccelerometryDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/accel_20190323021805Z_252b64e9-01ac-45c2-85af-91b5ea1dc40a.bin'
+        },
+        {
+            'type': 's3',
+            'bucket': 'chdhprivate',
+            'key': 'DataFiles/accel_20190323022821Z_b4d3807a-4802-4691-a243-4b0992e5df67.bin'
+        },
+        {
+            'type': 's3',
+            'bucket': 'chdhprivate',
+            'key': 'DataFiles/accel_20190323023913Z_31bc0ec8-87e1-4e3c-97aa-0da82fbcb50e.bin'
+        }],
+    'AudioProcessedDataFiles': [{
+        'type': 's3',
+        'bucket': 'chdhprivate',
+        'key': 'DataFiles/audio_20190323141540Z_dcf1df30-23c9-4f07-abbd-b2abecdce39d.mfcc'
+        },
+        {
+            'type': 's3',
+            'bucket': 'chdhprivate',
+            'key': 'DataFiles/audio_20190323230637Z_a26b78d0-d1b9-47ee-946c-77ca1feb6246.mfcc'
+        },
+        {
+            'type': 's3',
+            'bucket': 'chdhprivate',
+            'key': 'DataFiles/audio_20190323231714Z_c7231c2a-60c6-4ddf-bbf1-a04e71240a33.mfcc'
+        }]}, { 'AccelerometryCount': 8,
   'AudioProcessedCount': 4,
   'BatteryCount': 10,
   'BatteryLevel': 68,
@@ -54963,7 +55025,70 @@ data = [{ 'AccelerometryCount': 5,
                 'cafe'],
   'latitude': -39.97285698931409,
   'longitude': 145.3373341829556,
-  'type': 'App'}, { 'EndDateTime': '2019-02-09 00:07:00',
+  'type': 'App',
+   "GpsLocations": [
+       {
+           "lat": -41.277848,
+           "time_local": "2019-05-30 21:10:52",
+           "lon": 174.7763921,
+           "time": "2019-05-30 11:10:52Z"
+       },
+       {
+           "lat": -41.278848,
+           "time_local": "2019-05-30 21:22:59",
+           "lon": 174.7773921,
+           "time": "2019-05-30 11:22:59Z"
+       },
+       {
+           "lat": -41.279848,
+           "time_local": "2019-05-30 21:34:14",
+           "lon": 174.7763921,
+           "time": "2019-05-30 11:34:14Z"
+       },
+       {
+           "lat": -41.2775848,
+           "time_local": "2019-05-30 21:45:16",
+           "lon": 174.7783921,
+           "time": "2019-05-30 11:45:16Z"
+       },
+       {
+           "lat": -41.280848,
+           "time_local": "2019-05-30 21:56:28",
+           "lon": 174.7793921,
+           "time": "2019-05-30 11:56:28Z"
+       }
+   ],
+   'AccelerometryDataFiles': [{
+       'type': 's3',
+       'bucket': 'chdhprivate',
+       'key': 'DataFiles/accel_20190323021805Z_252b64e9-01ac-45c2-85af-91b5ea1dc40a.bin'
+   },
+       {
+           'type': 's3',
+           'bucket': 'chdhprivate',
+           'key': 'DataFiles/accel_20190323022821Z_b4d3807a-4802-4691-a243-4b0992e5df67.bin'
+       },
+       {
+           'type': 's3',
+           'bucket': 'chdhprivate',
+           'key': 'DataFiles/accel_20190323023913Z_31bc0ec8-87e1-4e3c-97aa-0da82fbcb50e.bin'
+       }],
+   'AudioProcessedDataFiles': [{
+       'type': 's3',
+       'bucket': 'chdhprivate',
+       'key': 'DataFiles/audio_20190323141540Z_dcf1df30-23c9-4f07-abbd-b2abecdce39d.mfcc'
+   },
+       {
+           'type': 's3',
+           'bucket': 'chdhprivate',
+           'key': 'DataFiles/audio_20190323230637Z_a26b78d0-d1b9-47ee-946c-77ca1feb6246.mfcc'
+       },
+       {
+           'type': 's3',
+           'bucket': 'chdhprivate',
+           'key': 'DataFiles/audio_20190323231714Z_c7231c2a-60c6-4ddf-bbf1-a04e71240a33.mfcc'
+       }]
+               }, { 'EndDateTime': '2019-02-09 00:07:00',
   'EndDateTimeLocal': '2019-02-09 11:07:00',
   'ParticipantTimeZone': 'Australia/Melbourne',
   'SEMAParticipantId': '140112592',
