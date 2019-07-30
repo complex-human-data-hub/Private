@@ -117,6 +117,22 @@ class InputVisitor(PTNodeVisitor):
             evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
             return result("factor", code, children, evalcode=evalcode)
 
+    def visit_comparison(self, node, children):
+        if len(children) == 1:
+            return result("comparison", children[0].code, children, evalcode = children[0].evalcode)
+        else:
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("comparison", code, children, evalcode=evalcode)
+
+    def visit_boolean_expression(self, node, children):
+        if len(children) == 1:
+            return result("boolean_expression", children[0].code, children, evalcode = children[0].evalcode)
+        else:
+            code = " ".join(c if type(c) == unicode else c.code for c in children)
+            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            return result("boolean_expression", code, children, evalcode=evalcode)
+
     def visit_term(self, node, children):
         if len(children) == 1:
             return result("term", children[0].code, children, evalcode = children[0].evalcode)
