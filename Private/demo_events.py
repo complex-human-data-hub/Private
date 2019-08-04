@@ -54938,6 +54938,7 @@ data = [{ 'AccelerometryCount': 5,
   'latitude': -37.82654211791193,
   'longitude': 143.07521887165967,
   'type': 'App',
+  'id': '98c67916-84bb-461a-adbc-d8e6e7b60dd0',
     'GpsLocations': [
         {
             'lat': -41.277848,
@@ -55026,6 +55027,7 @@ data = [{ 'AccelerometryCount': 5,
   'latitude': -39.97285698931409,
   'longitude': 145.3373341829556,
   'type': 'App',
+  'id': '98c67916-84bb-461a-adbc-d8e6e7b60dd1',
    'GpsLocations': [
        {
            'lat': -41.277848,
@@ -55109,6 +55111,7 @@ data = [{ 'AccelerometryCount': 5,
                 2019,
                 'Autumn'],
   'type': 'SEMA',
+  'id': '98c67916-84bb-461a-adbc-d8e6e7b60dd2',
   'GpsLocations': [
         {
             'lat': -42.277848,
@@ -55213,6 +55216,7 @@ data = [{ 'AccelerometryCount': 5,
                 2019,
                 'Autumn'],
   'type': 'SEMA',
+  'id': '98c67916-84bb-461a-adbc-d8e6e7b60dd3',
   'GpsLocations': [
             {
                 'lat': -40.277848,
@@ -55296,6 +55300,7 @@ data = [{ 'AccelerometryCount': 5,
                 2019,
                 'Autumn'],
   'type': 'SEMA',
+  'id': '98c67916-84bb-461a-adbc-d8e6e7b60dd4',
   'GpsLocations': [
         {
             'lat': -41.277848,

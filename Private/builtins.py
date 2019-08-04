@@ -14,6 +14,7 @@ import math
 from config import numpy_seed
 import preprocessing as pre
 import pandas as pd
+from demo_experiment_events import ExpEvents
 
 #from demo_events import Events, DemoEvents
 
@@ -867,6 +868,7 @@ builtins = {\
             "DemoEvents": DemoEvents, \
             "Events": Events, \
             "Event": Event, \
+            "ExpEvents": ExpEvents, \
 
             # Summary Statistics
 
