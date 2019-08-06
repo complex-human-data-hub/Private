@@ -112,7 +112,7 @@ data = [
                         ],
                         "start_date_time_local": "2017-07-01T08:00:00Z",
                         "cluster_id": 15,
-                        "id": "98c67916-84bb-461a-adbc-d8e6e7b60dd02",
+                        "id": "98c67916-84bb-461a-adbc-d8e6e7b60dd2",
                         "location": [
                             -45.3472835,
                             136.2354866
