@@ -538,7 +538,7 @@ class graph:
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
-                    res += base64.b64encode(self.globals["All"][name].getvalue())
+                    res += "[PNG Image]"
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if longFormat:
                         res += str(self.globals["All"][name])
