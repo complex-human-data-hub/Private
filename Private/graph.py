@@ -31,6 +31,7 @@ from config import ppservers, logfile, remote_socket_timeout, local_socket_timeo
 _log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
+numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 5.0   # percent
 display_precision = 3
