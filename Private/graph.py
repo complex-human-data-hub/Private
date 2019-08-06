@@ -965,7 +965,7 @@ except Exception as e:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -1152,6 +1152,7 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
+    numpy.random.seed(Private.config.numpy_seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
