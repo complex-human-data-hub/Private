@@ -1152,6 +1152,7 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
+    numpy.random.seed(Private.config.numpy_seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
