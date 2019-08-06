@@ -31,6 +31,7 @@ from config import ppservers, logfile, remote_socket_timeout, local_socket_timeo
 _log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
+numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 5.0   # percent
 display_precision = 3
@@ -546,7 +547,7 @@ class graph:
                         s = self.globals["All"][name].shape
                         res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
                             0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
-                elif type(self.globals["All"][name]) == float: # always display floats in full
+                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
                     res += str((formatter_string % self.globals["All"][name]))
                 else:
                     if longFormat:
