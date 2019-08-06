@@ -156,10 +156,15 @@ class InputVisitor(PTNodeVisitor):
                 square_bracket_end = i
         code_after_bracket = ""
         if len(children) - 1 > square_bracket_end:
-            code_after_bracket = '.' + children[square_bracket_end+1].code
+            for c in children[square_bracket_end + 1:]:
+                if c.result_type == 'expression':
+                    code_after_bracket += '[' + c.code + ']'
+                else:
+                    code_after_bracket += '.' + c.code
         res = result("indexed_variable", fn + "[" + ", ".join(c.code for c in children[square_bracket_start+1:square_bracket_end]) + "]" + code_after_bracket, children)
         if code_after_bracket:
             res.remove_dependencies(children[square_bracket_end+1].depend)
+        print res.code
         return res
 
     def visit_named_argument(self, node, children):
