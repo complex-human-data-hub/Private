@@ -547,7 +547,7 @@ class graph:
                         s = self.globals["All"][name].shape
                         res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
                             0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
-                elif type(self.globals["All"][name]) == float: # always display floats in full
+                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
                     res += str((formatter_string % self.globals["All"][name]))
                 else:
                     if longFormat:
