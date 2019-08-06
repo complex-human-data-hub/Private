@@ -147,7 +147,20 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_indexed_variable(self, node, children):
         fn = children[0].code
-        return result("indexed_variable", fn + "[" + ", ".join(c.code for c in children[1:]) + "]", children)
+        square_bracket_start = 0
+        square_bracket_end = 0
+        for i in range(1, len(children)):
+            if children[i].result_type == "leftsquarebrack":
+                square_bracket_start = i
+            if children[i].result_type == "rightsquarebrack":
+                square_bracket_end = i
+        code_after_bracket = ""
+        if len(children) - 1 > square_bracket_end:
+            code_after_bracket = '.' + children[square_bracket_end+1].code
+        res = result("indexed_variable", fn + "[" + ", ".join(c.code for c in children[square_bracket_start+1:square_bracket_end]) + "]" + code_after_bracket, children)
+        if code_after_bracket:
+            res.remove_dependencies(children[square_bracket_end+1].depend)
+        return res
 
     def visit_named_argument(self, node, children):
         return result("named_argument", children[0].code + " = " + children[1].code)

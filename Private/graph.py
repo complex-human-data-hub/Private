@@ -31,6 +31,7 @@ from config import ppservers, logfile, remote_socket_timeout, local_socket_timeo
 _log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
+numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 5.0   # percent
 display_precision = 3
@@ -538,7 +539,7 @@ class graph:
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
-                    res += base64.b64encode(self.globals["All"][name].getvalue())
+                    res += "[PNG Image]"
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if longFormat:
                         res += str(self.globals["All"][name])
@@ -546,7 +547,7 @@ class graph:
                         s = self.globals["All"][name].shape
                         res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
                             0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
-                elif type(self.globals["All"][name]) == float: # always display floats in full
+                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
                     res += str((formatter_string % self.globals["All"][name]))
                 else:
                     if longFormat:
@@ -965,7 +966,7 @@ except Exception as e:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -1152,6 +1153,7 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
+    numpy.random.seed(Private.config.numpy_seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
