@@ -584,7 +584,10 @@ class graph:
             newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
             valuebits = []
             for name in self.code.keys():
-                valuebits.append(self.getValue(name)[0:valuewidth])
+                if type(self.globals["All"][name]) == io.BytesIO:
+                    valuebits.append("[PNG Image]")
+                else:
+                    valuebits.append(self.getValue(name)[0:valuewidth])
             for name in self.probcode.keys():
                 if name in self.samplerexception:
                     valuebits.append(self.samplerexception[name])
