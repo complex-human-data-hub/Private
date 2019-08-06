@@ -95,7 +95,7 @@ def named_argument():           return identifier, "=", expression
 def argument():                 return [named_argument, expression]
 def function_call():            return identifier, "(", ZeroOrMore(argument, ","), argument, ")"
 def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
-def indexed_variable():         return dottedidentifier, leftsquarebrack, ZeroOrMore(expression, ","), expression, rightsquarebrack, ZeroOrMore(".", [indexed_variable, dottedidentifier])
+def indexed_variable():         return dottedidentifier, leftsquarebrack, ZeroOrMore(expression, ","), expression, rightsquarebrack, ZeroOrMore([(".", [identifier, indexed_variable, dottedidentifier]), ("[", expression, "]")])
 def expression():               return [boolean_expression, simple_expression]
 def deterministic_assignment(): return identifier, "=", expression
 def distribution_name():        return ["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "halfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal", "Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]
