@@ -680,7 +680,10 @@ class graph:
         return res[0:-1]
 
     def checkup(self, user, name):
-        nonuptodateparents = self.getParents(name) & (self.probabilistic - self.uptodate[user])
+        parents = self.getParents(name) 
+        if parents == set([]):
+            return False
+        nonuptodateparents = parents & (self.probabilistic - self.uptodate[user])
         if nonuptodateparents == set([]):
             return True
         else:
@@ -926,10 +929,13 @@ except Exception as e:
         if verbose:
             output = ""
         for name in self.probabilistic:
-            if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
-            result = result and self.checkdown(user, name)
-            if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
-            result = result and self.checkup(user, name)
+            if name in self.uptodate[user]:
+                if verbose: output += name + " is up to date\n"
+            else:
+                if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
+                result = result and self.checkdown(user, name)
+                if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
+                result = result and self.checkup(user, name)
         if verbose:
             return output
         else:

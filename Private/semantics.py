@@ -243,7 +243,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", self.depGraph.show_eval_code())
     def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.constructPyMC3code()[1])
-    def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler(verbose=True))
+    def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler("All", verbose=True))
     #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", self.depGraph.showSamplerChains())
     def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.showSamplerResults())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(self.depGraph.server.get_stats()['local']))
