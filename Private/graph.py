@@ -1159,7 +1159,10 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
-    numpy.random.seed(Private.config.numpy_seed)
+    name_long = long("".join(map(str, [ord(c) for c in name])))
+    # 4294967291 seems to be the largest prime under 2**32 (int limit)
+    seed = name_long % 4294967291
+    numpy.random.seed(seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
