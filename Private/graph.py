@@ -1159,7 +1159,9 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id):
     return_value = job_id
-    numpy.random.seed(Private.config.numpy_seed)
+    name_long = long("".join( map(str, [ord(c) for c in name])))
+    seed = name_long % (2**31 - 1)
+    numpy.random.seed(seed)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             value = eval(code, globals, locals)
