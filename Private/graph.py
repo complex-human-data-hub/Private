@@ -52,6 +52,7 @@ class graph:
 
         self.deterministic = set()
         self.probabilistic = set()
+        self.functions = set()
         self.builtins = set(builtins.keys()) | prob_builtins
 
         # dependencies
@@ -467,6 +468,29 @@ class graph:
         self.computePrivacy() # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute()
         self.computePrivacy() # every definition could change the privacy assignments
+
+
+    def define_function(self, name, code, evalcode, dependson, defines, arguments):
+        if name in prob_builtins | illegal_variable_names:
+            raise Exception("Illegal Identifier " + name)
+        self.acquire("define " + name)
+        if not dependson:
+            dependson = set()
+        else:
+            if self.check_cyclic_dependencies(name, dependson):
+                self.release()
+                raise Exception("Cyclic Dependency Found, " + name)
+        self.deterministic.add(name)
+        self.functions.add(name)
+        self.code[name] = "User Function"
+        self.evalcode[name] = evalcode
+        self.dependson[name] = dependson.difference(defines).difference(arguments)
+        for user in self.userids:
+            self.changeState(user, name, "stale")
+        self.release()
+        self.computePrivacy()  # need computePrivacy before compute so we don't compute public variables for each participant
+        self.compute()
+        self.computePrivacy()
 
     def delete(self, name):
         self.acquire("delete "+name)
@@ -971,8 +995,9 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+                            user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -1157,15 +1182,20 @@ except Exception as e:
                 res += k + ": " + v + "\n"
         return res
 
-def job(jobname, name, user, code, globals, locals, job_id):
+def job(jobname, name, user, code, globals, locals, job_id, user_func):
     return_value = job_id
     name_long = long("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
     numpy.random.seed(seed)
+    for func in user_func:
+        exec (func, globals, locals)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
-            value = eval(code, globals, locals)
+            if code.startswith("def"):
+                value = "User Function"
+            else:
+                value = eval(code, globals, locals)
             data = (jobname, name, user, value)
             if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
