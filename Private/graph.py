@@ -239,6 +239,8 @@ class graph:
 
         if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
             try:
+                for func in [self.evalcode[func_name] for func_name in self.functions]:
+                    exec (func, self.globals[user], self.locals)
                 val = eval(code, self.globals[user], self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
