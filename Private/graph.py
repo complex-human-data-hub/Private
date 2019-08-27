@@ -1001,7 +1001,7 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            user_func = [self.evalcode[func_name] for func_name in sorted(self.functions)]
+                            user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
                             self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
