@@ -41,6 +41,9 @@ class FileIterator:
         else:
             raise StopIteration
 
+    def reset(self):
+        self.file_id = -1
+
     def get_file_count(self):
         return len(self.file_obj_list)
 
