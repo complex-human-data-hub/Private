@@ -240,7 +240,7 @@ class graph:
         if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
             try:
                 for func in [self.evalcode[func_name] for func_name in self.functions]:
-                    exec (func, self.globals[user], self.locals)
+                    exec (func, self.globals[user])
                 val = eval(code, self.globals[user], self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
@@ -251,8 +251,8 @@ class graph:
                 result = str(e)
             finally:
                 for func_name in self.functions:
-                    if func_name in self.locals:
-                        del self.locals[func_name]
+                    if func_name in self.globals[user]:
+                        self.globals[user][func_name] = 'User Function'
 
         return result
 
@@ -1001,7 +1001,7 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            user_func = [self.evalcode[func_name] for func_name in self.functions]
+                            user_func = [self.evalcode[func_name] for func_name in sorted(self.functions)]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
                             self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
@@ -1195,7 +1195,7 @@ def job(jobname, name, user, code, globals, locals, job_id, user_func):
     seed = name_long % 4294967291
     numpy.random.seed(seed)
     for func in user_func:
-        exec (func, globals, locals)
+        exec (func, globals)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             if code.startswith("def"):
