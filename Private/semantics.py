@@ -30,7 +30,7 @@ def _debug(msg):
 
 class result:
 
-    def __init__(self, result_type, code = None, depend = None, evalcode = None, pyMC3code = None):
+    def __init__(self, result_type, code = None, depend = None, evalcode = None, pyMC3code = None, defines =()):
         self.result_type = result_type
         self.code = code
         if evalcode == None:
@@ -39,6 +39,7 @@ class result:
             self.evalcode = evalcode
         self.pyMC3code = pyMC3code
         self.depend = None
+        self.defines = defines
         if depend:
             if type(depend) == SemanticActionResults:
                 self.depend = []
@@ -57,7 +58,7 @@ class result:
         self.depend = list(set(self.depend) - set(dependenciesToRemove))
 
     def __repr__(self):
-        return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(self.evalcode) + "  depend: " + str(self.depend)
+        return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(self.evalcode) + "  depend: " + str(self.depend) + " defines: " + str(self.defines)
 
 class InputVisitor(PTNodeVisitor):
     def __init__(self, defaults=True, **kwargs):
@@ -86,6 +87,11 @@ class InputVisitor(PTNodeVisitor):
     def visit_starsym(self, node, children):                  return result("starsym", node.value)
     def visit_leftsquarebrack(self, node, children):          return result("leftsquarebrack", node.value)
     def visit_rightsquarebrack(self, node, children):         return result("rightsquarebrack", node.value)
+    def visit_comma(self, node, children):                    return result("comma", node.value)
+    def visit_left_bracket(self, node, children):             return result("leftbracket", node.value)
+    def visit_right_bracket(self, node, children):            return result("rightbracket", node.value)
+    def visit_keyword_define(self, node, children):           return result("define", node.value)
+    def visit_keyword_return(self, node, children):           return result("return", node.value)
     def visit_colon(self, node, children):                    return result("colon", node.value)
     def visit_atom(self, node, children):
         return result("atom", children[0].code, children)
@@ -175,8 +181,12 @@ class InputVisitor(PTNodeVisitor):
             fn = "frozenset"
         elif fn == "list":
             fn = "tuple"
-        code = fn + "("+ ", ".join(c.code for c in children[1:]) + ")"
-        evalcode = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
+        if len(children)> 1:
+            arguments = ", ".join(c if type(c) == unicode else c.code for c in children[1:])
+        else:
+            arguments = ""
+        code = fn + "("+ arguments + ")"
+        evalcode = fn + "(" + arguments + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
     def visit_simple_expression(self, node, children):
@@ -290,6 +300,58 @@ help: this message
     def visit_line(self, node, children):
         if len(children) > 0:
             return children[0].code
+        else:
+            return
+
+    def visit_func_det_assignment(self, node, children):
+        code = children[0].code + " = " + " ".join(c if type(c) == unicode else c.code for c in children[1:])
+        res = result("func_deterministic_assignment", code, children, evalcode=code, defines=set(children[0].depend))
+        res.remove_dependencies(children[0].depend)
+        return res
+
+    def visit_function_header(self, node, children):
+        children[1].remove_dependencies(children[1].depend)
+        code = " ".join(c if type(c) == unicode else c.code for c in children)
+        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        return result("function_header", code, children, evalcode=evalcode)
+
+    def visit_function_body_line(self, node, children):
+        defines = set()
+        for c in children:
+            defines = defines.union(c.defines)
+        if len(children) > 0:
+            return result("function_body_line", children[0].code, children, evalcode=children[0].code, defines=defines)
+        else:
+            return
+
+    def visit_function_return(self, node, children):
+        code = " ".join(c if type(c) == unicode else c.code for c in children)
+        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        return result("function_return", code, children, evalcode=evalcode)
+
+    def visit_function(self, node, children):
+        depends = set()
+        defines = set()
+        for c in children[1:]:
+            depends = depends.union(set(c.depend))
+            defines = defines.union(set(c.defines))
+        if len(children) > 1:
+            func_name = children[0].code.split(" ")[1]
+            code = children[0].code + "\n"
+            evalcode = children[0].evalcode + "\n"
+            for c in children[1:]:
+                if c.result_type == "function_body_line":
+                    code += '\t' + c.code + '\n'
+                    evalcode += '\t' + c.evalcode + '\n'
+                if c.result_type == "function_return":
+                    code += '\t' + c.code
+                    evalcode += '\t' + c.evalcode
+            depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
+            return
+
+    def visit_code_block(self, node, children):
+        if len(children) > 0:
+            return children[0]
         else:
             return
 

@@ -18,6 +18,7 @@ def fft(file_itr, segment_size):
     """
     output_length = 512
     file_arrays = []
+    file_itr.reset()
     for count in range(0, file_itr.get_file_count()):
         byte_file = file_itr.next()
         str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
@@ -52,6 +53,7 @@ def mfcc(file_itr):
     :param file_itr: file iterator from the event
     :return: reshaped mfcc data
     """
+    file_itr.reset()
     mfcc_size = 200 * 13
     mfcc_reshaped = np.empty([file_itr.get_file_count(), mfcc_size], dtype=np.float64)
     for count in range(0, file_itr.get_file_count()):
