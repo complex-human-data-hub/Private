@@ -9,7 +9,7 @@ import pydot
 import graphviz
 import logging
 import importlib
-from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins, commands
+from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins, commands, plot_builtins
 
 from networkx.drawing.nx_pydot import write_dot
 from Private.graph import *
@@ -177,16 +177,20 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_function_call(self, node, children):
         fn = children[0].code
+        additional_argument = ""
         if fn == "set":
             fn = "frozenset"
         elif fn == "list":
             fn = "tuple"
+        elif fn in plot_builtins:
+            additional_argument = "\", \"".join(c if type(c) == unicode else c.code for c in children[1:] if c.result_type != "named_argument")
+            additional_argument = "[\"" + additional_argument + "\"], "
         if len(children)> 1:
             arguments = ", ".join(c if type(c) == unicode else c.code for c in children[1:])
         else:
             arguments = ""
-        code = fn + "("+ arguments + ")"
-        evalcode = fn + "(" + arguments + ")"
+        code = fn + "(" + additional_argument + arguments + ")"
+        evalcode = fn + "(" + additional_argument + arguments + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
     def visit_simple_expression(self, node, children):

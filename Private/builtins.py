@@ -286,7 +286,7 @@ def pairplot(column_names, *args, **kwargs):
     return buf
 
 
-def distplot(a, **kwargs):  # have to stop this plotting if x is Private
+def distplot(column_names, a, **kwargs):  # have to stop this plotting if x is Private
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         seaborn.distplot(a, **kwargs)
     except Exception as e:
@@ -297,7 +297,7 @@ def distplot(a, **kwargs):  # have to stop this plotting if x is Private
     return buf
 
 
-def kdeplot(x, y=None, **kwargs):
+def kdeplot(column_names, x, y=None, **kwargs):
     """
     Fit and plot a univariate or bivariate kernel density estimate.
 
@@ -319,7 +319,7 @@ def kdeplot(x, y=None, **kwargs):
     return buf
 
 
-def rugplot(a, **kwargs):
+def rugplot(column_names, a, **kwargs):
     """
     Plot datapoints in an array as sticks on an axis.
 
@@ -959,6 +959,7 @@ prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "K
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
+plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
 illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
 
 
