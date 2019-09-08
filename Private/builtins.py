@@ -226,38 +226,64 @@ def Sigmoid(x):
 
 
 # Plotting Function Definitions
+data_columns = {"col", "row", "style", "hue", "size"}
 
-# plotting helper method
-def create_data_frame(column_names, *args):
+
+# plotting helper methods
+def create_data_frame(argument_names, kw_arguments, *args, **kwargs):
     """
     Creates a pandas data frame from given set of lists and column names. Each list will be taken as a column.
     It's a must to keep the same order in column names as well as the data lists.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_arguments: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists
     :return: pandas data frame
     """
     args = [arg for arg in args if arg is not None]
-    if len(column_names) != len(args):
-        raise Exception("Expected exactly" + str(len(args)) + "column names")
+    for kw_argument in kw_arguments:
+        kw = kw_argument.split(' = ')[0]
+        kwarg_name = kw_argument.split(' = ')[1]
+        if kw in data_columns and kwarg_name not in argument_names:
+            argument_names.append(kwarg_name)
+            args.append(kwargs[kw])
+    if len(argument_names) != len(args):
+        raise Exception("Expected exactly " + str(len(args)) + " column names")
     zipped_list = list(zip(*args))
-    df = pd.DataFrame(zipped_list, columns=column_names)
+    df = pd.DataFrame(zipped_list, columns=argument_names)
     return df
 
 
+def modify_plot_kwargs(kw_arguments, kwargs):
+    """
+    This replace the values of the data lists in the keyword parameters with the string variable (column) name
+
+    :param kw_arguments: String list of key word arg names. Should be in the same order as data lists
+    :param kwargs: key word arg
+    :return: kwarg
+    """
+    for kw_argument in kw_arguments:
+        kw = kw_argument.split(' = ')[0]
+        if kw in data_columns:
+            kwargs[kw] = kw_argument.split(' = ')[1]
+    return kwargs
+
+
 #   Distribution plots
-def jointplot(column_names, x, y, **kwargs):
+def jointplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Can be used to plot  two variables with bivariate and univariate graphs.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *[x, y])
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
-        seaborn.jointplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        seaborn.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -266,16 +292,18 @@ def jointplot(column_names, x, y, **kwargs):
     return buf
 
 
-def pairplot(column_names, *args, **kwargs):
+def pairplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot pairwise relationships in a dataset.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
         seaborn.pairplot(df, **kwargs)
     except Exception as e:
@@ -286,7 +314,7 @@ def pairplot(column_names, *args, **kwargs):
     return buf
 
 
-def distplot(column_names, a, **kwargs):  # have to stop this plotting if x is Private
+def distplot(argument_names, kw_argument_names, a, **kwargs):  # have to stop this plotting if x is Private
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         seaborn.distplot(a, **kwargs)
     except Exception as e:
@@ -297,11 +325,12 @@ def distplot(column_names, a, **kwargs):  # have to stop this plotting if x is P
     return buf
 
 
-def kdeplot(column_names, x, y=None, **kwargs):
+def kdeplot(argument_names, kw_argument_names, x, y=None, **kwargs):
     """
     Fit and plot a univariate or bivariate kernel density estimate.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
@@ -319,7 +348,7 @@ def kdeplot(column_names, x, y=None, **kwargs):
     return buf
 
 
-def rugplot(column_names, a, **kwargs):
+def rugplot(argument_names, kw_argument_names, a, **kwargs):
     """
     Plot datapoints in an array as sticks on an axis.
 
@@ -336,26 +365,29 @@ def rugplot(column_names, a, **kwargs):
     plt.close()
     return buf
 
+
 #   Relational plots
-def relplot(column_names, *args, **kwargs):
+def relplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Can be used to draw all seaborn relational plots. The kind parameter selects between different relational plots:
     scatterplot (with kind="scatter"; the default)
     lineplot (with kind="line")
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
         if len(args) == 3:
-            seaborn.relplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+            seaborn.relplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
         elif len(args) == 2:
-            seaborn.relplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+            seaborn.relplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         else:
-            seaborn.relplot(x=column_names[0], data=df, **kwargs)
+            raise Exception("At least 2 parameters expected for the relplot")
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -365,7 +397,7 @@ def relplot(column_names, *args, **kwargs):
 
 
 #   Categorical plots
-def catplot(column_names, *args, **kwargs):
+def catplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Can be used to draw all seaborn categorical plots. The kind parameter selects between different categorical plots:
 
@@ -387,19 +419,21 @@ def catplot(column_names, *args, **kwargs):
     countplot (with kind="count")
 
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
         if len(args) == 3:
-            seaborn.catplot(x=column_names[0], y=column_names[1], hue=column_names[2], data=df, **kwargs)
+            seaborn.catplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
         elif len(args) == 2:
-            seaborn.catplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+            seaborn.catplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         else:
-            seaborn.catplot(x=column_names[0], data=df, **kwargs)
+            seaborn.catplot(x=argument_names[0], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -409,18 +443,22 @@ def catplot(column_names, *args, **kwargs):
 
 
 # Regression plots
-def lmplot(column_names, x, y, **kwargs):
+def lmplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot data and regression model fits across a FacetGrid.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
-    :param x, y: data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *[x, y])
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
-        seaborn.lmplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        if len(args) == 3:
+            seaborn.lmplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+        else:
+            seaborn.lmplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -429,18 +467,20 @@ def lmplot(column_names, x, y, **kwargs):
     return buf
 
 
-def regplot(column_names, x, y, **kwargs):
+def regplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Can be used to plot data and a linear regression model fit.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *[x, y])
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
-        seaborn.regplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        seaborn.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -449,18 +489,20 @@ def regplot(column_names, x, y, **kwargs):
     return buf
 
 
-def residplot(column_names, x, y, **kwargs):
+def residplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot the residuals of a linear regression.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param x, y: data lists
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *[x, y])
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
-        seaborn.residplot(x=column_names[0], y=column_names[1], data=df, **kwargs)
+        seaborn.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -470,16 +512,18 @@ def residplot(column_names, x, y, **kwargs):
 
 
 # Matrix plots
-def heatmap(column_names, *args, **kwargs):
+def heatmap(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot rectangular data as a color-encoded matrix.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists, 2D dataset that can be coerced into an ndarray.
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
         seaborn.heatmap(df, **kwargs)
     except Exception as e:
@@ -490,16 +534,18 @@ def heatmap(column_names, *args, **kwargs):
     return buf
 
 
-def clustermap(column_names, *args, **kwargs):
+def clustermap(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot a matrix dataset as a hierarchically-clustered heatmap.
 
-    :param column_names: String list of column names. Should be in the same order as data lists
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
     :param args: data lists, Rectangular data for clustering. Cannot contain NAs.
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df = create_data_frame(column_names, *args)
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     try:
         seaborn.clustermap(df, **kwargs)
     except Exception as e:
