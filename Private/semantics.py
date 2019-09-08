@@ -177,20 +177,28 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_function_call(self, node, children):
         fn = children[0].code
-        additional_argument = ""
+        argument_names = ""
+        kw_argument_names = ""
         if fn == "set":
             fn = "frozenset"
         elif fn == "list":
             fn = "tuple"
         elif fn in plot_builtins:
-            additional_argument = "\", \"".join(c if type(c) == unicode else c.code for c in children[1:] if c.result_type != "named_argument")
-            additional_argument = "[\"" + additional_argument + "\"], "
+            argument_names = "\", \"".join(
+                c if type(c) == unicode else c.code for c in children[1:] if c.result_type != "named_argument")
+            kw_argument_names = "\", \"".join(
+                c.replace("\"", "") if type(c) == unicode else c.code.replace("\"", "") for c in children[1:] if c.result_type == "named_argument")
+            argument_names = "[\"" + argument_names + "\"], "
+            if len(kw_argument_names)>0:
+                kw_argument_names = "[\"" + kw_argument_names + "\"], "
+            else:
+                kw_argument_names = "[], "
         if len(children)> 1:
             arguments = ", ".join(c if type(c) == unicode else c.code for c in children[1:])
         else:
             arguments = ""
-        code = fn + "(" + additional_argument + arguments + ")"
-        evalcode = fn + "(" + additional_argument + arguments + ")"
+        code = fn + "(" + argument_names + kw_argument_names + arguments + ")"
+        evalcode = fn + "(" + argument_names + kw_argument_names + arguments + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
     def visit_simple_expression(self, node, children):
