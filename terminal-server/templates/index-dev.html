@@ -1,5 +1,6 @@
 <html>
     <head>
+        <title>{{title}}</title>
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
@@ -186,6 +187,27 @@ function createTerminal() {
         });
     }
 
+    term.is_def = function(cmd){
+        var startswith_def = /^def\s+\w[^:]+:$/;
+        return cmd.match(startswith_def);
+    }
+
+    term.end_def = function(cmd){
+        var return_def = /^\s{4}return(?:\s+\w|(?:\s+)?\()/;
+        if (cmd.match(return_def)){
+            return true;
+        }
+
+        var startswith = /^\s{4}[^\s]/;
+        if( cmd.match(startswith) ){
+            return false;
+        }
+    
+        //Cover cases of malformed and empty input
+        //Submit function and let parser raise exception
+        return true;
+    }
+
     term.show_graph = function(cmd, data){
         
         console.log("term.show_graph", cmd, data);
@@ -229,14 +251,36 @@ function createTerminal() {
         });
     }
 
-
+    term._record_function = null;
 
 
     term.enter = function () {
         // Enter key has been pressed
 
         console.log("term.enter", input);
+        if(term._record_function){ 
+            term._record_function += input + ";";
+            console.log(term._record_function);
+            if( term.end_def(input)){
+                console.log("def exit");
+                term.send_cmd(term._record_function)
+                term._record_function = null;
+            }else{
+                callback();
+            }
+            return true;
+            
+        }
+        if(term.is_def(input)){
+            console.log("def start");
+            term._record_function = input + '\n';
+            callback();
+            return true;
+        }
+        
+
         var cmd = $.trim(input);
+        
         term.send_cmd(cmd);
         $("#cmd").val("");
 
@@ -299,14 +343,54 @@ function createTerminal() {
 
 
     term.on('paste', function (rawdata, ev) {
-        console.log("paste", rawdata);
-        chunks = rawdata.split(/\r/)
+        console.log("paste")
+        rawdata = $.trim(rawdata) + "\r";
+
+        // xterm has already converted the newline
+        // character to mac format (\r) otherwise 
+        // would have used \r?\n instead of \r below
+        var re_def = /^def\s+.+\r(?:\s{4}.+\r)+/gm;
+
+        var m;
+        var defs = []
+        var keep = Array.apply(null, Array(rawdata.length)).map(function() { return true }); 
+
+        var chunks = [];
+        while(m = re_def.exec(rawdata)){
+
+            // Format def
+            var mlen = m[0].length;
+            var mindex = m.index;
+            var d = m[0].split(/\r/);
+            var start = d[0] + '\n';
+            var end = d.slice(1);
+            var df = start + end.join(";");
+            chunks.push(df);
+
+
+            // Remove characters
+            for (var i = mindex; i < mindex+mlen; i++){
+                keep[i] = false;
+            }
+
+        }
+
+        rawdata_keep = "";
+        for (var i = 0; i < rawdata.length; i++){
+            if(keep[i]) rawdata_keep += rawdata[i];
+        }
+
+        
+        
+        chunks = chunks.concat( rawdata_keep.split(/\r/) );
+        
+
         if (chunks.length > 1){
+            
             paste_input = input
             for (var i = 0; i < chunks.length; i++){
                 data = chunks[i];
                 if (! data) continue;
-
                 // Save the stuff before and after the position at which we're
                 // pasting
                 if (i == 0){
@@ -338,7 +422,7 @@ function createTerminal() {
 
                 //term.enter();
             }
-            input = rawdata
+            input = chunks.join("\r");
 
         }else{
             // Save the stuff before and after the position at which we're
