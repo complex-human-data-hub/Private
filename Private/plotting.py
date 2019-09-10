@@ -139,9 +139,11 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
     return buf
 
 
-def distplot(argument_names, kw_argument_names, a, **kwargs):  # have to stop this plotting if x is Private
+def distplot(argument_names, kw_argument_names, *args, **kwargs):
+    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
-        sns.distplot(a, **kwargs)
+        sns.distplot(df[df.columns[0]], **kwargs)
+        plt.title(title)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -150,7 +152,7 @@ def distplot(argument_names, kw_argument_names, a, **kwargs):  # have to stop th
     return buf
 
 
-def kdeplot(argument_names, kw_argument_names, x, y=None, **kwargs):
+def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Fit and plot a univariate or bivariate kernel density estimate.
 
@@ -160,11 +162,13 @@ def kdeplot(argument_names, kw_argument_names, x, y=None, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
+    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
     try:
-        if y is None:
-            sns.kdeplot(x, **kwargs)
+        if len(args) > 1 is None:
+            sns.kdeplot(df.ix[:,0], **kwargs)
         else:
-            sns.kdeplot(x, y, **kwargs)
+            sns.kdeplot(df.ix[:,0], df.ix[:,1], **kwargs)
+        plt.title(title)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -173,7 +177,7 @@ def kdeplot(argument_names, kw_argument_names, x, y=None, **kwargs):
     return buf
 
 
-def rugplot(argument_names, kw_argument_names, a, **kwargs):
+def rugplot(argument_names, kw_argument_names, *args, **kwargs):
     """
     Plot datapoints in an array as sticks on an axis.
 
@@ -181,8 +185,10 @@ def rugplot(argument_names, kw_argument_names, a, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
+    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
     try:
-        sns.rugplot(a, **kwargs)
+        sns.rugplot(df.ix[:,0], **kwargs)
+        plt.title(title)
     except Exception as e:
         pass
     buf = io.BytesIO()
