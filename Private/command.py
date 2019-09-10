@@ -54,7 +54,17 @@ if args.filename:
 
 input_line = raw_input("> ")
 while input_line != 'exit':
-    if input_line != "":
+    function = ""
+    if input_line.startswith("def"):
+        function += input_line + '\n'
+        input_line = raw_input("> ")
+        while input_line.startswith("    "):
+            function += input_line + ';'
+            if input_line.strip().startswith("return"):
+                break
+            input_line = raw_input("> ")
+        execute(function)
+    elif input_line != "":
         execute(input_line)
 
     input_line = raw_input("> ")

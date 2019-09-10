@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names
 import copy
 from Private.manifoldprivacy import distManifold
 import shutil
@@ -22,6 +22,7 @@ import os
 import base64
 import time
 import uuid
+import pymc3 as pm
 
 
 from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
@@ -30,6 +31,7 @@ from config import ppservers, logfile, remote_socket_timeout, local_socket_timeo
 _log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
+numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 5.0   # percent
 display_precision = 3
@@ -50,6 +52,7 @@ class graph:
 
         self.deterministic = set()
         self.probabilistic = set()
+        self.functions = set()
         self.builtins = set(builtins.keys()) | prob_builtins
 
         # dependencies
@@ -236,6 +239,8 @@ class graph:
 
         if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
             try:
+                for func in [self.evalcode[func_name] for func_name in self.functions]:
+                    exec (func, self.globals[user])
                 val = eval(code, self.globals[user], self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
@@ -244,6 +249,10 @@ class graph:
                     result = str(val)
             except Exception as e:
                 result = str(e)
+            finally:
+                for func_name in self.functions:
+                    if func_name in self.globals[user]:
+                        self.globals[user][func_name] = 'User Function'
 
         return result
 
@@ -434,15 +443,15 @@ class graph:
 
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-        if name in prob_builtins:
+        if name in prob_builtins | illegal_variable_names:
             raise Exception("Illegal Identifier " + name)
         self.acquire("define " + name)
         if not dependson:
             dependson = []
         else:
-            if self.check_cyclic_dependencies(name, set(dependson) - self.builtins):
+            if self.check_cyclic_dependencies(name, set(dependson)):
                 self.release()
-                raise Exception("Cyclic Dependency Found")
+                raise Exception("Cyclic Dependency Found, " + name)
         if prob:
             self.probabilistic.add(name)
             self.probcode[name] = code
@@ -465,6 +474,29 @@ class graph:
         self.computePrivacy() # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute()
         self.computePrivacy() # every definition could change the privacy assignments
+
+
+    def define_function(self, name, code, evalcode, dependson, defines, arguments):
+        if name in prob_builtins | illegal_variable_names:
+            raise Exception("Illegal Identifier " + name)
+        self.acquire("define " + name)
+        if not dependson:
+            dependson = set()
+        else:
+            if self.check_cyclic_dependencies(name, dependson):
+                self.release()
+                raise Exception("Cyclic Dependency Found, " + name)
+        self.deterministic.add(name)
+        self.functions.add(name)
+        self.code[name] = "User Function"
+        self.evalcode[name] = evalcode
+        self.dependson[name] = dependson.difference(defines).difference(arguments)
+        for user in self.userids:
+            self.changeState(user, name, "stale")
+        self.release()
+        self.computePrivacy()  # need computePrivacy before compute so we don't compute public variables for each participant
+        self.compute()
+        self.computePrivacy()
 
     def delete(self, name):
         self.acquire("delete "+name)
@@ -537,7 +569,7 @@ class graph:
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
-                    res += base64.b64encode(self.globals["All"][name].getvalue())
+                    res += "[PNG Image]"
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if longFormat:
                         res += str(self.globals["All"][name])
@@ -545,7 +577,7 @@ class graph:
                         s = self.globals["All"][name].shape
                         res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
                             0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
-                elif type(self.globals["All"][name]) == float: # always display floats in full
+                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
                     res += str((formatter_string % self.globals["All"][name]))
                 else:
                     if longFormat:
@@ -678,7 +710,10 @@ class graph:
         return res[0:-1]
 
     def checkup(self, user, name):
-        nonuptodateparents = self.getParents(name) & (self.probabilistic - self.uptodate[user])
+        parents = self.getParents(name) 
+        if parents == set([]):
+            return False
+        nonuptodateparents = parents & (self.probabilistic - self.uptodate[user])
         if nonuptodateparents == set([]):
             return True
         else:
@@ -815,6 +850,7 @@ class graph:
             loggingcode = """
 try:
     logging = __import__("logging")
+    logging.basicConfig(level=logging.DEBUG)
     _log = logging.getLogger("Private")
     #logging.disable(100)
     _log.debug("Running PyMC3 Code")
@@ -836,6 +872,7 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
+    traceback = __import__("traceback")
 
 
     basic_model = pymc3.Model()
@@ -872,25 +909,38 @@ try:
                     locals = None
 
             code += """
-        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable")
+        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
         _log.debug("Finished PyMC3 Code")
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished PyMC3 Code\\n")
 
 except Exception as e:
-    # remove stuff after the : as that sometimes reveals private information
-    _log.debug("PyMC3 Code Exception: " + str(e))
-    with open("/tmp/private-worker.log", "a") as fp:
-        fp.write("Error " + str(e) + "\\n")
-    ind = e.args[0].find(":")
-    if ind != -1:
-        estring = e.args[0][0:ind]
-    else:
-        estring = e.args[0]
+    try:
+        # remove stuff after the : as that sometimes reveals private information
+        _log.debug("PyMC3 Code Exception: " + str(e))
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error " + str(e) + "\\n")
+            fp.write(traceback.format_exc() + "\\n")
+        ind = e.args[0].find(":")
+        if ind != -1:
+            estring = e.args[0][0:ind]
+        else:
+            estring = e.args[0]
 
-    newErrorString = estring   # do we need to do this?
-    e.args = (newErrorString,)
-    __private_result__ = (e, exception_variable)
+        newErrorString = estring   # do we need to do this?
+        e.args = (newErrorString,)
+        __private_result__ = (e, exception_variable)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished processing Error \\n")
+    except Exception as e2:
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error2 " + str(e2) + "\\n")
+            fp.write(traceback.format_exc() + "\\n")
+        __private_result__ = (e2, exception_variable)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished processing Error2 \\n")
+
+        
 
 """.format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
 
@@ -909,10 +959,13 @@ except Exception as e:
         if verbose:
             output = ""
         for name in self.probabilistic:
-            if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
-            result = result and self.checkdown(user, name)
-            if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
-            result = result and self.checkup(user, name)
+            if name in self.uptodate[user]:
+                if verbose: output += name + " is up to date\n"
+            else:
+                if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
+                result = result and self.checkdown(user, name)
+                if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
+                result = result and self.checkup(user, name)
         if verbose:
             return output
         else:
@@ -948,8 +1001,9 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+                            user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id), modules=("Private.s3_helper", "Private.config"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -1025,8 +1079,13 @@ except Exception as e:
     def samplercallback(self, returnvalue):
         numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
-        myname, user, names, value, exception_variable = Private.s3_helper.read_results_s3(
+        myname, user, names, value, exception_variable, model = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
+        if user == "All":
+            self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
+            self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
+            self.globals[user]['waic'] =  pm.stats.waic(value, model)
+            self.globals[user]['loo'] =  pm.stats.loo(value, model)
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1129,11 +1188,20 @@ except Exception as e:
                 res += k + ": " + v + "\n"
         return res
 
-def job(jobname, name, user, code, globals, locals, job_id):
+def job(jobname, name, user, code, globals, locals, job_id, user_func):
     return_value = job_id
+    name_long = long("".join(map(str, [ord(c) for c in name])))
+    # 4294967291 seems to be the largest prime under 2**32 (int limit)
+    seed = name_long % 4294967291
+    numpy.random.seed(seed)
+    for func in user_func:
+        exec (func, globals)
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
-            value = eval(code, globals, locals)
+            if code.startswith("def"):
+                value = "User Function"
+            else:
+                value = eval(code, globals, locals)
             data = (jobname, name, user, value)
             if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
@@ -1149,8 +1217,8 @@ def samplerjob(jobname, user, names, code, globals, locals, job_id):
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             exec (code, globals, locals)
-            value, exception_variable = locals["__private_result__"]
-            data = (jobname, user, names, value, exception_variable)
+            value, exception_variable, model = locals["__private_result__"]
+            data = (jobname, user, names, value, exception_variable, model)
             if Private.config.s3_integration:
                 Private.s3_helper.save_results_s3(job_id, data)
             else:

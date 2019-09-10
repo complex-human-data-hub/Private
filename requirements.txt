@@ -17,7 +17,7 @@ pandas
 patsy
 pp
 pydot
-pymc3
+pymc3==3.6
 pyparsing
 python-dateutil
 pytz

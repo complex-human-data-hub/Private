@@ -13,6 +13,8 @@ import theano.tensor
 import math
 from config import numpy_seed
 import preprocessing as pre
+import pandas as pd
+from demo_experiment_events import ExpEvents
 
 #from demo_events import Events, DemoEvents
 
@@ -224,10 +226,328 @@ def Sigmoid(x):
 
 
 # Plotting Function Definitions
+data_columns = {"col", "row", "style", "hue", "size"}
 
-def distplot(a, **kwargs):  # have to stop this plotting if x is Private
+
+# plotting helper methods
+def create_data_frame(argument_names, kw_arguments, *args, **kwargs):
+    """
+    Creates a pandas data frame from given set of lists and column names. Each list will be taken as a column.
+    It's a must to keep the same order in column names as well as the data lists.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_arguments: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists
+    :return: pandas data frame
+    """
+    args = [arg for arg in args if arg is not None]
+    for kw_argument in kw_arguments:
+        kw = kw_argument.split(' = ')[0]
+        kwarg_name = kw_argument.split(' = ')[1]
+        if kw in data_columns and kwarg_name not in argument_names:
+            argument_names.append(kwarg_name)
+            args.append(kwargs[kw])
+    if len(argument_names) != len(args):
+        raise Exception("Expected exactly " + str(len(args)) + " column names")
+    zipped_list = list(zip(*args))
+    df = pd.DataFrame(zipped_list, columns=argument_names)
+    return df
+
+
+def modify_plot_kwargs(kw_arguments, kwargs):
+    """
+    This replace the values of the data lists in the keyword parameters with the string variable (column) name
+
+    :param kw_arguments: String list of key word arg names. Should be in the same order as data lists
+    :param kwargs: key word arg
+    :return: kwarg
+    """
+    for kw_argument in kw_arguments:
+        kw = kw_argument.split(' = ')[0]
+        if kw in data_columns:
+            kwargs[kw] = kw_argument.split(' = ')[1]
+    return kwargs
+
+
+#   Distribution plots
+def jointplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Can be used to plot  two variables with bivariate and univariate graphs.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def pairplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot pairwise relationships in a dataset.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.pairplot(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def distplot(argument_names, kw_argument_names, a, **kwargs):  # have to stop this plotting if x is Private
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         seaborn.distplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def kdeplot(argument_names, kw_argument_names, x, y=None, **kwargs):
+    """
+    Fit and plot a univariate or bivariate kernel density estimate.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    try:
+        if y is None:
+            seaborn.kdeplot(x, **kwargs)
+        else:
+            seaborn.kdeplot(x, y, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def rugplot(argument_names, kw_argument_names, a, **kwargs):
+    """
+    Plot datapoints in an array as sticks on an axis.
+
+    :param a: vector
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    try:
+        seaborn.rugplot(a, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+#   Relational plots
+def relplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn relational plots. The kind parameter selects between different relational plots:
+    scatterplot (with kind="scatter"; the default)
+    lineplot (with kind="line")
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        if len(args) == 3:
+            seaborn.relplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.relplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+        else:
+            raise Exception("At least 2 parameters expected for the relplot")
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+#   Categorical plots
+def catplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Can be used to draw all seaborn categorical plots. The kind parameter selects between different categorical plots:
+
+    Categorical scatterplots:
+
+    stripplot (with kind="strip"; the default)
+    swarmplot (with kind="swarm")
+
+    Categorical distribution plots:
+
+    boxplot (with kind="box")
+    violinplot (with kind="violin")
+    boxenplot (with kind="boxen")
+
+    Categorical estimate plots:
+
+    pointplot (with kind="point")
+    barplot (with kind="bar")
+    countplot (with kind="count")
+
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        if len(args) == 3:
+            seaborn.catplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+        elif len(args) == 2:
+            seaborn.catplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+        else:
+            seaborn.catplot(x=argument_names[0], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+# Regression plots
+def lmplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot data and regression model fits across a FacetGrid.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        if len(args) == 3:
+            seaborn.lmplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+        else:
+            seaborn.lmplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def regplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Can be used to plot data and a linear regression model fit.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def residplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot the residuals of a linear regression.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param x, y: data lists
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+# Matrix plots
+def heatmap(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot rectangular data as a color-encoded matrix.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists, 2D dataset that can be coerced into an ndarray.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.heatmap(df, **kwargs)
+    except Exception as e:
+        pass
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    return buf
+
+
+def clustermap(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot a matrix dataset as a hierarchically-clustered heatmap.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists, Rectangular data for clustering. Cannot contain NAs.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
+    kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
+    try:
+        seaborn.clustermap(df, **kwargs)
     except Exception as e:
         pass
     buf = io.BytesIO()
@@ -249,7 +569,7 @@ def private_median(x, **kwargs):
 
 
 def private_percentile(x, percent):
-    return numpy.percentile(x, percent)
+    return numpy.percentile(x, percent, interpolation='lower')
 
 
 def private_std(x, **kwargs):
@@ -476,6 +796,30 @@ def private_mfcc(x):
     return pre.mfcc(x)
 
 
+def zip_date(lists, keys, max_distances, unmatched=True):
+    return pre.zip_date(lists, keys, max_distances, keep_unmatched=unmatched)
+
+
+def bucket_date(lists, keys, interval, start=None, empty=False):
+    return pre.bucket_date(lists, keys, interval, bucket_start_str=start, keep_empty_buckets=empty)
+
+
+def euclidean_distance(v1, v2):
+    return pre.euclidean_distance(v1, v2)
+
+
+def all_pair_euclidean_distance(vector_list1, vector_list2):
+    return pre.all_pair_euclidean_distance(vector_list1, vector_list2)
+
+
+def location_distance(lat1, lon1, lat2, lon2):
+    return pre.get_distance_km(lat1, lon1, lat2, lon2)
+
+
+def all_pair_location_distance(loc_list1, loc_list2):
+    return  pre.get_all_pair_loc_distance(loc_list1, loc_list2)
+
+
 def array_output_threshold(x):
     numpy.set_printoptions(threshold=int(x))
 
@@ -539,8 +883,25 @@ builtins = {\
             "Sigmoid": Sigmoid,
 
             # Plotting Functions
-
+            #   Distribution plots
+            "jointplot": jointplot, \
+            "pairplot": pairplot, \
             "distplot": distplot, \
+            "kdeplot": kdeplot, \
+            "rugplot": rugplot, \
+
+            #   Relational and Categorical plots
+            "relplot": relplot, \
+            "catplot": catplot, \
+
+            #   Regression plots
+            "lmplot": lmplot, \
+            "regplot": regplot, \
+            "residplot": residplot, \
+
+            # Matrix plots
+            "heatmap": heatmap, \
+            "clustermap": clustermap, \
 
             # Control of Sampler
 
@@ -553,6 +914,7 @@ builtins = {\
             "DemoEvents": DemoEvents, \
             "Events": Events, \
             "Event": Event, \
+            "ExpEvents": ExpEvents, \
 
             # Summary Statistics
 
@@ -622,15 +984,29 @@ builtins = {\
 
             "fft": private_fft, \
             "mfcc": private_mfcc, \
+            "zipDate": zip_date, \
+            "bucketDate": bucket_date, \
+            "eucDist": euclidean_distance, \
+            "eucDistAll": all_pair_euclidean_distance, \
+            "locDist": location_distance, \
+            "locDistAll": all_pair_location_distance, \
 
             # config builtins
-            "ArrayOutputThreshold": array_output_threshold
+            "ArrayOutputThreshold": array_output_threshold, \
+
+            # stat and diagnostic built-ins
+            "gelmanRubin": None, \
+            "effectiveN": None, \
+            "waic": None, \
+            "loo": None
     }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
+plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
+illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
 
 
 def setBuiltinPrivacy(graph):
