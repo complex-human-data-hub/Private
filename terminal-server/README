@@ -13,6 +13,9 @@ contains the the flask server
 is a simple web page that can make a call to local server,
 which in turn call the private on unforgettable.me and returns a response
 
+* templates/index-dev.html
+dev copy of index.html, you will be taken to this page if you add the cookie debug=1 to your browser page
+
 
 Between this code and your xterm code you should be able to keep working on the console. Let me know if you need help setting things up.
 
