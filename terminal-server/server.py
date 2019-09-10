@@ -119,9 +119,9 @@ def index():
         user_uid = str( uuid.uuid4() )
 
     if 'debug' in request.cookies:
-        resp = make_response( render_template('index-dev.html', uid=user_uid))
+        resp = make_response( render_template('index-dev.html', uid=user_uid, title="Dev"))
     else:
-        resp = make_response( render_template('index.html', uid=user_uid))
+        resp = make_response( render_template('index.html', uid=user_uid, title="Private"))
     resp.set_cookie('uid', value=user_uid)
     
     _log.debug("[{}] /".format(user_uid))
@@ -135,6 +135,7 @@ def run_analyze():
         req = {
             'cmd': request.form.get('cmd')
         }
+        _log.debug("[CMD] {}".format(req['cmd']))
         res = {}
         #user_uid = request.form.get('uid')
         user_uid = request.cookies.get('uid')
