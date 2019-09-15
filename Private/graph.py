@@ -1152,6 +1152,8 @@ except Exception as e:
         self.computePrivacy()
 
     def manifoldprivacycallback(self, returnvalue):
+        sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
+        step_size = max(int(sample_size / Private.config.max_sample_size), 1)
         try:
             self.acquire("manifoldprivacycallback")
             jobname, name, user, d = returnvalue
@@ -1168,6 +1170,7 @@ except Exception as e:
                 if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
                     if self.privacySamplerResults[variable] != "private":
                         self.privacySamplerResults[variable] = "public"
+                        self.globals['All'][variable] = self.globals['All'][variable][::step_size]
         except Exception as e:
             self.log.debug("manifold privacy " + str(e))
             print("manifold privacy " + str(e))

@@ -26,6 +26,9 @@ s3_log_level = logging.CRITICAL
 # numpy seed
 numpy_seed = 8623574
 
+# Return sample size
+max_sample_size = 100
+
 ppservers = ()
 ppservers_list = []
 
