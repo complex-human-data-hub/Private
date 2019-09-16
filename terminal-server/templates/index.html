@@ -386,11 +386,13 @@ function createTerminal() {
         
 
         if (chunks.length > 1){
-            
+            console.log("IF");
+            console.log("chunks", chunks) 
             paste_input = input
             for (var i = 0; i < chunks.length; i++){
                 data = chunks[i];
                 if (! data) continue;
+                console.log("here")
                 // Save the stuff before and after the position at which we're
                 // pasting
                 if (i == 0){
@@ -425,6 +427,7 @@ function createTerminal() {
             input = chunks.join("\r");
 
         }else{
+            console.log("ELSE");
             // Save the stuff before and after the position at which we're
             // pasting
             pre = input.slice(0, cursorIndex)
@@ -443,6 +446,7 @@ function createTerminal() {
             cursorIndex = pre.length + rawdata.length
 
         }
+        term.enter();
     });
 
 
