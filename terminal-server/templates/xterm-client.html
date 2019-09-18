@@ -68,7 +68,7 @@
 
 
         </style>
-
+    <div class="col-lg-12" id="wwidth"></div>
     <div class="col-lg-9" id="terminal-container">
         <div id="terminal"></div>
     </div>
@@ -109,7 +109,7 @@ function createTerminal() {
     // The following is a messy hack to get the sizing 'sort-of' right
     // looking forward to xterm.js doing the work here with 'addons/fit'
    
-    var winwidth = $(window).width() ;
+    var winwidth = $("#wwidth").width() ;
     cols = Math.min(parseInt(winwidth/10, 10), 140);
     if( winwidth > 1200) cols = 95;
     if( winwidth > 1300) cols = 110;
