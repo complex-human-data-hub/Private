@@ -84,7 +84,7 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
                    profile_name=aws_profile.get('name'),
                    region_name=aws_profile.get('region_name'))
             client = session.client('s3')
-            theobject = client.get_object(Bucket=new_bucket_name, Key=url)
+            theobject = client.get_object(Bucket=bucket_name, Key=key)
             body = theobject["Body"]
             data = body.read()
         except Exception as err:
