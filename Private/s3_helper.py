@@ -4,12 +4,21 @@ import boto3
 from botocore.exceptions import ClientError
 from config import s3_log_level, s3_bucket_name
 from boto3.session import Session
+import json 
+from datetime import datetime
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
 logging.getLogger('botocore').setLevel(s3_log_level)
 logging.getLogger('s3transfer').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
+
+def _debug(msg):
+    with open('/tmp/s3-debug.log', 'a') as fp:
+        if not isinstance(msg, basestring):
+            msg = json.dumps(msg, indent=4, sort_keys=True, default=str)
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 
 def save_results_s3(key, value, bucket_name=s3_bucket_name):
@@ -61,6 +70,11 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
     :param bucket_name: s3 bucket name
     :return: result set as a tuple
     """
+    _debug({
+        'function': 'read_file',
+        'bucket': bucket_name,
+        'aws_profile': aws_profile
+        })
     if aws_profile:
         session = Session(
                profile_name=aws_profile.get('name'),
