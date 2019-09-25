@@ -7,6 +7,7 @@ from boto3.session import Session
 import json 
 from datetime import datetime
 import os 
+import traceback 
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
@@ -77,12 +78,22 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
         'aws_profile': aws_profile
         })
     if aws_profile:
-        session = Session(
-               profile_name=aws_profile.get('name'),
-               region_name=aws_profile.get('region_name'))
-        client = session.client('s3')
-        return client.get_object(Bucket=bucket_name, Key=key).get('Body').read()
+        data = None
+        try:
+            session = Session(
+                   profile_name=aws_profile.get('name'),
+                   region_name=aws_profile.get('region_name'))
+            client = session.client('s3')
+            theobject = client.get_object(Bucket=new_bucket_name, Key=url)
+            body = theobject["Body"]
+            data = body.read()
+        except Exception as err:
+            _debug({
+                'error': str(err),
+                'traceback': traceback.format_exc()
+                })
         
+        return data
     else:
         s3 = boto3.resource('s3')
         return s3.Object(bucket_name, key).get()['Body'].read()
