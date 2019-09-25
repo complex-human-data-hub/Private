@@ -6,6 +6,7 @@ from config import s3_log_level, s3_bucket_name
 from boto3.session import Session
 import json 
 from datetime import datetime
+import os 
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
