@@ -358,7 +358,7 @@ help: this message
                 if c.result_type == "function_return":
                     code += '\t' + c.code
                     evalcode += '\t' + c.evalcode
-            depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
+            self.depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
             return
 
     def visit_code_block(self, node, children):
