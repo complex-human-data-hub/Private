@@ -3,6 +3,7 @@ import dill as pickle
 import boto3
 from botocore.exceptions import ClientError
 from config import s3_log_level, s3_bucket_name
+from boto3.session import Session
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
@@ -53,12 +54,20 @@ def if_exist(key, bucket_name=s3_bucket_name):
         return True
 
 
-def read_file(key, bucket_name=s3_bucket_name):
+def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
     """
     Reads a file set from s3
     :param key: s3 key
     :param bucket_name: s3 bucket name
     :return: result set as a tuple
     """
-    s3 = boto3.resource('s3')
-    return s3.Object(bucket_name, key).get()['Body'].read()
+    if aws_profile:
+        session = Session(
+               profile_name=aws_profile.get('name'),
+               region_name=aws_profile.get('region_name'))
+        client = session.client('s3')
+        return client.get_object(Bucket=bucket_name, Key=key).get('Body').read()
+        
+    else:
+        s3 = boto3.resource('s3')
+        return s3.Object(bucket_name, key).get()['Body'].read()
