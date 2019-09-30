@@ -719,8 +719,8 @@ def setUserIds(events=None):
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 def setGlobals(events=None):
-    print "HERE"
-    print events
+    #print "HERE"
+    #print events
     if events:
         builtins["Events"] = events
         builtins["DemoEvents"] = events
