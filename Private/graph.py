@@ -872,6 +872,8 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
+    dot = __import__("theano").tensor.tensordot
+    softmax = __import__("theano").tensor.nnet.nnet.softmax
     traceback = __import__("traceback")
 
 
