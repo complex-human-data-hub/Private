@@ -25,9 +25,10 @@ class FileIterator:
     ]
     """
 
-    def __init__(self, datafile_obj_list):
+    def __init__(self, datafile_obj_list, aws_profile=None):
         self.file_id = -1
         self.file_obj_list = datafile_obj_list
+        self.aws_profile = aws_profile
 
     def __iter__(self):
         return self
@@ -37,7 +38,7 @@ class FileIterator:
             self.file_id += 1
             file_object = self.file_obj_list[self.file_id]
             if file_object['type'] == SOURCE_TYPE_S3:
-                return s3_helper.read_file(file_object['key'], file_object['bucket'])
+                return s3_helper.read_file(file_object['key'], bucket_name=file_object['bucket'], aws_profile=self.aws_profile)
             elif file_object['type'] == SOURCE_TYPE_LOCAL_FILE_SYSTEM:
                 try:
                     with open(file_object[SOURCE_LOCAL_FILE_PATH_KEY]) as file:
@@ -45,6 +46,7 @@ class FileIterator:
                         return byte_file
                 except IOError:
                     raise Exception('Issue when reading local file ' + file_object[SOURCE_LOCAL_FILE_PATH_KEY])
+
             else:
                 raise Exception('Unknown data source type')
         else:

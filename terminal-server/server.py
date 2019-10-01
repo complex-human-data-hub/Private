@@ -114,14 +114,15 @@ def get_private_server(uid, uip, uua):
 
 @app.route('/', methods=['GET'])
 def index():
+    analyze_url = "/analyze"
     user_uid = request.cookies.get('uid')
     if not user_uid:
         user_uid = str( uuid.uuid4() )
 
     if 'debug' in request.cookies:
-        resp = make_response( render_template('index-dev.html', uid=user_uid, title="Dev"))
+        resp = make_response( render_template('index-dev.html', uid=user_uid, title="Dev", analyze_url=analyze_url))
     else:
-        resp = make_response( render_template('index.html', uid=user_uid, title="Private"))
+        resp = make_response( render_template('index.html', uid=user_uid, title="Private", analyze_url=analyze_url))
     resp.set_cookie('uid', value=user_uid)
     
     _log.debug("[{}] /".format(user_uid))
