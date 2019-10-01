@@ -241,7 +241,10 @@ class graph:
             try:
                 for func in [self.evalcode[func_name] for func_name in self.functions]:
                     exec (func, self.globals[user])
-                val = eval(code, self.globals[user], self.locals)
+                if code in self.functions:
+                    val = self.evalcode[code]
+                else:
+                    val = eval(code, self.globals[user], self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
                     result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
