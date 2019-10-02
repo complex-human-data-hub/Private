@@ -24,6 +24,8 @@ def fft(file_itr, segment_size):
         str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
         file_arrays.append(str_file)
     complete_array = np.concatenate(file_arrays)
+    if len(complete_array) == 0:
+        return {}
     x = complete_array[0:4 * np.floor_divide(complete_array.shape[0], 4)]
     x = x.reshape((np.divide(x.shape[0], 4), 4))
     time_stamps = (x[:, 3] - x[0, 3])/1000000000
@@ -58,8 +60,9 @@ def mfcc(file_itr):
     mfcc_reshaped = np.empty([file_itr.get_file_count(), mfcc_size], dtype=np.float64)
     for count in range(0, file_itr.get_file_count()):
         byte_file = file_itr.next()
-        str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
-        mfcc_reshaped[count, :] = str_file.reshape((1, mfcc_size))
+        if byte_file != "":
+            str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
+            mfcc_reshaped[count, :] = str_file.reshape((1, mfcc_size))
     mfcc_reshaped = mfcc_reshaped[~np.all(mfcc_reshaped == 0, axis=1)]
     return mfcc_reshaped
 
