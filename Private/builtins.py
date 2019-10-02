@@ -386,7 +386,7 @@ def private_range(*args):
     return range(*args)
 
 
-def private_reduce(function, iterable):  # cannot use as we can't take functions in Private
+def private_reduce(function, iterable):
     return reduce(function, iterable)
 
 
