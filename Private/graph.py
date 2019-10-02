@@ -934,14 +934,14 @@ except Exception as e:
 
         newErrorString = estring   # do we need to do this?
         e.args = (newErrorString,)
-        __private_result__ = (e, exception_variable)
+        __private_result__ = (e, exception_variable, basic_model)
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished processing Error \\n")
     except Exception as e2:
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Error2 " + str(e2) + "\\n")
             fp.write(traceback.format_exc() + "\\n")
-        __private_result__ = (e2, exception_variable)
+        __private_result__ = (e2, exception_variable, basic_model)
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished processing Error2 \\n")
 
