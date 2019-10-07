@@ -875,13 +875,14 @@ try:
             code += """
     exception_variable = "No Exception Variable"
     pymc3 = __import__("pymc3")
-    dot = __import__("theano").tensor.tensordot
-    softmax = __import__("theano").tensor.nnet.nnet.softmax
+    #dot = __import__("theano").tensor.tensordot
+    #softmax = __import__("theano").tensor.nnet.nnet.softmax
     traceback = __import__("traceback")
 
 
     basic_model = pymc3.Model()
 
+    
     with basic_model:
 
 """
@@ -1087,10 +1088,15 @@ except Exception as e:
         myname, user, names, value, exception_variable, model = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
         if user == "All":
+            self.log.debug("samplercallback: All ")
             self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
+            self.log.debug("samplercallback: All gelmanRubin ")
             self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
+            self.log.debug("samplercallback: All effectiveN ")
             self.globals[user]['waic'] =  pm.stats.waic(value, model)
+            self.log.debug("samplercallback: All waic ")
             self.globals[user]['loo'] =  pm.stats.loo(value, model)
+            self.log.debug("samplercallback: All loo ...done")
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1104,8 +1110,11 @@ except Exception as e:
             else:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
+            self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         else: # successful sampler return
+            self.log.debug("samplercallback: successful return ")
             try:
+                self.log.debug("samplercallback: name in names ")
                 for name in names:
                     if name in value.varnames:
                         self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
@@ -1113,10 +1122,13 @@ except Exception as e:
                         self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
                     self.changeState(user, name, "uptodate")
 
+                self.log.debug("samplercallback: name in names ...done ")
 
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
+                self.log.debug("samplercallback: whichsamplersarecomplete ")
                 if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
+                    self.log.debug("samplercallback: whichsamplersarecomplete - All ")
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
@@ -1128,7 +1140,9 @@ except Exception as e:
                                           jobname = "Manifold: " + u + " " + name
                                           self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
 
+                    self.log.debug("samplercallback: whichsamplersarecomplete - All ...done")
                 else: # else compare All to this users samples using manifold privacy calculation
+                    self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
                     if self.haveSamples("All"):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
@@ -1139,17 +1153,22 @@ except Exception as e:
                                     else:
                                         jobname = "Manifold: " + user + " " + name
                                         self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
+                    self.log.debug("samplercallback: whichsamplersarecomplete - Users ...done")
                                          
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
                 #print("in samplercallback when assigning values " + str(e))
                 #traceback.print_exc()
 
+        self.log.debug("samplercallback: delete jobs ")
 
         try:
             del self.jobs[myname]
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
+
+        self.log.debug("samplercallback: delete jobs ...done")
+
         self.release()
 
         self.computePrivacy()

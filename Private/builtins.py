@@ -217,6 +217,15 @@ def Constant(c, size):
     return y.random(size=size)
 
 
+# Theano functions
+def dot(x, y, **kwargs):
+    prod = theano.tensor.tensordot(x, y, **kwargs)
+    return prod
+
+def softmax(x):
+    return theano.tensor.nnet.nnet.softmax(x)
+
+
 # Probabilistic Functions
 def Sigmoid(x):
     return 1 / (1 + theano.tensor.exp(-x))
@@ -544,6 +553,10 @@ builtins = {\
             "Categorical": Categorical, \
             "DiscreteWeibull": DiscreteWeibull, \
             "Constant": Constant, \
+
+            # Theano Functions
+            "dot": dot, 
+            "softmax": softmax,
 
             # Probilistic Function 
             "Sigmoid": Sigmoid,
