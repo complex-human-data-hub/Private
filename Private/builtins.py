@@ -217,7 +217,7 @@ def Constant(c, size):
     return y.random(size=size)
 
 
-# Deterministic Functions
+# Deterministic implementation of dot and softmax
 def dot(x, y, *args, **kwargs):
     return numpy.dot(x, y)
 
