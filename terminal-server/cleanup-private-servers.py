@@ -5,6 +5,11 @@ import service_pb2_grpc
 import time
 import private_config as config
 import shelvelock
+import sys
+
+killall = False
+if len(sys.argv) > 1:
+    killall = True 
 
 with open(config.certfile, 'rb') as f:
     trusted_certs = f.read()
@@ -24,11 +29,11 @@ def get_rpc_stub(host, port):
 
 
 server_shelf = shelvelock.open(config.privateserver_shelf)
-
+remove = [51150, 51149, 51154]
 now = time.time()
 for key in server_shelf.keys():
     server = json.loads( server_shelf[key] )
-    if (now - server.get('access_time')) >= config.server_timeout:
+    if server.get('port') in remove or killall or ((now - server.get('access_time')) >= config.server_timeout):
         req = {'cmd': 'clear'}
         print server.get('port')
         rpc_stub = get_rpc_stub(config.private_host, server.get('port'))
