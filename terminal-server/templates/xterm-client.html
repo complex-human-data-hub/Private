@@ -1,9 +1,9 @@
-
         <!-- 
             Start xTerm Client
             Okay bad (in 2010) adding CSS to the body...I know, but I want to use this a module elsewhere. 
             So, apologizes if I offend any spec sensibilities...I guess it wouldn't me the first time :)
         -->
+
         <style>
 
         #terminal-graph-container{
@@ -33,8 +33,52 @@
 
         }
 
+
+        .cmd-loader {
+          margin: 0 auto;
+          border: 16px solid #f3f3f3;
+          border-radius: 50%;
+          border-top: 16px solid #3498db;
+          width: 120px;
+          height: 120px;
+          -webkit-animation: spin 2s linear infinite; /* Safari */
+          animation: spin 2s linear infinite;
+        }
+
+        /* Safari */
+        @-webkit-keyframes spin {
+          0% { -webkit-transform: rotate(0deg); }
+          100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+
+
         .figure-caption{
             text-align:center;
+        }
+
+        .modal-cmd-outer {
+            background-color: rgba(0, 0, 0, 0.5);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+        .modal-cmd-inner {
+            //background-color: #fff;
+            width: 50%;
+            padding: 25px;
+            margin: 25% auto;
+            min-height: 260px;
+            z-index: 1000;
+            max-width: 700px;
         }
 
         .modal-outer {
@@ -68,7 +112,9 @@
 
 
         </style>
-    <div class="col-lg-12" id="wwidth"></div>
+    </head>
+    <body>
+    <div class="loader"></div>
     <div class="col-lg-9" id="terminal-container">
         <div id="terminal"></div>
     </div>
@@ -87,6 +133,11 @@
     </div>
 </div>
 
+<div style="display: none;" class="modal-cmd-outer">
+    <div class="modal-cmd-inner">
+        <div class="cmd-loader"></div>
+    </div>
+</div>
 
 <script type="text/javascript">
 term = null;
@@ -100,6 +151,15 @@ var cursorIndex = 0 // Where the cursor should be relative to input
 var post = "" // Segment of current user input located behind cursor
 var figures = 0; 
 
+function _display_loader(msg){
+    $(".modal-cmd-outer").fadeIn("slow");
+}
+function _hide_loader(){
+    $(".modal-cmd-outer").fadeOut("slow");
+}
+
+
+
 function createTerminal() {
 
     // Terminal size
@@ -109,7 +169,7 @@ function createTerminal() {
     // The following is a messy hack to get the sizing 'sort-of' right
     // looking forward to xterm.js doing the work here with 'addons/fit'
    
-    var winwidth = $("#wwidth").width() ;
+    var winwidth = $(window).width() ;
     cols = Math.min(parseInt(winwidth/10, 10), 140);
     if( winwidth > 1200) cols = 95;
     if( winwidth > 1300) cols = 110;
@@ -135,6 +195,7 @@ function createTerminal() {
         input = ""
     };
     term.prompt()
+    term.runningCMD = false;
 
     // ---------------- Needs to send and receive data via ajax ----------------- //
 
@@ -145,18 +206,24 @@ function createTerminal() {
     }
 
     term.send_cmd = function(cmd) {
-      console.log("term.send_cmd", cmd);
+
+      console.log("term.send_cmd2", cmd);
+      console.log("term.send_cmd runningCMD", term.runningCMD);
+        if (term.runningCMD) return;
         if (!cmd) return;
 
         //write_cmd(cmd);
         data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
-
+        term.runningCMD = true;
+        _display_loader();
         $.ajax({
             type: "POST",
             url: '{{analyze_url}}',
             data: data,
             success: function(data){
                 console.log("ajax:success:cmd", cmd, data);
+                _hide_loader();
+                term.runningCMD = false;
                 if(data.type == 'graph'){
                     term.show_graph(cmd, data)
                 }else if(data.response){
@@ -164,9 +231,12 @@ function createTerminal() {
                 }
                 callback();
             },
-            fail: function(xhr, textStatus, errorThrown) {
+            error: function(xhr, textStatus, errorThrown) {
+              _hide_loader();
+              term.runningCMD = false;
               console.log("ajax:fail:cmd", cmd);
-              callback()
+              alert("Command could not be run at this time: " + cmd + ". Please try again");  
+              callback();
             },
             dataType: "json"
         });
@@ -241,6 +311,7 @@ function createTerminal() {
 
     term.enter = function () {
         // Enter key has been pressed
+        if(term.runningCMD) return;
 
         console.log("term.enter", input);
         if(term._record_function){ 
@@ -328,6 +399,8 @@ function createTerminal() {
 
 
     term.on('paste', function (rawdata, ev) {
+        if(term.runningCMD) return;
+
         console.log("paste")
         rawdata = $.trim(rawdata) + "\r";
 
@@ -436,6 +509,9 @@ function createTerminal() {
 
 
     term.on('key', function (key, ev) {
+        console.log("key term.runningCMD", term.runningCMD);
+        if(term.runningCMD) return;
+
         var printable = (
             !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
         );
@@ -613,6 +689,5 @@ $(document).ready(function(){
         $("#figures-caption").text("");
     });
 </script>
-  
 
 <!-- end xTerm Client -->
