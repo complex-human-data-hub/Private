@@ -1263,6 +1263,7 @@ def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
 
 def getJobId(jobname, user, names, code, globals, locals):
     # todo generate a unique id for the job
-    return str(uuid.uuid4())
+    folder_name = "results"
+    return folder_name + "/" + str(uuid.uuid4())
 
 depGraph = graph()
