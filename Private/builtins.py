@@ -217,13 +217,14 @@ def Constant(c, size):
     return y.random(size=size)
 
 
-# Theano functions
-def dot(x, y, **kwargs):
-    prod = theano.tensor.tensordot(x, y, **kwargs)
-    return prod
+# Deterministic Functions
+def dot(x, y, *args, **kwargs):
+    return numpy.dot(x, y)
+
 
 def softmax(x):
-    return theano.tensor.nnet.nnet.softmax(x)
+    e_x = numpy.exp(x - numpy.max(x))
+    return e_x / e_x.sum(axis=0)
 
 
 # Probabilistic Functions
