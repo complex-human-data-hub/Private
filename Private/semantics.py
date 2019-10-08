@@ -244,7 +244,8 @@ class InputVisitor(PTNodeVisitor):
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children):
-        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
+        pyMC3_code = children[0].code + " = " + "pymc3." + "Deterministic" + "(\'" + children[0].code + "\', " + children[1].code + "%s)"
+        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=pyMC3_code)
         return result("expression_assignment", children[0].code)
 
     def visit_probabilistic_assignment(self, node, children):
@@ -259,7 +260,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
-        self.depGraph.__init__()
+        self.depGraph.__init__(events=self.depGraph.globals["All"]["Events"])
         return result("clear_variables", "All variables removed.")
     def visit_show_dependencies(self, node, children):        return result("show_dependencies", self.depGraph.show_dependencies())
     def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
@@ -358,7 +359,7 @@ help: this message
                 if c.result_type == "function_return":
                     code += '\t' + c.code
                     evalcode += '\t' + c.evalcode
-            depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
+            self.depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
             return
 
     def visit_code_block(self, node, children):

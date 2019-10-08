@@ -217,6 +217,16 @@ def Constant(c, size):
     return y.random(size=size)
 
 
+# Deterministic implementation of dot and softmax
+def dot(x, y, *args, **kwargs):
+    return numpy.dot(x, y)
+
+
+def softmax(x):
+    e_x = numpy.exp(x - numpy.max(x))
+    return e_x / e_x.sum(axis=0)
+
+
 # Probabilistic Functions
 def Sigmoid(x):
     return 1 / (1 + theano.tensor.exp(-x))
@@ -386,8 +396,8 @@ def private_range(*args):
     return range(*args)
 
 
-def private_reduce(function, iterable, initializer=None):  # cannot use as we can't take functions in Private
-    return reduce(function, iterable, initializer=initializer)
+def private_reduce(function, iterable):
+    return reduce(function, iterable)
 
 
 def private_repr(x):
@@ -545,6 +555,10 @@ builtins = {\
             "DiscreteWeibull": DiscreteWeibull, \
             "Constant": Constant, \
 
+            # Theano Functions
+            "dot": dot, 
+            "softmax": softmax,
+
             # Probilistic Function 
             "Sigmoid": Sigmoid,
 
@@ -669,6 +683,7 @@ builtins = {\
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
 prob_builtins = prob_builtins | set(["Binomial", "ZeroInflatedBinomial", "Bernoulli", "Poisson", "ZeroInflatedPoisson", "NegativeBinomial", "ZeroInflatedNegativeBinomial", "DiscreteUniform", "Geometric", "Categorical", "DiscreteWeibull", "Constant", "OrderedLogistic"]) # discrete distributions
+prob_builtins = prob_builtins | {'dot', 'softmax'} # theano
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
 plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
@@ -719,8 +734,8 @@ def setUserIds(events=None):
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 def setGlobals(events=None):
-    print "HERE"
-    print events
+    #print "HERE"
+    #print events
     if events:
         builtins["Events"] = events
         builtins["DemoEvents"] = events
