@@ -123,6 +123,11 @@ class InputVisitor(PTNodeVisitor):
             evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
             return result("factor", code, children, evalcode=evalcode)
 
+    def visit_list_index(self, node, children):
+        code = " ".join(c if type(c) == unicode else c.code for c in children)
+        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        return result("list_index", code, children, evalcode=evalcode)
+
     def visit_comparison(self, node, children):
         if len(children) == 1:
             return result("comparison", children[0].code, children, evalcode = children[0].evalcode)
