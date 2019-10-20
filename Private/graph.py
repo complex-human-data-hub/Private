@@ -447,7 +447,7 @@ class graph:
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if name in prob_builtins | illegal_variable_names:
-            raise Exception("Illegal Identifier " + name)
+            raise Exception("Illegal Identifier " + name + " is a Private Built-in")
         self.acquire("define " + name)
         if not dependson:
             dependson = []
@@ -481,7 +481,7 @@ class graph:
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
-            raise Exception("Illegal Identifier " + name)
+            raise Exception("Illegal Identifier " + name + " is a Private Built-in")
         self.acquire("define " + name)
         if not dependson:
             dependson = set()
