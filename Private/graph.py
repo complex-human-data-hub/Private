@@ -251,7 +251,7 @@ class graph:
                 else:
                     result = str(val)
             except Exception as e:
-                result = str(e)
+                raise Exception(e.__class__.__name__ + ": " + e.message)
             finally:
                 for func_name in self.functions:
                     if func_name in self.globals[user]:
@@ -383,7 +383,7 @@ class graph:
                 if child not in self.stale[user] and child not in self.builtins:
                     self.changeState(user, child, "stale")
         else:
-            raise Exception("Unknown state %s in changeState" % newstate)
+            raise Exception("Exception: " + "Unknown state %s in changeState" % newstate)
 
     def setAllPublic(self):
         self.log.debug("All variables except builtins become public")
@@ -447,14 +447,14 @@ class graph:
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if name in prob_builtins | illegal_variable_names:
-            raise Exception("Illegal Identifier '" + name + "' is a Private Built-in")
+            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
         if not dependson:
             dependson = []
         else:
             if self.check_cyclic_dependencies(name, set(dependson)):
                 self.release()
-                raise Exception("Cyclic Dependency Found, " + name)
+                raise Exception("Exception: Cyclic Dependency Found, " + name)
         if prob:
             self.probabilistic.add(name)
             self.probcode[name] = code
@@ -481,14 +481,14 @@ class graph:
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
-            raise Exception("Illegal Identifier '" + name + "' is a Private Built-in")
+            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
         if not dependson:
             dependson = set()
         else:
             if self.check_cyclic_dependencies(name, dependson):
                 self.release()
-                raise Exception("Cyclic Dependency Found, " + name)
+                raise Exception("Exception: Cyclic Dependency Found, " + name)
         self.deterministic.add(name)
         self.functions.add(name)
         self.code[name] = "User Function"
@@ -588,7 +588,7 @@ class graph:
                     else:
                         res += reprlib.repr(self.globals["All"][name])
             else:
-                raise Exception(name + " is not stale, computing, exception or uptodate.")
+                raise Exception("Exception: " + name + " is not stale, computing, exception or uptodate.")
         elif name in self.builtins:
             if name in self.public:
                 if longFormat:
@@ -598,7 +598,7 @@ class graph:
             else:
                 res += "Private"
         else:
-            raise Exception("Unknown variable in getValue" + name)
+            raise Exception("Exception: Unknown variable in getValue" + name)
         return res
 
     def __repr__(self):
