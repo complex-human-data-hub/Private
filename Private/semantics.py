@@ -178,7 +178,7 @@ class InputVisitor(PTNodeVisitor):
         return res
 
     def visit_named_argument(self, node, children):
-        return result("named_argument", children[0].code + " = " + children[1].code)
+        return result("named_argument", children[0].code + " = " + children[1].code, defines=set(children[0].code))
 
     def visit_function_call(self, node, children):
         fn = children[0].code
@@ -328,10 +328,13 @@ help: this message
         return res
 
     def visit_function_header(self, node, children):
+        defines = set()
+        for c in children:
+            defines = defines.union(c.defines)
         children[1].remove_dependencies(children[1].depend)
         code = " ".join(c if type(c) == unicode else c.code for c in children)
         evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
-        return result("function_header", code, children, evalcode=evalcode)
+        return result("function_header", code, children, evalcode=evalcode, defines=defines)
 
     def visit_function_body_line(self, node, children):
         defines = set()
@@ -350,9 +353,10 @@ help: this message
     def visit_function(self, node, children):
         depends = set()
         defines = set()
+        for c in children:
+            defines = defines.union(set(c.defines))
         for c in children[1:]:
             depends = depends.union(set(c.depend))
-            defines = defines.union(set(c.defines))
         if len(children) > 1:
             func_name = children[0].code.split(" ")[1]
             code = children[0].code + "\n"
