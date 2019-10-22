@@ -653,7 +653,10 @@ class graph:
     def show_code(self):
         codebits = []
         for name in self.code.keys():
-            codebits.append(name + " = " + str(self.code[name]))
+            if name in self.functions:
+                codebits.append(self.evalcode[name].replace("\t", "    "))
+            else:
+                codebits.append(name + " = " + str(self.code[name]))
         for name in self.probcode.keys():
             if name in self.hierarchical:
                 codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
