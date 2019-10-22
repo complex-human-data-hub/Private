@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
 import copy
 from Private.manifoldprivacy import distManifold
 import shutil
@@ -1012,7 +1012,7 @@ except Exception as e:
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.globals[user], self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
+                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
                             #time.sleep(1)
 
 
@@ -1036,7 +1036,7 @@ except Exception as e:
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
                                 job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.globals[user], locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -1217,6 +1217,24 @@ except Exception as e:
             else:
                 res += k + ": " + v + "\n"
         return res
+
+    def get_globals(self, names, user):
+        user_globals = self.globals[user]
+        job_globals = {}
+        deps = set()
+        for name in names:
+            if name in self.dependson:
+                deps = deps.union(self.dependson[name])
+            if name in self.probdependson:
+                deps = deps.union(self.probdependson[name])
+        for key in user_globals.keys():
+            if key in data_builtins:
+                if key in deps:
+                    job_globals[key] = user_globals[key]
+            else:
+                job_globals[key] = user_globals[key]
+        return job_globals
+
 
 def job(jobname, name, user, code, globals, locals, job_id, user_func):
     return_value = job_id
