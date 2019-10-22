@@ -1243,7 +1243,11 @@ def job(jobname, name, user, code, globals, locals, job_id, user_func):
     seed = name_long % 4294967291
     numpy.random.seed(seed)
     for func in user_func:
-        exec (func, globals)
+        try:
+            exec (func, globals)
+        except Exception as e:
+            e = Exception("Error in User Function: " + func[4:10] + "...")
+            return ((jobname, name, user, e))
     try:
         if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
             if code.startswith("def"):
