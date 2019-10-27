@@ -67,7 +67,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_identifier(self, node, children):
         if node.value in commands:
-            raise Exception("Illegal Identifier '" + node.value + "' is a Private Command")
+            raise Exception("Exception: Illegal Identifier '" + node.value + "' is a Private Command")
         return result("identifier", node.value, node.value)
 
     def visit_distribution_name(self, node, children):
