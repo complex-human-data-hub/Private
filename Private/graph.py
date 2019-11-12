@@ -1227,13 +1227,27 @@ except Exception as e:
                 deps = deps.union(self.dependson[name])
             if name in self.probdependson:
                 deps = deps.union(self.probdependson[name])
+        deps = self.get_all_required_dependents(deps)
         for key in user_globals.keys():
-            if key in data_builtins:
-                if key in deps:
-                    job_globals[key] = user_globals[key]
-            else:
+            if key in deps:
                 job_globals[key] = user_globals[key]
         return job_globals
+
+    def get_all_required_dependents(self, names):
+        to_visit = names
+        final_set = set()
+        while to_visit != set():
+            new_additions = set()
+            for vname in to_visit:
+                final_set.add(vname)
+                if vname in self.dependson and vname in self.functions:
+                    new_additions = new_additions.union(self.dependson[vname])
+                if vname in self.probdependson:
+                    new_additions = new_additions.union(self.probdependson[vname])
+            to_visit = to_visit.union(new_additions)
+            to_visit = to_visit.difference(final_set)
+
+        return final_set
 
 
 def job(jobname, name, user, code, globals, locals, job_id, user_func):
