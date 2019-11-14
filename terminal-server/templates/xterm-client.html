@@ -347,9 +347,17 @@ function createTerminal() {
         console.log("callback");
 
         // Save the input
-        if (input != inputHistory[inputHistory.length - 1]) {
-            // Don't want to save the same command twice
-            inputHistory.push(input)
+
+        input = input.replace(/[;\r]/g, "\n");
+        input_array = input.split(/\n/);
+        for(var i = 0; i < input_array.length; i++){
+            if($.trim(input_array[i]).length == 0){ 
+                continue;
+            }
+            if (input_array[i] != inputHistory[inputHistory.length - 1]) {
+                // Don't want to save the same command twice
+                inputHistory.push(input_array[i])
+            }
         }
 
         // Reset counts
@@ -363,34 +371,105 @@ function createTerminal() {
 
     // -------------------------------------------------------------------------- //
 
+    term.ppWrite = function(str){
+        input_array = str.split(/[;\r\n]/);
+        console.log("ppWrite", input_array)
+        for(var i = 0; i < input_array.length; i++){
+            if($.trim(input_array[i]).length == 0) continue;
+            term.write(input_array[i])
+            if ((i + 1) < input_array.length) term.write('\r\n' + prompt);
+        }
+
+    }
+
     term.deleteLine = function () {
         // Deletes all of the text (asides from the prompt) on the current
         // line
-        console.log("term.deleteLine");
+        console.log("term.deleteLine", input.length, cols);
 
+        //if(input.length > 0){
+        //    for(var i = 0; i < Math.floor(input.length / cols); i++ ){
+        //        term.write('\u001B[2K'); //Delete a line
+        //        term.write('\x1b[F'); // Go back a line
+        //    }
+        //}
+
+        //term.write('\u001B[2K'); //Delete a line
+        //cursorIndex = 0
+        //term.bringCursorForwards(prompt.length + 1);
         while (cursorIndex < input.length + 1) {
             // Make sure we're at the end of the line
+            console.log("i:" + cursorIndex);
             term.bringCursorForwards(1)
             cursorIndex += 1
         }
+        var backline = false;
         while (input.length > 0) {
-            term.write('\b \b')
+            if (((input.length + 1 + prompt.length) % cols) == 0){ 
+                backline = true;
+                term.write('\x1b[F'); // Go back a line
+                term.write('\u001B[' + cols + 'G'); // Move to cursor to the end of the line
+                term.write('\u001B[K'); // Delete the last character
+
+            }
             input = input.slice(0, -1)
+            term.write('\b \b')
+        
         }
+        
+        if (backline) term.bringCursorForwards(1)
+
+
+
+        // Original
+        //while (cursorIndex < input.length + 1) {
+        //    // Make sure we're at the end of the line
+        //    term.bringCursorForwards(1)
+        //    cursorIndex += 1
+        //}
+        //while (input.length > 0) {
+        //    term.write('\b \b')
+        //    input = input.slice(0, -1)
+        //}
         cursorIndex = 0
     }
 
 
     term.bringCursorBackwards = function (n) {
-        console.log("term.bringCursorBackwards");
-        // Brings the cursor backwards by n
-        for (var i = 0; i < n; i++) {
-            term.write('\x1b[D')
+        console.log("term.bringCursorBackwards", n);
+        console.log(input);
+        console.log(input.length);
+        console.log(cursorIndex);
+        console.log(rows, cols) ;
+        var backline = false;
+        if (((cursorIndex + prompt.length) % cols) == 0){ 
+            term.write('\x1b[F'); // Go back a line
+            term.write('\u001B[' + cols + 'G'); // Move to cursor to the end of the line
+            term.write('\x1b[C');
+            //term.bringCursorForwards(cols+1);
+            backline = true;
         }
+
+        if(!backline) term.write('\x1b[D');
+        
+        if(n > 1) return term.bringCursorBackwards(n-1);
+
+        // Brings the cursor backwards by n
+        //for (var i = 0; i < n; i++) {
+        //    term.write('\x1b[D')
+        //}
     }
 
     term.bringCursorForwards = function (n) {
         console.log("term.bringCursorForwards");
+        console.log(input);
+        console.log(input.length);
+        console.log(cursorIndex);
+        console.log(rows, cols)
+        //If multi-line move cursor to next line 
+        if (((cursorIndex + prompt.length) % (cols + 1)) == 0){ 
+            term.write('\x1b[E')
+        }
         // Brings the cursor forward by n
         for (var i = 0; i < n; i++) {
             term.write('\x1b[C')
@@ -462,12 +541,13 @@ function createTerminal() {
                 pki = cursorIndex
 
                 // Clear the line
-                term.deleteLine()
-                term.write('\b \b')
+                ////term.deleteLine()
+                ////term.write('\b \b')
 
                 // Write the new user input
                 paste_input = pre + data + post
-                term.write(paste_input)
+                ////term.write(paste_input)
+                term.ppWrite(paste_input)
 
                 // Bring the cursor back to where it should be after pasting
                 if((i + 1) == chunks.length){
@@ -524,10 +604,20 @@ function createTerminal() {
         } else if (ev.key == 'Backspace') {
             // backspace
             console.log("key: Backspace"); 
+                    // NEW BIT
+                    console.log(cursorIndex, prompt.length, (cursorIndex + prompt.length), cols, ((cursorIndex + prompt.length) % cols));
+            if (((cursorIndex + prompt.length) % cols) == 0){ 
+                term.write('\x1b[F'); // Go back a line
+                term.write('\u001B[' + cols + 'G'); // Move to cursor to the end of the line
+                term.write('\u001B[K'); // Delete the last character
+                //term.bringCursorForwards(cols+1);
+            }
+                    // END NEW BIT
             if (input.slice(0, cursorIndex).length > 0) {
                 // So we don't delete the prompt
                 term.write('\b \b')
 
+                console.log(cursorIndex, prompt.length, (cursorIndex + prompt.length), cols, ((cursorIndex + prompt.length) % cols));
                 if (post.length == 0) {
                     // Cursor is at the end of the line, simply cut down
                     input = input.slice(0, -1)
@@ -548,13 +638,15 @@ function createTerminal() {
                     term.write(input)
                     term.bringCursorBackwards(post.length)
                     post = input.slice(cursorIndex-1)
+
                 }
                 cursorIndex -= 1
             }
 
         } else if (ev.key == 'ArrowLeft') {
-            console.log("key: ArrowLeft"); 
+            console.log("key: ArrowLeft", cursorIndex); 
             // Left arrow key
+            
             if (cursorIndex > 0) {
                 cursorIndex -= 1
                 term.bringCursorBackwards(1)
@@ -563,7 +655,7 @@ function createTerminal() {
         } else if (ev.key == 'ArrowRight') {
             console.log("key: ArrowRight"); 
             // Right arrow key
-            if (cursorIndex < input.length) {
+            if (cursorIndex < input.length + 1) {
                 cursorIndex += 1
                 term.bringCursorForwards(1)
                 post = input.slice(cursorIndex)
@@ -633,8 +725,9 @@ function createTerminal() {
             term.write("    ")
             cursorIndex += 4
         } else if (printable) {
-            console.log("key: printable"); 
+            console.log("key: printable", post, post.length); 
             // regular input
+            post = input.slice(cursorIndex);
             if (post.length > 0) {
                 console.log("    post.length > 0"); 
                 // We have to re-position post, or else we'll write over it
