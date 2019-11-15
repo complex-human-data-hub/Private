@@ -159,6 +159,36 @@ function _hide_loader(){
 }
 
 
+function fetchTerminalSize(term, parentElement){
+    console.log(term);
+    console.log("core", term._core);
+    MINIMUM_COLS = 60;
+    MINIMUM_ROWS = 25;
+    var actualCellWidth = term._core.renderer.dimensions.actualCellWidth;
+    var actualCellHeight = term._core.renderer.dimensions.actualCellHeight;
+    console.log(actualCellWidth,actualCellHeight);
+    var parentElementStyle = window.getComputedStyle(parentElement);
+    var parentElementHeight = parseInt(parentElementStyle.getPropertyValue('height'));
+    var parentElementWidth = Math.max(0, parseInt(parentElementStyle.getPropertyValue('width')));
+    var elementStyle = window.getComputedStyle(term.element);
+    var elementPadding = {
+      top: parseInt(elementStyle.getPropertyValue('padding-top')),
+      bottom: parseInt(elementStyle.getPropertyValue('padding-bottom')),
+      right: parseInt(elementStyle.getPropertyValue('padding-right')),
+      left: parseInt(elementStyle.getPropertyValue('padding-left'))
+    };
+    var elementPaddingVer = elementPadding.top + elementPadding.bottom;
+    var elementPaddingHor = elementPadding.right + elementPadding.left;
+    var availableHeight = parentElementHeight - elementPaddingVer;
+    var availableWidth = parentElementWidth - elementPaddingHor - term._core.viewport.scrollBarWidth;
+    var geometry = {
+      cols: Math.max(MINIMUM_COLS, Math.floor(availableWidth / actualCellWidth)),
+      rows: Math.max(MINIMUM_ROWS, Math.floor(availableHeight / actualCellHeight))
+    };
+    return geometry;
+
+}
+
 
 function createTerminal() {
 
@@ -170,12 +200,13 @@ function createTerminal() {
     // looking forward to xterm.js doing the work here with 'addons/fit'
    
     var winwidth = $(window).width() ;
-    cols = Math.min(parseInt(winwidth/10, 10), 140);
+    var cols = Math.min(parseInt(winwidth/10, 10), 140);
     if( winwidth > 1200) cols = 95;
     if( winwidth > 1300) cols = 110;
     if( winwidth > 1400) cols = 120;
     if( winwidth > 1600) cols = 130;
     if( winwidth > 1700) cols = 140;
+
 
     if (! $("#size-not-lg").is(":visible")){
         // We have a large screen
@@ -187,7 +218,19 @@ function createTerminal() {
     // Initiate terminal
     term = new Terminal({cursorBlink: true, cursorStyle: "bar", cols:cols, rows:rows})
     term.open(document.getElementById('terminal'))
+
+    geometry = fetchTerminalSize(term, document.getElementById('terminal'));
+    console.log("geometry", geometry);
+    $("#terminal").empty();
+    term = new Terminal({cursorBlink: true, cursorStyle: "bar", cols:geometry.cols, rows:geometry.rows})
+    term.open(document.getElementById('terminal'))
     term.writeln(" Welcome to Private")
+
+    console.log("new term", term);
+    cols = geometry.cols;
+    rows = geometry.rows;
+
+    //console.log("actualCellWidth", term._core._renderer.dimensions.actualCellWidth);
 
     var prompt = ' > ';
     term.prompt = function () {
