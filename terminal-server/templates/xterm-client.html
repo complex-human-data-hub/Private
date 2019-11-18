@@ -362,7 +362,8 @@ function createTerminal() {
             console.log(term._record_function);
             if( term.end_def(input)){
                 console.log("def exit");
-                term.send_cmd(term._record_function)
+                console.log("send_cmd function", term._record_function);
+                term.send_cmd(term._record_function);
                 term._record_function = null;
             }else{
                 callback();
@@ -379,8 +380,11 @@ function createTerminal() {
         
 
         var cmd = $.trim(input);
-        
-        term.send_cmd(cmd);
+        if(cmd.length > 0){
+            console.log("sending command", cmd);
+            term.send_cmd(cmd);
+        }
+
         $("#cmd").val("");
 
     }
@@ -544,7 +548,8 @@ function createTerminal() {
             var d = m[0].split(/\r/);
             var start = d[0] + '\n';
             var end = d.slice(1);
-            var df = start + end.join(";");
+            // remove empty array items, and join with semi-colons 
+            var df = start + end.filter(function(x){return $.trim(x).length > 0}).join(";") + ";";
             chunks.push(df);
 
 
