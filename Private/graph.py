@@ -293,7 +293,7 @@ class graph:
             else:
                 return all(self.checkPrivacyDown(child) for child in probChildren)
 
-    def compute_privacy(self, sub_graphs=None):
+    def compute_privacy(self, sub_graphs):
 
         self.acquire("computePrivacy")
 
@@ -1127,7 +1127,7 @@ except Exception as e:
                 names.add(name)
         return(names)
 
-    def compute(self, sub_graphs=None):
+    def compute(self, sub_graphs):
         # Need to reconnect if we are close to the tcp_keep_alive timout
         # otherwise OS will dropout connection
         self.check_ppserver_connection()
