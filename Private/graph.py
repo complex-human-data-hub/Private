@@ -1,3 +1,4 @@
+import hashlib
 import multiprocessing
 import pp
 import reprlib
@@ -292,12 +293,12 @@ class graph:
             else:
                 return all(self.checkPrivacyDown(child) for child in probChildren)
 
-    def computePrivacy(self):
+    def compute_privacy(self, sub_graphs=None):
 
         self.acquire("computePrivacy")
 
         # set all variables except builtins to unknown_privacy
-        self.setAllUnknown()
+        self.set_all_unknown(sub_graphs)
 
         self.computeGraphPrivacy()
         self.computeProbabilisticPrivacy()
@@ -375,12 +376,12 @@ class graph:
             # check dependencies to see if other variables need to be made stale
             #print name, self.deterministicParents(name)
             for parent in self.deterministicParents(name): # parents via deterministic links
-                #print name, " det ", self.deterministicParents(name)
+                # print name, " det ", self.deterministicParents(name)
                 if parent not in self.stale[user]:
                     self.changeState(user, parent, "stale")
             for child in self.probabilisticChildren(name): # children via probabilistic links
-                #print name, " prob ", self.deterministicParents(name)
-                if child not in self.stale[user] and child not in self.builtins:
+                # print name, " prob ", self.probabilisticChildren(name)
+                if child not in self.stale[user] and child not in self.builtins and child not in (self.deterministic & self.uptodate[user]):
                     self.changeState(user, child, "stale")
         else:
             raise Exception("Exception: " + "Unknown state %s in changeState" % newstate)
@@ -396,15 +397,15 @@ class graph:
             self.unknown_privacy.discard(name)
             self.public.add(name)
 
-    def setAllUnknown(self):
+    def set_all_unknown(self, sub_graphs):
 
         # set all variables except builtins to unknown privacy
-
-        for name in self.deterministic | self.probabilistic:
-            self.private.discard(name)
-            self.public.discard(name)
-            self.unknown_privacy.discard(name)
-            self.unknown_privacy.add(name)
+        for sub_graph in sub_graphs.values():
+            for name in (sub_graph & (self.deterministic | self.probabilistic)):
+                self.private.discard(name)
+                self.public.discard(name)
+                self.unknown_privacy.discard(name)
+                self.unknown_privacy.add(name)
 
     def setPrivacy(self, name, privacy):
         self.private.discard(name)
@@ -461,7 +462,7 @@ class graph:
             self.pyMC3code[name] = pyMC3code
             if dependson != []:
                 self.probdependson[name] = set(dependson)
-            for n in self.probabilistic - self.deterministic:
+            for n in (self.probabilistic - self.deterministic) & self.get_sub_graph(name):
                 for user in self.userids:
                     self.changeState(user, n, "stale")
             if hier:
@@ -474,10 +475,9 @@ class graph:
             for user in self.userids:
                 self.changeState(user, name, "stale")
         self.release()
-        self.computePrivacy() # need computePrivacy before compute so we don't compute public variables for each participant
-        self.compute()
-        self.computePrivacy() # every definition could change the privacy assignments
-
+        self.compute_privacy(self.get_sub_graphs(name)) # need computePrivacy before compute so we don't compute public variables for each participant
+        self.compute(self.get_sub_graphs(name))
+        self.compute_privacy(self.get_sub_graphs(name)) # every definition could change the privacy assignments
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
@@ -497,9 +497,9 @@ class graph:
         for user in self.userids:
             self.changeState(user, name, "stale")
         self.release()
-        self.computePrivacy()  # need computePrivacy before compute so we don't compute public variables for each participant
-        self.compute()
-        self.computePrivacy()
+        self.compute_privacy(self.get_sub_graphs(name))  # need computePrivacy before compute so we don't compute public variables for each participant
+        self.compute(self.get_sub_graphs(name))
+        self.compute_privacy(self.get_sub_graphs(name))
 
     def delete(self, name):
         self.acquire("delete "+name)
@@ -530,7 +530,7 @@ class graph:
             res = name + " not found."
 
         self.release()
-        self.computePrivacy() # every delete could change the privacy assignments
+        self.compute_privacy(self.get_sub_graphs(name)) # every delete could change the privacy assignments
         return res
 
 #  def has_descendants(self, name):
@@ -850,7 +850,140 @@ class graph:
         recursive_helper(node)
         return result
 
-    def constructPyMC3code(self, user=None):
+    def generate_graph(self):
+        """
+        Generates a directed graph from the available variables
+
+        :return: Returns a networkX graph
+        """
+        g = nx.DiGraph()
+        visited, stack = set(), list(self.probabilistic | self.deterministic)
+        while stack:
+            vertex = stack.pop()
+            g.add_node(vertex)
+            if vertex not in visited:
+                visited.add(vertex)
+                for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
+                    g.add_edge(vertex, k)
+                    stack.append(k)
+        return g
+
+    def get_all_sub_graphs(self, nodes_subset=None):
+        """
+        Identified disconnected probabilistic sub graphs.
+
+        :return: Dictionary of sub graphs sub_graph_id: list of node names
+        """
+        var_graph = self.generate_graph()
+        nodes = nodes_subset if nodes_subset else var_graph.nodes
+        sub_graph_id = 0
+        node_state = {}
+        sub_graphs = {}
+        not_visited, visited = 0, 1
+
+        for node in nodes:
+            node_state[node] = not_visited
+
+        def get_connected(n, graph_id):
+            if node_state[n] == not_visited:
+                sub_graphs[graph_id].add(n)
+                node_state[n] = visited
+                descendants = nx.algorithms.descendants(var_graph, n)
+                ancestors = nx.algorithms.ancestors(var_graph, n)
+
+                for c in set(descendants) | set(ancestors):
+                    if c not in self.builtins:
+                        sub_graphs[graph_id].add(c)
+                    if c in self.probabilistic:
+                        if c not in node_state:
+                            node_state[c] = not_visited
+                        get_connected(c, graph_id)
+
+        for node in nodes:
+            if node_state[node] != visited and node in (self.probabilistic - self.deterministic):
+                sub_graphs[sub_graph_id] = set()
+                get_connected(node, sub_graph_id)
+                sub_graph_id += 1
+
+        return_sub_graphs = {}
+        for key, value in sub_graphs.items():
+            return_sub_graphs[self.get_graph_id(value)] = value
+
+        return return_sub_graphs
+
+    def get_sub_graphs(self, node):
+        """
+        Return all the sub graphs where the variable is present
+
+        :param node: name of the variable, string
+        :return: dictionary of sub graphs
+        """
+        sub_graphs = self.get_all_sub_graphs()
+        result_dict = {}
+        for sub_graph_id, sub_graph in sub_graphs.items():
+            if node in sub_graph:
+                result_dict[sub_graph_id] = sub_graph
+        return result_dict
+
+    def get_sub_graph(self, node):
+        """
+        Returns the first sub graph for the given node (name), can be sued for probabilistic variables
+
+        :param node: node (name of a variable)
+        :return: set of nodes (strings)
+        """
+        sub_graphs = self.get_all_sub_graphs([node])
+        for sub_graph_id, sub_graph in sub_graphs.items():
+            if node in sub_graph:
+                return sub_graph
+        return set()
+
+    def is_sub_graph_complete(self, user, sub_graph):
+        """
+        Check if all required dependencies of the sub graph is up-to-date
+
+        :param user: user name
+        :param sub_graph: list of variables
+        :return: boolean
+        """
+        result = True
+        for name in sub_graph & self.probabilistic:
+            if name not in self.uptodate[user]:
+                result = result and self.checkdown(user, name)
+                result = result and self.checkup(user, name)
+        return result
+
+    @staticmethod
+    def get_graph_id(nodes):
+        """
+        Get a ID for the custer based on the nodes
+        :param nodes: set of variables in the cluster
+        :return: string
+        """
+        hash_object = hashlib.sha384(str(nodes))
+        hex_dig = hash_object.hexdigest()
+        return hex_dig
+
+    def sub_graph_job_count(self, sub_graph_id, sub_graph):
+        """
+        Counts the number of active jobs for a given sub graph. This is tightly coupled to the job name (which is not
+        good) and job names should not be changed without changing this function
+        :param sub_graph_id: generated ID
+        :param sub_graph: set() of variable names
+        :return: count (int)
+        """
+        job_count = 0
+        for job_names in self.jobs.keys():
+            if job_names.endswith(str(sub_graph_id)):
+                job_count += 1
+            else:
+                for node in sub_graph:
+                    if job_names.endswith(node):
+                        job_count += 1
+
+        return job_count
+
+    def constructPyMC3code(self, user=None, sub_graph=()):
         #try:
             locals = {}
             loggingcode = """
@@ -869,7 +1002,7 @@ try:
 
             # extract index variables
 
-            for indexvariable in list(set(self.hierarchical.values())):
+            for indexvariable in list(set(self.hierarchical.values()) & sub_graph):
                 code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
                 code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
                 if user:
@@ -895,6 +1028,8 @@ try:
             # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
             probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
+            if sub_graph:
+                probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
 
             for name in probabilistic_only_names:
                 code += '        exception_variable = "%s"\n' % name
@@ -904,7 +1039,7 @@ try:
                 else:
                     code += "        " + self.pyMC3code[name] % ""+ "\n"
 
-            observed_names = list(self.probabilistic & self.deterministic)
+            observed_names = list(self.probabilistic & self.deterministic & sub_graph)
             for name in observed_names:
                 code += '        exception_variable = "%s"\n' % name
                 obsname = "__private_%s_observed" % name
@@ -992,8 +1127,7 @@ except Exception as e:
                 names.add(name)
         return(names)
 
-
-    def compute(self):
+    def compute(self, sub_graphs=None):
         # Need to reconnect if we are close to the tcp_keep_alive timout
         # otherwise OS will dropout connection
         self.check_ppserver_connection()
@@ -1017,30 +1151,34 @@ except Exception as e:
 
 
             #self.log.debug("self.jobs: " + str(self.jobs.keys()))
-            if len(self.jobs) == 0: # don't start a sampler until all other jobs have finished
-                sampler_names = self.variablesToBeSampled()
-                self.log.debug("sampler names: " + str(sampler_names))
-                for user in self.userids:
-                    #print user, user == "All", sampler_names - self.public != set()
-                    if user == "All" or sampler_names - self.public != set():
-                        if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-                            self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
-                            self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
-                            if self.canRunSampler(user): # all necessary dependencies for all probabilistic variables have been defined or computed
-                                for name in sampler_names:
-                                    self.changeState(user, name, "computing")
-                                    if name in self.globals[user]:
-                                        self.globals[user][name] = None  # remove any previous samples that have been calculated
-                                self.samplerexception[user] = {}
+            for sub_graph_id, sub_graph in sub_graphs.items():
+                if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
+                    sampler_names = self.variablesToBeSampled()
+                    self.log.debug("sampler names: " + str(sampler_names))
+                    for user in self.userids:
+                        #print user, user == "All", sampler_names - self.public != set()
+                        if user == "All" or sampler_names - self.public != set():
+                            if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+                                self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
+                                self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
+                                if self.is_sub_graph_complete(user, sub_graph):
+                                    sampler_names = sub_graph - self.deterministic
+                                    if sampler_names & self.uptodate[user] == sampler_names:
+                                        continue
+                                    for name in sampler_names:
+                                        self.changeState(user, name, "computing")
+                                        if name in self.globals[user]:
+                                            self.globals[user][name] = None  # remove any previous samples that have been calculated
+                                    self.samplerexception[user] = {}
 
-                                jobname = "Sampler:  " + user
-                                locals, sampler_code =  self.constructPyMC3code(user)
-                                job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
-                                # Sleep was causing the hang, need to figure out if we
-                                # really need it
-                                #time.sleep(1)
-                    self.SamplerParameterUpdated = False
+                                    jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
+                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+                                    job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
+                                    self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
+                                    # Sleep was causing the hang, need to figure out if we
+                                    # really need it
+                                    #time.sleep(1)
+                        self.SamplerParameterUpdated = False
         except Exception as e:
             print("in compute " + str(e))
             traceback.print_exc()
@@ -1048,9 +1186,9 @@ except Exception as e:
 
     def callback(self, returnvalue):
         self.acquire("callback")
+        jobname, name, user, value = Private.s3_helper.read_results_s3(
+            returnvalue) if Private.config.s3_integration else returnvalue
         try:
-            jobname, name, user, value = Private.s3_helper.read_results_s3(
-                returnvalue) if Private.config.s3_integration else returnvalue
             if isinstance(value, Exception):
                 if user == "All":
                     self.globals[user][name] = str(value)
@@ -1076,9 +1214,9 @@ except Exception as e:
             self.log.debug(str(e))
 
         self.release()
-        self.computePrivacy()
-        self.compute()
-        self.computePrivacy()
+        self.compute_privacy(self.get_sub_graphs(name))
+        self.compute(self.get_sub_graphs(name))
+        self.compute_privacy(self.get_sub_graphs(name))
 
     def haveSamples(self, user):
         # have to allow for possibility that some probabilistic variables are not retained and therefore won't have samples
@@ -1173,17 +1311,16 @@ except Exception as e:
         self.log.debug("samplercallback: delete jobs ...done")
 
         self.release()
-
-        self.computePrivacy()
-        self.compute()
-        self.computePrivacy()
+        self.compute_privacy(self.get_all_sub_graphs(names))
+        self.compute(self.get_all_sub_graphs(names))
+        self.compute_privacy(self.get_all_sub_graphs(names))
 
     def manifoldprivacycallback(self, returnvalue):
         sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
         step_size = max(int(sample_size / Private.config.max_sample_size), 1)
+        self.acquire("manifoldprivacycallback")
+        jobname, name, user, d = returnvalue
         try:
-            self.acquire("manifoldprivacycallback")
-            jobname, name, user, d = returnvalue
             self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
             self.numberOfManifoldPrivacyProcessesComplete[name] = self.numberOfManifoldPrivacyProcessesComplete.get(name, 0) + 1
             if self.privacySamplerResults.get(name, None) != "private":
@@ -1207,7 +1344,7 @@ except Exception as e:
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
         self.release()
-        self.computePrivacy()
+        self.compute_privacy(self.get_sub_graphs(name))
 
     def showSamplerResults(self):
         res = str(len(self.privacySamplerResults)) + " results\n"
