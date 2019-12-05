@@ -7,7 +7,6 @@ from collections import OrderedDict, deque
 import logging
 import matplotlib.pyplot as plt
 import networkx as nx
-
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
 import copy
@@ -929,23 +928,27 @@ except Exception as e:
         _log.debug("PyMC3 Code Exception: " + str(e))
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Error " + str(e) + "\\n")
-            fp.write(traceback.format_exc() + "\\n")
-        ind = e.args[0].find(":")
-        if ind != -1:
-            estring = e.args[0][0:ind]
-        else:
-            estring = e.args[0]
+        #ind = min( e.args[0].find(":"), e.args[0].find("\\n"))
+        #ind = e.args[0].find(":")
+        #if ind != -1:
+        #    estring = e.args[0][0:ind]
+        #else:
+        #    estring = e.args[0]
+        #newErrorString = estring   # do we need to do this?
 
-        newErrorString = estring   # do we need to do this?
-        e.args = (newErrorString,)
-        __private_result__ = (e, exception_variable, basic_model)
+        estring = e.args[0]
+        newErrorString = estring[estring.rfind("\\n")+1:]
+        # Need to create a new Exception here 
+        # some exceptions were cpickle when pp passed the result back to the master
+        return_exception = Exception(newErrorString)
+        __private_result__ = (return_exception, exception_variable, None)
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished processing Error \\n")
     except Exception as e2:
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Error2 " + str(e2) + "\\n")
             fp.write(traceback.format_exc() + "\\n")
-        __private_result__ = (e2, exception_variable, basic_model)
+        __private_result__ = (e2, exception_variable, None)
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished processing Error2 \\n")
 
@@ -1036,7 +1039,7 @@ except Exception as e:
                                 jobname = "Sampler:  " + user
                                 locals, sampler_code =  self.constructPyMC3code(user)
                                 job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback)
+                                self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback, callbackargs=(jobname,))
                                 # Sleep was causing the hang, need to figure out if we
                                 # really need it
                                 #time.sleep(1)
@@ -1085,25 +1088,17 @@ except Exception as e:
         # so see if any of the probabilistic variables have samples
         return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
 
-    def samplercallback(self, returnvalue):
+    def samplercallback(self, callback_args, returnvalue):
         numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
+
         myname, user, names, value, exception_variable, model = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
-        if user == "All":
-            self.log.debug("samplercallback: All ")
-            self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
-            self.log.debug("samplercallback: All gelmanRubin ")
-            self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
-            self.log.debug("samplercallback: All effectiveN ")
-            self.globals[user]['waic'] =  pm.stats.waic(value, model)
-            self.log.debug("samplercallback: All waic ")
-            self.globals[user]['loo'] =  pm.stats.loo(value, model)
-            self.log.debug("samplercallback: All loo ...done")
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
-                self.globals[user][name] = ""
+                # ** Might need to remove the Exception message here
+                self.globals[user][name] = str(value)
                 self.changeState(user, name, "exception")
             if exception_variable != "No Exception Variable":
                 m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
@@ -1115,7 +1110,6 @@ except Exception as e:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         else: # successful sampler return
-            self.log.debug("samplercallback: successful return ")
             try:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
@@ -1129,9 +1123,11 @@ except Exception as e:
 
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
-                self.log.debug("samplercallback: whichsamplersarecomplete ")
                 if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
-                    self.log.debug("samplercallback: whichsamplersarecomplete - All ")
+                    self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
+                    self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
+                    self.globals[user]['waic'] =  pm.stats.waic(value, model)
+                    self.globals[user]['loo'] =  pm.stats.loo(value, model)
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
@@ -1143,7 +1139,6 @@ except Exception as e:
                                           jobname = "Manifold: " + u + " " + name
                                           self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
 
-                    self.log.debug("samplercallback: whichsamplersarecomplete - All ...done")
                 else: # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
                     if self.haveSamples("All"):
@@ -1156,7 +1151,6 @@ except Exception as e:
                                     else:
                                         jobname = "Manifold: " + user + " " + name
                                         self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
-                    self.log.debug("samplercallback: whichsamplersarecomplete - Users ...done")
                                          
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
@@ -1292,6 +1286,7 @@ def samplerjob(jobname, user, names, code, globals, locals, job_id):
         return return_value
 
     except Exception as e:
+        # This doesn't seem to be the right size, should be 6 items
         return (jobname, user, names, e, "No Exception Variable")
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
