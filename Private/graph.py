@@ -1230,14 +1230,19 @@ except Exception as e:
             returnvalue) if Private.config.s3_integration else returnvalue
         if user == "All":
             self.log.debug("samplercallback: All ")
-            self.globals[user]['gelmanRubin'] = pm.diagnostics.gelman_rubin(value)
-            self.log.debug("samplercallback: All gelmanRubin ")
-            self.globals[user]['effectiveN'] =  pm.diagnostics.effective_n(value)
-            self.log.debug("samplercallback: All effectiveN ")
-            self.globals[user]['waic'] =  pm.stats.waic(value, model)
-            self.log.debug("samplercallback: All waic ")
-            self.globals[user]['loo'] =  pm.stats.loo(value, model)
-            self.log.debug("samplercallback: All loo ...done")
+            gelman_rubin = pm.diagnostics.gelman_rubin(value)
+            effective_n = pm.diagnostics.effective_n(value)
+            waic = pm.stats.waic(value, model)
+            loo = pm.stats.loo(value, model)
+            for stat_key in gelman_rubin:
+                self.globals[user]['gelmanRubin'][stat_key] = gelman_rubin[stat_key]
+                self.log.debug("samplercallback: All gelmanRubin")
+                self.globals[user]['effectiveN'][stat_key] = effective_n[stat_key]
+                self.log.debug("samplercallback: All effectiveN ")
+                self.globals[user]['waic'][stat_key] = waic
+                self.log.debug("samplercallback: All waic ")
+                self.globals[user]['loo'][stat_key] = loo
+                self.log.debug("samplercallback: All loo ...done")
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
