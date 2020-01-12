@@ -93,7 +93,7 @@ def private_list():             return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
 def list_index():               return [(expression, Optional(colon, Optional(expression)), Optional(colon, Optional(expression))), (colon, Optional(expression), Optional(colon, Optional(expression)))]
 def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), private_list, atom], ZeroOrMore(leftsquarebrack, list_index, ZeroOrMore(comma, list_index), rightsquarebrack)
-def term():                     return factor, ZeroOrMore(["*","/"], factor)
+def term():                     return factor, ZeroOrMore(["*", "//", "/", "%"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-"], term)
 def comparison():               return simple_expression, ZeroOrMore(relation, simple_expression)
 def boolean_expression():       return comparison, ZeroOrMore(["and","or"], comparison)
