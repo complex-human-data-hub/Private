@@ -100,7 +100,7 @@ def boolean_expression():       return comparison, ZeroOrMore(["and","or"], comp
 def named_argument():           return identifier, "=", expression
 def argument():                 return [named_argument, expression]
 def function_call():            return identifier, "(", [(ZeroOrMore(argument, ","), argument), ""], ")"
-def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def method_call():              return dottedidentifier, "(", [(ZeroOrMore(expression, ","), expression), ""], ")"
 def indexed_variable():         return dottedidentifier, leftsquarebrack, ZeroOrMore(expression, ","), expression, rightsquarebrack, ZeroOrMore([(".", [identifier, indexed_variable, dottedidentifier]), ("[", expression, "]")])
 def expression():               return [boolean_expression, simple_expression]
 def deterministic_assignment(): return identifier, "=", expression

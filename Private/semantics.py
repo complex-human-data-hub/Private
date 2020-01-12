@@ -154,7 +154,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_method_call(self, node, children):
         fn = children[0].code
-        return result("method_call", fn + "(" + ", ".join(c.code for c in children[1:]) + ")", children)
+        return result("method_call", fn + "(" + ", ".join(c.code for c in children[1:] if c != u'') + ")", children)
 
     def visit_indexed_variable(self, node, children):
         fn = children[0].code
