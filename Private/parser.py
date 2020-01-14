@@ -93,14 +93,14 @@ def private_list():             return [list_comprehension, enumerated_list]
 def bracketed_expression():     return "(", expression, ")"
 def list_index():               return [(expression, Optional(colon, Optional(expression)), Optional(colon, Optional(expression))), (colon, Optional(expression), Optional(colon, Optional(expression)))]
 def factor():                   return [function_call, method_call, indexed_variable, bracketed_expression, (notsym, factor), private_list, atom], ZeroOrMore(leftsquarebrack, list_index, ZeroOrMore(comma, list_index), rightsquarebrack)
-def term():                     return factor, ZeroOrMore(["*","/"], factor)
+def term():                     return factor, ZeroOrMore(["*", "//", "/", "%"], factor)
 def simple_expression():        return Optional(["+", "-"]), term, ZeroOrMore(["+", "-"], term)
 def comparison():               return simple_expression, ZeroOrMore(relation, simple_expression)
 def boolean_expression():       return comparison, ZeroOrMore(["and","or"], comparison)
 def named_argument():           return identifier, "=", expression
 def argument():                 return [named_argument, expression]
 def function_call():            return identifier, "(", [(ZeroOrMore(argument, ","), argument), ""], ")"
-def method_call():              return dottedidentifier, "(", ZeroOrMore(expression, ","), expression, ")"
+def method_call():              return dottedidentifier, "(", [(ZeroOrMore(expression, ","), expression), ""], ")"
 def indexed_variable():         return dottedidentifier, leftsquarebrack, ZeroOrMore(expression, ","), expression, rightsquarebrack, ZeroOrMore([(".", [identifier, indexed_variable, dottedidentifier]), ("[", expression, "]")])
 def expression():               return [boolean_expression, simple_expression]
 def deterministic_assignment(): return identifier, "=", expression
