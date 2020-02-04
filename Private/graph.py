@@ -1175,7 +1175,7 @@ except Exception as e:
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
                                     job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id)
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id, resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                         self.SamplerParameterUpdated = False
         except Exception as e:
