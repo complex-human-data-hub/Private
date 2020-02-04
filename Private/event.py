@@ -1,5 +1,6 @@
+from __future__ import absolute_import
 import pprint
-from file_iterator import FileIterator
+from .file_iterator import FileIterator
 
 pp = pprint.PrettyPrinter()
 
@@ -20,7 +21,7 @@ class Event:
         return pp.pformat(self.__dict__)
 
     def convert_data_files(self):
-        for key in self.__dict__.keys():
+        for key in list(self.__dict__):
             if key.endswith("DataFiles"):
                 self.__dict__[key + "Itr"] = FileIterator(self.__dict__[key], aws_profile=self.aws_profile)
 

@@ -1,9 +1,10 @@
+from __future__ import print_function
 import logging
 import os
 
 mypid = os.getpid()
 
-print "PID = ", mypid
+print("PID = ", mypid)
 logfile = "/tmp/private-%d.log" % mypid
 
 # socket timeout in seconds which is also the maximum time a remote job could be executed. Increase this value if you
