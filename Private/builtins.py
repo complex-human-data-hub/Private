@@ -1,17 +1,19 @@
+from __future__ import print_function
+from __future__ import absolute_import
 #import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
 #matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
                        # note these lines need to be at top of script
 import numpy.random
 import numpy
-from event import Event
+from .event import Event
 import pymc3 as pm
 import copy
 import theano.tensor
 import math
-from config import numpy_seed
-import preprocessing as pre
-import plotting as plot
-from demo_experiment_events import ExpEvents
+from .config import numpy_seed
+from . import preprocessing as pre
+from . import plotting as plot
+from .demo_experiment_events import ExpEvents
 
 #from demo_events import Events, DemoEvents
 
@@ -20,7 +22,8 @@ from demo_experiment_events import ExpEvents
 # can be replace by a custom Source class to suit 
 # the researchers purposes
 
-from private_data import Source
+from .private_data import Source
+from functools import reduce
 
 data_source = Source()
 Events = data_source.get_events()
@@ -277,7 +280,7 @@ def private_chr(x):
 
 
 def private_cmp(x, y):
-    return cmp(x, y)
+    return ((x > y) - (x < y))
 
 
 def private_complex(real, *imag):
@@ -353,7 +356,7 @@ def private_list(x):
 
 
 def private_long(x):
-    return long(x)
+    return int(x)
 
 
 def private_map(function, iterable):  # cannot use as we can't take functions in Private
@@ -445,11 +448,11 @@ def private_type(x):
 
 
 def private_unichr(x):
-    return unichr(x)
+    return chr(x)
 
 
 def private_unicode(obj):
-    return unicode(obj)
+    return str(obj)
 
 
 def private_vars(p_object=None):
@@ -457,7 +460,7 @@ def private_vars(p_object=None):
 
 
 def private_xrange(start, stop, *step):
-    return xrange(start, stop, *step)
+    return range(start, stop, *step)
 
 
 def private_zip(*iterables):
@@ -742,7 +745,7 @@ def setGlobals(events=None):
     else:
         builtins["Events"] = Events
         builtins["DemoEvents"] = DemoEvents
-        print len(DemoEvents)
+        print(len(DemoEvents))
 
     # create a new set of globals with data that removes each user
 
