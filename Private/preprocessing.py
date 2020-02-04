@@ -20,7 +20,7 @@ def fft(file_itr, segment_size):
     file_arrays = []
     file_itr.reset()
     for count in range(0, file_itr.get_file_count()):
-        byte_file = file_itr.next()
+        byte_file = next(file_itr)
         str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
         file_arrays.append(str_file)
     complete_array = np.concatenate(file_arrays)
@@ -59,7 +59,7 @@ def mfcc(file_itr):
     mfcc_size = 200 * 13
     mfcc_reshaped = np.empty([file_itr.get_file_count(), mfcc_size], dtype=np.float64)
     for count in range(0, file_itr.get_file_count()):
-        byte_file = file_itr.next()
+        byte_file = next(file_itr)
         if byte_file != "":
             str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
             mfcc_reshaped[count, :] = str_file.reshape((1, mfcc_size))

@@ -1,8 +1,9 @@
+from __future__ import absolute_import
 import logging
 import dill as pickle
 import boto3
 from botocore.exceptions import ClientError
-from config import s3_log_level, s3_bucket_name
+from .config import s3_log_level, s3_bucket_name
 from boto3.session import Session
 import json 
 from datetime import datetime
@@ -17,7 +18,7 @@ logging.getLogger('urllib3').setLevel(s3_log_level)
 
 def _debug(msg):
     with open('/tmp/s3-debug.log', 'a') as fp:
-        if not isinstance(msg, basestring):
+        if not isinstance(msg, str):
             msg = json.dumps(msg, indent=4, sort_keys=True, default=str)
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
