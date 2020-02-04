@@ -1,9 +1,10 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import sys
-import io
 import traceback
 import logging
 import argparse
-from config import logfile
+from Private.config import logfile
 
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", nargs="?", default = None)
@@ -13,8 +14,8 @@ _log = logging.getLogger("Private")
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log.debug("============================= Starting new interpreter =============================")
 
-from parser import PrivateParser
-from semantics import PrivateSemanticAnalyser
+from Private.parser import PrivateParser
+from Private.semantics import PrivateSemanticAnalyser
 
 #from private_data import Source
 #from graph import graph
@@ -45,29 +46,29 @@ def execute(line):
 def load_code(filename):
     f = open(filename, "r").readlines()
     for line in f:
-        print line[0:-1]
+        print(line[0:-1])
         execute(line[0:-1])
 
 parser = PrivateParser()
 if args.filename:
     load_code(args.filename)
 
-input_line = raw_input("> ")
+input_line = input("> ")
 while input_line != 'exit':
     function = ""
     if input_line.startswith("def"):
         function += input_line + '\n'
-        input_line = raw_input("> ")
+        input_line = input("> ")
         while input_line.startswith("    "):
             function += input_line + ';'
             if input_line.strip().startswith("return"):
                 break
-            input_line = raw_input("> ")
+            input_line = input("> ")
         execute(function)
     elif input_line != "":
         execute(input_line)
 
-    input_line = raw_input("> ")
+    input_line = input("> ")
 
 
 exit()
