@@ -27,7 +27,7 @@ def fft(file_itr, segment_size):
     if len(complete_array) == 0:
         return {}
     x = complete_array[0:4 * np.floor_divide(complete_array.shape[0], 4)]
-    x = x.reshape((np.divide(x.shape[0], 4), 4))
+    x = x.reshape((int(np.divide(x.shape[0], 4)), 4))
     time_stamps = (x[:, 3] - x[0, 3])/1000000000
     mag_sq = x[:, 0] * x[:, 0] + x[:, 1] * x[:, 1] + x[:, 2] * x[:, 2]
     if segment_size > 0:
