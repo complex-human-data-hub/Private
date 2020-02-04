@@ -1,14 +1,18 @@
+from __future__ import print_function
+
+import inspect
 import sys
 import io
 
 import numpy as np
 import networkx as nx
-import pp
+# import pp
 import time
 import pydot
 import graphviz
 import logging
 import importlib
+import json
 from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins, commands, plot_builtins
 
 from networkx.drawing.nx_pydot import write_dot
@@ -21,12 +25,13 @@ from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
 def _debug(msg):
     with open('/tmp/private-debug.log', 'a') as fp:
-        if not isinstance(msg, basestring):
+        if not isinstance(msg, str):
             msg = json.dumps(msg)
         fp.write("{}\n".format( msg ))
 
 
 #debug = False
+depGraph = graph()
 
 class result:
 
@@ -49,10 +54,10 @@ class result:
                             self.depend.extend(child.depend)
             elif type(depend) == str:
                 self.depend = [depend]
-            elif type(depend) == unicode:
+            elif type(depend) == str:
                 self.depend = [depend]
             else:
-                raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a unicode: " + str(depend) + " is a " + str(type(depend)))
+                raise Exception("result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a str: " + str(depend) + " is a " + str(type(depend)))
 
     def remove_dependencies(self, dependenciesToRemove):
         self.depend = list(set(self.depend) - set(dependenciesToRemove))
@@ -74,7 +79,7 @@ class InputVisitor(PTNodeVisitor):
         return result("distribution_name", node.value, node.value)
 
     def visit_dottedidentifier(self, node, children):
-        n = ".".join(c if type(c) == unicode else c.code for c in children)
+        n = ".".join(c if type(c) == str else c.code for c in children)
         # any dotted identifiers reduce to ther first identifier as a dependency
         #depend = children[0] if type(children[0]) == unicode else children[0].code
         return result("dottedidentifier", n, children[0].code)
@@ -99,7 +104,7 @@ class InputVisitor(PTNodeVisitor):
         if len(children) == 1:
             return result("identifier_list", children[0].code, children)
         else:
-            return result("identifier_list", ", ".join(c if type(c) == unicode else c.code for c in children), children)
+            return result("identifier_list", ", ".join(c if type(c) == str else c.code for c in children), children)
     def visit_enumerated_list(self, node, children):
         return result("enumerated_list", "[" + ", ".join([c.code for c in children]) + "]", children)
     def visit_list_comprehension(self, node, children):
@@ -113,43 +118,43 @@ class InputVisitor(PTNodeVisitor):
         return result("private_list", children[0].code, children)
 
     def visit_bracketed_expression(self, node, children):
-        return result("bracketed_expression", "(" + " ".join(c if type(c) == unicode else c.code for c in children) + ")", children)
+        return result("bracketed_expression", "(" + " ".join(c if type(c) == str else c.code for c in children) + ")", children)
 
     def visit_factor(self, node, children):
         if len(children) == 1:
             return result("factor", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("factor", code, children, evalcode=evalcode)
 
     def visit_list_index(self, node, children):
-        code = " ".join(c if type(c) == unicode else c.code for c in children)
-        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        code = " ".join(c if type(c) == str else c.code for c in children)
+        evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
         return result("list_index", code, children, evalcode=evalcode)
 
     def visit_comparison(self, node, children):
         if len(children) == 1:
             return result("comparison", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("comparison", code, children, evalcode=evalcode)
 
     def visit_boolean_expression(self, node, children):
         if len(children) == 1:
             return result("boolean_expression", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("boolean_expression", code, children, evalcode=evalcode)
 
     def visit_term(self, node, children):
         if len(children) == 1:
             return result("term", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("term", code, children, evalcode=evalcode)
 
     def visit_method_call(self, node, children):
@@ -190,16 +195,16 @@ class InputVisitor(PTNodeVisitor):
             fn = "tuple"
         elif fn in plot_builtins:
             argument_names = "\", \"".join(
-                c if type(c) == unicode else c.code for c in children[1:] if c.result_type != "named_argument")
+                c if type(c) == str else c.code for c in children[1:] if c.result_type != "named_argument")
             kw_argument_names = "\", \"".join(
-                c.replace("\"", "") if type(c) == unicode else c.code.replace("\"", "") for c in children[1:] if c.result_type == "named_argument")
+                c.replace("\"", "") if type(c) == str else c.code.replace("\"", "") for c in children[1:] if c.result_type == "named_argument")
             argument_names = "[\"" + argument_names + "\"], "
             if len(kw_argument_names)>0:
                 kw_argument_names = "[\"" + kw_argument_names + "\"], "
             else:
                 kw_argument_names = "[], "
         if len(children)> 1:
-            arguments = ", ".join(c if type(c) == unicode else c.code for c in children[1:])
+            arguments = ", ".join(c if type(c) == str else c.code for c in children[1:])
         else:
             arguments = ""
         code = fn + "(" + argument_names + kw_argument_names + arguments + ")"
@@ -210,16 +215,16 @@ class InputVisitor(PTNodeVisitor):
         if len(children) == 1:
             return result("simple_expression", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("simple_expression", code, children, evalcode=evalcode)
 
     def visit_expression(self, node, children):
         if len(children) == 1:
             return result("expression", children[0].code, children, evalcode = children[0].evalcode)
         else:
-            code = " ".join(c if type(c) == unicode else c.code for c in children)
-            evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+            code = " ".join(c if type(c) == str else c.code for c in children)
+            evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
             return result("expression", code, children, evalcode=evalcode)
 
     def visit_deterministic_assignment(self, node, children):
@@ -322,7 +327,7 @@ help: this message
             return
 
     def visit_func_det_assignment(self, node, children):
-        code = children[0].code + " = " + " ".join(c if type(c) == unicode else c.code for c in children[1:])
+        code = children[0].code + " = " + " ".join(c if type(c) == str else c.code for c in children[1:])
         res = result("func_deterministic_assignment", code, children, evalcode=code, defines=set(children[0].depend))
         res.remove_dependencies(children[0].depend)
         return res
@@ -332,8 +337,8 @@ help: this message
         for c in children:
             defines = defines.union(c.defines)
         children[1].remove_dependencies(children[1].depend)
-        code = " ".join(c if type(c) == unicode else c.code for c in children)
-        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        code = " ".join(c if type(c) == str else c.code for c in children)
+        evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
         return result("function_header", code, children, evalcode=evalcode, defines=defines)
 
     def visit_function_body_line(self, node, children):
@@ -346,8 +351,8 @@ help: this message
             return
 
     def visit_function_return(self, node, children):
-        code = " ".join(c if type(c) == unicode else c.code for c in children)
-        evalcode = " ".join(c if type(c) == unicode else c.evalcode for c in children)
+        code = " ".join(c if type(c) == str else c.code for c in children)
+        evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
         return result("function_return", code, children, evalcode=evalcode)
 
     def visit_function(self, node, children):
@@ -378,7 +383,7 @@ help: this message
             return
 
     def visit_value(self, node, children):
-        print self.depGraph.getValue(node.value, longFormat=True)
+        print(self.depGraph.getValue(node.value, longFormat=True))
 
     def visit_command_line_expression(self, node, children):
         return result("command_line_expression", str(self.depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
