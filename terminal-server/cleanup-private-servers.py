@@ -1,9 +1,10 @@
+from __future__ import print_function
 import grpc
 import json
-import service_pb2
-import service_pb2_grpc
+from . import service_pb2
+from . import service_pb2_grpc
 import time
-import private_config as config
+from . import private_config as config
 import shelvelock
 import sys
 
@@ -35,7 +36,7 @@ for key in server_shelf.keys():
     server = json.loads( server_shelf[key] )
     if server.get('port') in remove or killall or ((now - server.get('access_time')) >= config.server_timeout):
         req = {'cmd': 'clear'}
-        print server.get('port')
+        print(server.get('port'))
         rpc_stub = get_rpc_stub(config.private_host, server.get('port'))
         response = rpc_stub.Private(service_pb2.PrivateParcel(json=json.dumps(req), project_uid=config.project_uid))
         del server_shelf[key]
