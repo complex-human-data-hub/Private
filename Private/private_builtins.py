@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import numpy.random
 import numpy
-import preprocessing as pre
+from . import preprocessing as pre
 
 
 def Normal(mu, sigma, length):
