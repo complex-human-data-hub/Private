@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import json
-import s3_helper
-from event import Event
+from . import s3_helper
+from .event import Event
 
 
 class EventsIterator:

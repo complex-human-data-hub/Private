@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 from datetime import datetime
 import os
 
-import s3_helper
+from . import s3_helper
 SOURCE_TYPE_S3 = 's3'
 SOURCE_TYPE_LOCAL_FILE_SYSTEM = 'localfs'
 SOURCE_LOCAL_FILE_PATH_KEY = 'filepath'
