@@ -117,21 +117,8 @@ class graph:
     def check_ppserver_connection(self):
 
         if self.server is None:
-            self.server = Client('10.0.2.15:8786')
+            self.server = Client(f'{Private.config.dask_scheduler_ip}:{Private.config.dask_scheduler_port}')
 
-        # ctime = time.time()
-        # cbuffer = 0.9   # Allow a buffer
-        # if (ctime - self.last_server_connect) < (tcp_keepalive_time * cbuffer):
-        #     return None      #no need to reconnect
-        # if not ppservers:
-        #     # Running locally, let ncpus default to the number of system processors
-        #     self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
-        # else:
-        #     # Set ncpus to 0 so that we only process on remote machines
-        #     self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
-        #
-        # self.last_server_connect = ctime
-        # self.log.debug( "Starting pp with" + str(self.server.get_ncpus()) + "workers" )
         return None
 
     def acquire(self, who):
