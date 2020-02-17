@@ -34,7 +34,10 @@ class FileIterator:
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __len__(self):
+        return len(self.file_obj_list)
+    
+    def next(self):
         if self.file_id < len(self.file_obj_list) - 1:
             self.file_id += 1
             file_object = self.file_obj_list[self.file_id]
