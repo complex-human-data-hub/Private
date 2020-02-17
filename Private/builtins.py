@@ -675,10 +675,10 @@ builtins = {\
             "ArrayOutputThreshold": array_output_threshold, \
 
             # stat and diagnostic built-ins
-            "gelmanRubin": None, \
-            "effectiveN": None, \
-            "waic": None, \
-            "loo": None
+            "gelmanRubin": {}, \
+            "effectiveN": {}, \
+            "waic": {}, \
+            "loo": {}
     }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
