@@ -503,6 +503,10 @@ def array_output_threshold(x):
     numpy.set_printoptions(threshold=int(x))
 
 
+def private_isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
+    return numpy.isclose(a, b, rtol, atol, equal_nan)
+
+
 builtins = {\
 
             # make __bultins__ None
@@ -673,6 +677,9 @@ builtins = {\
             "eucDistAll": all_pair_euclidean_distance, \
             "locDist": location_distance, \
             "locDistAll": all_pair_location_distance, \
+
+            #testing
+            "isclose": private_isclose,\
 
             # config builtins
             "ArrayOutputThreshold": array_output_threshold, \
