@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 from numpy.random import uniform, normal, randint
 import sys
@@ -63,5 +64,5 @@ if __name__ == "__main__":
     N = 1000
     Sall = normal(0, 1, N)
     Sminus = normal(0.1, 1, N)
-    print "Prob gap %1.4f%%" % (distManifold(Sall, Sminus) * 100.0)
+    print("Prob gap %1.4f%%" % (distManifold(Sall, Sminus) * 100.0))
     plotDistances(Sall, Sminus)

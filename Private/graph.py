@@ -1,6 +1,7 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import hashlib
 import multiprocessing
-import pp
 import reprlib
 import numpy
 import numpy.random
@@ -10,7 +11,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
-import copy
 from Private.manifoldprivacy import distManifold
 import shutil
 import io
@@ -20,13 +20,12 @@ import pprint
 import dill as pickle
 import os
 import base64
-import time
 import uuid
 import pymc3 as pm
+from dask.distributed import Client
 
-
-from config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
-
+from .config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
+import json
 #logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log = logging.getLogger("Private")
 
@@ -116,20 +115,10 @@ class graph:
         setBuiltinPrivacy(self) # set privacy of builtins
 
     def check_ppserver_connection(self):
-        ctime = time.time()
-        cbuffer = 0.9   # Allow a buffer 
-        if (ctime - self.last_server_connect) < (tcp_keepalive_time * cbuffer):
-            return None      #no need to reconnect
 
-        if not ppservers:
-            # Running locally, let ncpus default to the number of system processors
-            self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
-        else:
-            # Set ncpus to 0 so that we only process on remote machines
-            self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
+        if self.server is None:
+            self.server = Client(f'{Private.config.dask_scheduler_ip}:{Private.config.dask_scheduler_port}')
 
-        self.last_server_connect = ctime
-        self.log.debug( "Starting pp with" + str(self.server.get_ncpus()) + "workers" )
         return None
 
     def acquire(self, who):
@@ -265,8 +254,7 @@ class graph:
                 f = open(os.devnull, "w")
                 pickle.dump(value, f)
             except:
-                print "Pickle error with: ", key
-                traceback.print_exc()
+                print("Pickle error with: ", key)
 
     def showPrivacy(self):
         res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
@@ -959,7 +947,7 @@ class graph:
         :param nodes: set of variables in the cluster
         :return: string
         """
-        hash_object = hashlib.sha384(str(nodes))
+        hash_object = hashlib.sha384(str(nodes).encode('utf-8'))
         hex_dig = hash_object.hexdigest()
         return hex_dig
 
@@ -1002,6 +990,7 @@ try:
             # extract index variables
 
             for indexvariable in list(set(self.hierarchical.values()) & sub_graph):
+                code += "    global __%s_Dict \n" % indexvariable
                 code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
                 code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
                 if user:
@@ -1141,7 +1130,6 @@ except Exception as e:
         try:
             for user in self.userids:
                 for name in self.variablesToBeCalculated(user):
-                    #print name, name not in self.public, user == "All"
                     if name not in self.public or user == "All":
                         jobname = "Compute:  " + user + " " + name
                         if jobname not in self.jobs:
@@ -1149,17 +1137,14 @@ except Exception as e:
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
-                            self.jobs[jobname] = self.server.submit(job, (jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, job_id, user_func), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.callback)
-                            #time.sleep(1)
+                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, job_id, user_func)
+                            self.jobs[jobname].add_done_callback(self.callback)
 
-
-            #self.log.debug("self.jobs: " + str(self.jobs.keys()))
             for sub_graph_id, sub_graph in sub_graphs.items():
                 if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
                     sampler_names = self.variablesToBeSampled()
                     self.log.debug("sampler names: " + str(sampler_names))
                     for user in self.userids:
-                        #print user, user == "All", sampler_names - self.public != set()
                         if user == "All" or sampler_names - self.public != set():
                             if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
                                 self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
@@ -1177,10 +1162,8 @@ except Exception as e:
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
                                     job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, (jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id), modules=("Private.s3_helper", "Private.config", "numpy"), callback=self.samplercallback, callbackargs=(jobname,))
-                                    # Sleep was causing the hang, need to figure out if we
-                                    # really need it
-                                    #time.sleep(1)
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id, resources={'process': 1})
+                                    self.jobs[jobname].add_done_callback(self.samplercallback)
                         self.SamplerParameterUpdated = False
         except Exception as e:
             print("in compute " + str(e))
@@ -1188,6 +1171,7 @@ except Exception as e:
         self.release()
 
     def callback(self, returnvalue):
+        returnvalue = returnvalue.result()
         self.acquire("callback")
         jobname, name, user, value = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
@@ -1226,7 +1210,8 @@ except Exception as e:
         # so see if any of the probabilistic variables have samples
         return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
 
-    def samplercallback(self, callback_args, returnvalue):
+    def samplercallback(self, returnvalue):
+        returnvalue = returnvalue.result()
         numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
 
@@ -1259,11 +1244,10 @@ except Exception as e:
 
                 self.log.debug("samplercallback: name in names ...done ")
 
-
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
                 if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
-                    gelman_rubin = pm.diagnostics.gelman_rubin(value)
-                    effective_n = pm.diagnostics.effective_n(value)
+                    gelman_rubin = pm.gelman_rubin(value)
+                    effective_n = pm.effective_n(value)
                     waic = pm.stats.waic(value, model)
                     loo = pm.stats.loo(value, model)
                     for stat_key in gelman_rubin:
@@ -1280,7 +1264,8 @@ except Exception as e:
                                           self.privacySamplerResults[name] = "private"
                                      else:
                                           jobname = "Manifold: " + u + " " + name
-                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, u, self.globals[u][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
+                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, u, self.globals[u][name], self.globals["All"][name])
+                                          self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
 
                 else: # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
@@ -1293,12 +1278,10 @@ except Exception as e:
                                         self.privacySamplerResults[name] = "private"
                                     else:
                                         jobname = "Manifold: " + user + " " + name
-                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, (jobname, name, user, self.globals[user][name], self.globals["All"][name]), callback=self.manifoldprivacycallback)
-                                         
+                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, user, self.globals[user][name], self.globals["All"][name])
+                                        self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
-                #print("in samplercallback when assigning values " + str(e))
-                #traceback.print_exc()
 
         self.log.debug("samplercallback: delete jobs ")
 
@@ -1315,6 +1298,7 @@ except Exception as e:
         self.compute_privacy(self.get_all_sub_graphs(names))
 
     def manifoldprivacycallback(self, returnvalue):
+        returnvalue = returnvalue.result()
         sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
         step_size = max(int(sample_size / Private.config.max_sample_size), 1)
         self.acquire("manifoldprivacycallback")
@@ -1388,7 +1372,7 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id, user_func):
     return_value = job_id
-    name_long = long("".join(map(str, [ord(c) for c in name])))
+    name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
     numpy.random.seed(seed)
@@ -1442,4 +1426,4 @@ def getJobId(jobname, user, names, code, globals, locals):
     folder_name = "results"
     return folder_name + "/" + str(uuid.uuid4())
 
-depGraph = graph()
+# depGraph = graph()

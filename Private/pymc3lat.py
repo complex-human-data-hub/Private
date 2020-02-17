@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import numpy.random as r
 import pandas as pd
@@ -63,7 +64,7 @@ latitudes = [ \
 {"Name": "Mary", "Latitude": -31.11800896}]
 
 Latitudes = pd.DataFrame(latitudes)
-print Latitudes
+print(Latitudes)
 
 
 lats = np.normal(-31, 1, 10)
@@ -97,17 +98,17 @@ with basic_model:
     # Expected value of outcome
     mu = alpha + beta[0]*X1 + beta[1]*X2
 
-    meana = mean(alpha)
+    meana = np.mean(alpha)
 
     # Likelihood (sampling distribution) of observations
     #Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    print "here"
+    print("here")
     trace = pm.sample(500, progressbar=False, verbose=False)
-    print "here2"
+    print("here2")
 
     #pm.traceplot(trace)
 
 #plt.show()
 
-print trace["alpha"]
+print(trace["alpha"])

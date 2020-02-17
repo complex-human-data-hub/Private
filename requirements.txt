@@ -8,16 +8,15 @@ future
 graphviz
 h5py
 ipaddress
-joblib<0.13.0
+joblib
 kiwisolver
 matplotlib
 networkx
 numpy
 pandas
 patsy
-pp
 pydot
-pymc3==3.6
+pymc3
 pyparsing
 python-dateutil
 pytz
@@ -31,3 +30,5 @@ text-unidecode
 Theano
 tqdm
 boto3
+dask
+distributed

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from faker import Faker
 from random import choice, randint, gauss, uniform, shuffle, expovariate
 from datetime import timedelta, datetime
@@ -64,7 +65,7 @@ class FakeEvent:
             t = min(int(expovariate(1.))+1, len(FakeEvent.audioClassType))
             shuffle(FakeEvent.audioClassType)
 
-            for i in xrange(t):
+            for i in range(t):
                 self.keywords.append(FakeEvent.audioClassType[i])
 
             if randint(0, 10) != 0: # add a few events that don't have location information
@@ -186,7 +187,7 @@ class FakeEvent:
             if SEMAParticipantId:
                 self.SEMAParticipantId = SEMAParticipantId
             else:
-                self.SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in xrange(8)])
+                self.SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
             self.ParticipantTimeZone = "Australia/Melbourne"
             self.StudyName = "DemoStudy"
             self.keywords.append(self.StudyName)
@@ -272,34 +273,34 @@ if __name__ == "__main__":
 
     # using list comprehensions to filter events ala examples from paper
 
-    #someEvents = [FakeEvent() for _ in xrange(50)]
+    #someEvents = [FakeEvent() for _ in range(50)]
     #print [e.latitude for e in someEvents if e.type == "App" and e.hasField("latitude")]
 
     # generate many events for a small set of users
 
     #events = []
-    #for user in xrange(10):
+    #for user in range(10):
     #    i = randint(5,10)
     #    ev = FakeEvent()
     #    userid = ev.UserId
     #    RainProb = 0.3
     #    if user == 0:
     #        RainProb = 0.5
-    #    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9, RainProb=RainProb) for _ in xrange(i)])
+    #    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9, RainProb=RainProb) for _ in range(i)])
     #print events
 
 
     
     NumUsers = 10
-    users = [FakeEvent.fake.uuid4() for _ in xrange(NumUsers)]
+    users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
 
     Events = []
     for user in users:
-      SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in xrange(8)])
+      SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
       month = randint(1,12)
       firstday = randint(1,20)
-      for day in xrange(firstday,firstday+7):
-        for hour in xrange(0,24):
+      for day in range(firstday,firstday+7):
+        for hour in range(0,24):
             lat = gauss(-37.814, 1.)
             long = gauss(144.96332, 1.5)
             eApp = FakeEvent(eventType="App", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
@@ -327,4 +328,4 @@ if __name__ == "__main__":
             e = FakeEvent(eventType="SEMA", UserId=user, SEMAParticipantId = SEMAParticipantId, DateTime = datetime(2019, month, day, semahour), Latitude=lat, Longitude=long)
             Events.append(e)
 
-    print Events
+    print(Events)

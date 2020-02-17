@@ -1,7 +1,8 @@
+from __future__ import print_function
 import grpc
 import json
-import service_pb2
-import service_pb2_grpc
+from . import service_pb2
+from . import service_pb2_grpc
 import sys
 
 def main(cmd):
@@ -22,7 +23,7 @@ def main(cmd):
         'cmd': cmd
     }
     response = stub.Private(service_pb2.PrivateParcel(json=json.dumps(req), project_uid=project_uid))
-    print json.loads(response.json)
+    print(json.loads(response.json))
 
 if __name__ == '__main__':
     main(sys.argv[1])

@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 from datetime import datetime
 import os
 
-import s3_helper
+from . import s3_helper
 SOURCE_TYPE_S3 = 's3'
 SOURCE_TYPE_LOCAL_FILE_SYSTEM = 'localfs'
 SOURCE_LOCAL_FILE_PATH_KEY = 'filepath'
@@ -33,7 +34,7 @@ class FileIterator:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.file_id < len(self.file_obj_list) - 1:
             self.file_id += 1
             file_object = self.file_obj_list[self.file_id]

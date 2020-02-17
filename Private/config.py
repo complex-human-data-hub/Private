@@ -1,9 +1,10 @@
+from __future__ import print_function
 import logging
 import os
 
 mypid = os.getpid()
 
-print "PID = ", mypid
+print("PID = ", mypid)
 logfile = "/tmp/private-%d.log" % mypid
 
 # socket timeout in seconds which is also the maximum time a remote job could be executed. Increase this value if you
@@ -22,6 +23,10 @@ tcp_keepalive_time = 7200 #2 hours
 s3_integration = False
 s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
+
+#dask config
+dask_scheduler_ip = "10.0.2.15"
+dask_scheduler_port = 8786
 
 # numpy seed
 numpy_seed = 8623574

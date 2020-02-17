@@ -1,5 +1,6 @@
-import shelvelock 
-import private_config as config
+from __future__ import print_function
+import shelvelock
+from . import private_config as config
 import json
 import time
 now = time.time() 
@@ -13,8 +14,8 @@ def format_output(item):
 server_shelf = shelvelock.open(config.privateserver_shelf)
 
 
-print "Inactive\tPort\tUID\tIP\tUA"
+print("Inactive\tPort\tUID\tIP\tUA")
 for key in server_shelf.keys():
-    print format_output( json.loads(server_shelf.get(key)) )
+    print(format_output( json.loads(server_shelf.get(key)) ))
 
 server_shelf.close()

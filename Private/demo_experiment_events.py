@@ -1,4 +1,5 @@
-from event import Event
+from __future__ import absolute_import
+from .event import Event
 
 data = [
     {
@@ -52,7 +53,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -188,7 +189,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -325,7 +326,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -461,7 +462,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -597,7 +598,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -733,7 +734,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -869,7 +870,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {
@@ -1005,7 +1006,7 @@ data = [
                     ]
                 ],
                 "target_timestamp_label": "Sunday afternoon 3pm on Dec 9",
-                "initial_zoom": 07,
+                "initial_zoom": 0o7,
                 "response": "C",
                 "map_events": [
                     {

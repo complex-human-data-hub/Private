@@ -1,6 +1,5 @@
 from __future__ import unicode_literals
-import sys
-import io
+from __future__ import print_function
 
 
 from arpeggio import ParserPython, EOF, ZeroOrMore, Optional
@@ -140,7 +139,7 @@ if __name__ == "__main__":
         try:
             parser = ParserPython(rule, debug=True, autokwd=True)
             parse_tree = parser.parse(input_line)
-            print parse_tree
-            print input_line, " is valid"
+            print(parse_tree)
+            print(input_line, " is valid")
         except:
-            print input_line, " is invalid"
+            print(input_line, " is invalid")

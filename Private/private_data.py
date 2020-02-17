@@ -1,4 +1,5 @@
-from demo_events import Events, DemoEvents
+from __future__ import absolute_import
+from .demo_events import Events, DemoEvents
 
 class Source:
     """ 
