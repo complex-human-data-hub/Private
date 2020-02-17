@@ -38,3 +38,33 @@ test tutorial1.5:
 temperatures = [e.Temperature for e in DemoEvents if e.hasField("Temperature")]
 meantemp = mean(temperatures)
 result = [isclose(meantemp, 20.63, atol=0.5)]
+
+test tutorial1.6:
+ButtonEvents = [e for e in DemoEvents if e.type == "Button"]
+Anxious = ["Anxious" in e.keywords for e in ButtonEvents]
+Sunday = ["Sunday" in e.keywords for e in ButtonEvents]
+Monday = ["Monday" in e.keywords for e in ButtonEvents]
+Tuesday = ["Tuesday" in e.keywords for e in ButtonEvents]
+Wednesday = ["Wednesday" in e.keywords for e in ButtonEvents]
+Thursday = ["Thursday" in e.keywords for e in ButtonEvents]
+Friday = ["Friday" in e.keywords for e in ButtonEvents]
+Saturday = ["Saturday" in e.keywords for e in ButtonEvents]
+meanSunday = mean(bSunday)
+meanMonday = mean(bMonday)
+meanTuesday = mean(bTuesday)
+meanWednesday = mean(bWednesday)
+meanThursday = mean(bThursday)
+meanFriday = mean(bFriday)
+meanSaturday = mean(bSaturday)
+meanIntercept = mean(Intercept)
+Anxious ~ Bernoulli(p)
+p ~ Sigmoid(bSunday * Sunday + bMonday * Monday + bTuesday * Tuesday + bWednesday * Wednesday + bThursday * Thursday + bFriday * Friday + bSaturday * Saturday + Intercept)
+bSunday ~ Normal(0, 10)
+bMonday ~ Normal(0, 10)
+bTuesday ~ Normal(0, 10)
+bWednesday ~ Normal(0, 10)
+bThursday ~ Normal(0, 10)
+bFriday ~ Normal(0, 10)
+bSaturday ~ Normal(0, 10)
+Intercept ~ Normal(0, 10)
+result = [isclose(meanSunday, -4, atol=0.5), isclose(meanMonday, -4, atol=0.5), isclose(meanTuesday, -4, atol=0.75), isclose(meanWednesday, 12, atol=0.5), isclose(meanThursday, -4, atol=0.5), isclose(meanFriday, -4, atol=0.5), isclose(meanSaturday, -4, atol=0.5)]
