@@ -1385,7 +1385,7 @@ except Exception as e:
 
 def job(jobname, name, user, code, globals, locals, job_id, user_func):
     with open("/tmp/monday.log", "a") as fp:
-        fp.write("In job: {}\n".format(name))
+        fp.write("In job ({}): {} \n".format(os.getpid(), name))
     return_value = job_id
     name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
