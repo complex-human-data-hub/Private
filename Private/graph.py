@@ -23,6 +23,7 @@ import base64
 import uuid
 import pymc3 as pm
 from dask.distributed import Client
+from datetime import datetime
 
 from .config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
 import json
@@ -34,6 +35,15 @@ numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 5.0   # percent
 display_precision = 3
+
+
+def debug_logger(msg):
+    with open("/tmp/monday.log", "a") as fp:
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
+
 
 def ppset(s):
     """
@@ -1126,7 +1136,7 @@ except Exception as e:
 
         self.log.debug("In compute") 
         self.acquire("compute")
-
+        debug_logger("in compute")
         try:
             for user in self.userids:
                 for name in self.variablesToBeCalculated(user):
@@ -1137,6 +1147,7 @@ except Exception as e:
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
+                            debug_logger(self.evalcode[name])
                             self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, job_id, user_func)
                             self.jobs[jobname].add_done_callback(self.callback)
 
@@ -1173,8 +1184,10 @@ except Exception as e:
     def callback(self, returnvalue):
         returnvalue = returnvalue.result()
         self.acquire("callback")
+        debug_logger("In callback")
         jobname, name, user, value = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
+        debug_logger([jobname, name, user, value])
         try:
             if isinstance(value, Exception):
                 if user == "All":
@@ -1371,6 +1384,8 @@ except Exception as e:
 
 
 def job(jobname, name, user, code, globals, locals, job_id, user_func):
+    with open("/tmp/monday.log", "a") as fp:
+        fp.write("In job: {}\n".format(name))
     return_value = job_id
     name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
