@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from datetime import datetime
 import os
+import hashlib
 
 from . import s3_helper
 SOURCE_TYPE_S3 = 's3'
@@ -37,7 +38,7 @@ class FileIterator:
     def __len__(self):
         return len(self.file_obj_list)
     
-    def next(self):
+    def __next__(self):
         if self.file_id < len(self.file_obj_list) - 1:
             self.file_id += 1
             file_object = self.file_obj_list[self.file_id]
@@ -72,3 +73,6 @@ class FileIterator:
         file_name = os.path.basename(self.file_obj_list[file_id]['key'])
         file_name_parts = file_name.split('_')
         return datetime.strptime(file_name_parts[1], '%Y%m%d%H%M%SZ')
+
+    def get_iter_id(self):
+        return hashlib.sha224(str(self.file_obj_list).encode('utf-8')).hexdigest()
