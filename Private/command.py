@@ -18,11 +18,12 @@ from Private.parser import PrivateParser
 from Private.semantics import PrivateSemanticAnalyser
 
 #from private_data import Source
-#from graph import graph
+from Private import graph
 
 #data_source = Source()
 #events = data_source.get_events()
 #current_graph = graph(events=events)
+
 current_graph = None
 
 def execute(line):
@@ -45,9 +46,23 @@ def execute(line):
 
 def load_code(filename):
     f = open(filename, "r").readlines()
+    function = ""
     for line in f:
-        print(line[0:-1])
-        execute(line[0:-1])
+        input_line = line[0:-1]
+        print(input_line)
+        if input_line.startswith("def"):
+            function += input_line + '\n'
+            continue 
+
+        if input_line.startswith("    "):
+            function += input_line + ';'
+            if input_line.strip().startswith("return"):
+                execute(function)
+                function = ""
+            continue
+
+        elif input_line != "":
+            execute(input_line)
 
 parser = PrivateParser()
 if args.filename:
