@@ -46,7 +46,7 @@ class FileIterator:
                 return s3_helper.read_file(file_object['key'], bucket_name=file_object['bucket'], aws_profile=self.aws_profile)
             elif file_object['type'] == SOURCE_TYPE_LOCAL_FILE_SYSTEM:
                 try:
-                    with open(file_object[SOURCE_LOCAL_FILE_PATH_KEY]) as file:
+                    with open(file_object[SOURCE_LOCAL_FILE_PATH_KEY], 'rb') as file:
                         byte_file = file.read()
                         return byte_file
                 except IOError:
