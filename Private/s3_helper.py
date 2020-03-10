@@ -98,3 +98,46 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
     else:
         s3 = boto3.resource('s3')
         return s3.Object(bucket_name, key).get()['Body'].read()
+
+
+def get_all_s3_keys(bucket=s3_bucket_name):
+    """Get a list of all keys in an S3 bucket."""
+    keys = []
+
+    kwargs = {'Bucket': bucket}
+    while True:
+        s3 = boto3.client('s3')
+        resp = s3.list_objects_v2(**kwargs)
+        for obj in resp['Contents']:
+            keys.append(obj['Key'])
+
+        try:
+            kwargs['ContinuationToken'] = resp['NextContinuationToken']
+        except KeyError:
+            break
+
+    return keys
+
+
+def get_matching_s3_keys(prefix='', bucket=s3_bucket_name):
+    """
+    Generate the keys in an S3 bucket.
+
+    :param bucket: Name of the S3 bucket.
+    :param prefix: Only fetch keys that start with this prefix (optional).
+    :param suffix: Only fetch keys that end with this suffix (optional).
+    """
+    keys = []
+    kwargs = {'Bucket': bucket, 'Prefix': prefix}
+    while True:
+        s3 = boto3.client('s3')
+        resp = s3.list_objects_v2(**kwargs)
+        if 'Contents' in resp:
+            for obj in resp['Contents']:
+                keys.append(obj['Key'])
+        try:
+            kwargs['ContinuationToken'] = resp['NextContinuationToken']
+        except KeyError:
+            break
+
+    return keys
