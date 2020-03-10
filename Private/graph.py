@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import hashlib
 import multiprocessing
 import reprlib
+import sys
+
 import numpy
 import numpy.random
 from collections import OrderedDict, deque
@@ -11,7 +13,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
-from Private.manifoldprivacy import distManifold
+from Private.s3_reference import S3Reference
 import shutil
 import io
 import re
@@ -55,7 +57,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self, events=None):
+    def __init__(self, events=None, project_id='proj1'):
 
         # variable types
 
@@ -71,7 +73,8 @@ class graph:
 
         # variables related to values
 
-        self.globals = setGlobals(events=events)
+        self.project_id = project_id
+        self.globals = setGlobals(events=events, proj_id=self.project_id)
         self.userids = setUserIds(events=events)
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
@@ -243,7 +246,7 @@ class graph:
                 if code in self.functions:
                     val = self.evalcode[code]
                 else:
-                    val = eval(code, self.globals[user], self.locals)
+                    val = eval(code, retrieve_s3_vars(self.globals[user]), self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
                     result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
@@ -570,6 +573,8 @@ class graph:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
                     res += "[PNG Image]"
+                elif type(self.globals["All"][name]) == S3Reference:
+                    res += self.globals["All"][name].display_value
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if longFormat:
                         res += str(self.globals["All"][name])
@@ -1146,9 +1151,8 @@ except Exception as e:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            job_id = getJobId(jobname, name, user, self.evalcode[name], self.globals[user], self.locals)
                             debug_logger(self.evalcode[name])
-                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, job_id, user_func)
+                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id)
                             self.jobs[jobname].add_done_callback(self.callback)
 
             for sub_graph_id, sub_graph in sub_graphs.items():
@@ -1172,8 +1176,7 @@ except Exception as e:
 
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    job_id = getJobId(jobname, sampler_names, user, sampler_code, self.globals[user], self.locals)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, job_id, resources={'process': 1})
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                         self.SamplerParameterUpdated = False
         except Exception as e:
@@ -1185,8 +1188,7 @@ except Exception as e:
         returnvalue = returnvalue.result()
         self.acquire("callback")
         debug_logger("In callback")
-        jobname, name, user, value = Private.s3_helper.read_results_s3(
-            returnvalue) if Private.config.s3_integration else returnvalue
+        jobname, name, user, value = returnvalue
         debug_logger([jobname, name, user, value])
         try:
             if isinstance(value, Exception):
@@ -1383,10 +1385,8 @@ except Exception as e:
         return final_set
 
 
-def job(jobname, name, user, code, globals, locals, job_id, user_func):
-    with open("/tmp/monday.log", "a") as fp:
-        fp.write("In job ({}): {} \n".format(os.getpid(), name))
-    return_value = job_id
+def job(jobname, name, user, code, globals, locals, user_func, proj_id):
+    var_id = generate_variable_id(proj_id, user, name)
     name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
@@ -1398,34 +1398,23 @@ def job(jobname, name, user, code, globals, locals, job_id, user_func):
             e = Exception("Error in User Function: " + func[4:10] + "...")
             return ((jobname, name, user, e))
     try:
-        if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
-            if code.startswith("def"):
-                value = "User Function"
-            else:
-                value = eval(code, globals, locals)
-            data = (jobname, name, user, value)
-            if Private.config.s3_integration:
-                Private.s3_helper.save_results_s3(job_id, (jobname, name, user, value))
-            else:
-                return_value = data
-        return return_value
+        if code.startswith("def"):
+            value = "User Function"
+        else:
+            value = eval(code, retrieve_s3_vars(globals), locals)
+        if sys.getsizeof(value) > 5:
+            value = S3Reference(var_id, value)
+        return (jobname, name, user, value)
     except Exception as e:
         return((jobname, name, user, e))
 
-def samplerjob(jobname, user, names, code, globals, locals, job_id):
-    return_value = job_id
+def samplerjob(jobname, user, names, code, globals, locals, proj_id):
     numpy.random.seed(Private.config.numpy_seed)
     try:
-        if not (Private.config.s3_integration and Private.s3_helper.if_exist(job_id)):
-            exec (code, globals, locals)
-            value, exception_variable, model = locals["__private_result__"]
-            data = (jobname, user, names, value, exception_variable, model)
-            if Private.config.s3_integration:
-                Private.s3_helper.save_results_s3(job_id, data)
-            else:
-                return_value = data
-        return return_value
-
+        exec (code, retrieve_s3_vars(globals), retrieve_s3_vars(locals))
+        value, exception_variable, model = locals["__private_result__"]
+        data = (jobname, user, names, value, exception_variable, model)
+        return data
     except Exception as e:
         # This doesn't seem to be the right size, should be 6 items
         return (jobname, user, names, e, "No Exception Variable")
@@ -1441,4 +1430,17 @@ def getJobId(jobname, user, names, code, globals, locals):
     folder_name = "results"
     return folder_name + "/" + str(uuid.uuid4())
 
-# depGraph = graph()
+
+def generate_variable_id(project_id, user_id, variable_id):
+    return f"{str(project_id)}/{str(user_id)}_{str(variable_id)}"
+
+
+def check_all_variables_s3(project_id, user_id, names):
+    return all([Private.s3_helper.if_exist(generate_variable_id(project_id, user_id, name)) for name in names])
+
+
+def retrieve_s3_vars(var_dict):
+    for key in var_dict:
+        if type(var_dict[key]) == S3Reference:
+            var_dict[key] = var_dict[key].value()
+    return var_dict
