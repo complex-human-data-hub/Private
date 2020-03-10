@@ -6,6 +6,8 @@ from __future__ import absolute_import
 import numpy.random
 import numpy
 from .event import Event
+from Private.s3_reference import S3Reference
+import Private.s3_helper as s3_helper
 import pymc3 as pm
 import copy
 import theano.tensor
@@ -743,9 +745,8 @@ def setUserIds(events=None):
 
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
-def setGlobals(events=None):
-    #print "HERE"
-    #print events
+
+def setGlobals(events=None, proj_id="proj1"):
     if events:
         builtins["Events"] = events
         builtins["DemoEvents"] = events
@@ -755,13 +756,19 @@ def setGlobals(events=None):
         print(len(DemoEvents))
 
     # create a new set of globals with data that removes each user
+    s3_keys = s3_helper.get_matching_s3_keys(proj_id)
 
     result = {}
-    result["All"] = copy.copy(builtins)
     users = set(e.UserId for e in builtins["Events"])
     for user in users:
         result[user] = copy.copy(builtins)
-        result[user]["Events"] = [e for e in builtins["Events"] if e.UserId != user]
-        result[user]["DemoEvents"] = result[user]["Events"]
-
+        user_events = [e for e in builtins["Events"] if e.UserId != user]
+        result[user]["Events"] = S3Reference(f"{proj_id}/{user}_Events", user_events,
+                                             f"{proj_id}/{user}_Events" in s3_keys)
+        result[user]["DemoEvents"] = S3Reference(f"{proj_id}/{user}_DemoEvents", user_events,
+                                                 f"{proj_id}/{user}_DemoEvents" in s3_keys)
+    builtins["Events"] = S3Reference(f"{proj_id}/Events", Events, f"{proj_id}/Events" in s3_keys)
+    builtins["DemoEvents"] = S3Reference(f"{proj_id}/DemoEvents", DemoEvents,
+                                         f"{proj_id}/DemoEvents" in s3_keys)
+    result["All"] = copy.copy(builtins)
     return result
