@@ -202,7 +202,7 @@ class graph:
 
     def eval_command_line_expression(self, code, dependson, user = "All"):
         # determine status of all dependencies to see whether to evaluate
-
+        self.acquire("eval_command_line_expression")
         result = ""
 
         # look for undefined
@@ -246,7 +246,8 @@ class graph:
                 if code in self.functions:
                     val = self.evalcode[code]
                 else:
-                    val = eval(code, retrieve_s3_vars(self.globals[user]), self.locals)
+                    user_globals = retrieve_s3_vars(self.globals[user])
+                    val = eval(code, user_globals, self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
                     result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
@@ -259,6 +260,7 @@ class graph:
                     if func_name in self.globals[user]:
                         self.globals[user][func_name] = 'User Function'
 
+        self.release()
         return result
 
     def checkPickling(self):
@@ -1150,6 +1152,7 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+                            
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             debug_logger(self.evalcode[name])
                             self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id)
@@ -1402,8 +1405,9 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
             value = "User Function"
         else:
             value = eval(code, retrieve_s3_vars(globals), locals)
-        if sys.getsizeof(value) > 5:
+        if sys.getsizeof(value) > 1e6:
             value = S3Reference(var_id, value)
+
         return (jobname, name, user, value)
     except Exception as e:
         return((jobname, name, user, e))
@@ -1440,7 +1444,13 @@ def check_all_variables_s3(project_id, user_id, names):
 
 
 def retrieve_s3_vars(var_dict):
-    for key in var_dict:
+    ret_dict = {}
+    for key in var_dict.keys():
         if type(var_dict[key]) == S3Reference:
-            var_dict[key] = var_dict[key].value()
-    return var_dict
+            ret_dict[key] = var_dict[key].value()
+        else:
+            ret_dict[key] = var_dict[key]
+
+    return ret_dict
+
+
