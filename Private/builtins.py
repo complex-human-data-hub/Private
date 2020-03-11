@@ -13,10 +13,11 @@ import copy
 import theano.tensor
 import math
 from .config import numpy_seed
+import os
 from . import preprocessing as pre
 from . import plotting as plot
 from .demo_experiment_events import ExpEvents
-
+import json
 #from demo_events import Events, DemoEvents
 
 # Import our source data 
@@ -27,12 +28,15 @@ from .demo_experiment_events import ExpEvents
 from .private_data import Source
 from functools import reduce
 
+
 data_source = Source()
 Events = data_source.get_events()
 DemoEvents = data_source.get_demo_events()
 
 # Deterministic Continuous Distribution Definitions
 numpy.random.seed(numpy_seed)
+
+
 
 
 def Uniform(lower, upper, size):
@@ -753,11 +757,10 @@ def setGlobals(events=None, proj_id="proj1"):
     else:
         builtins["Events"] = Events
         builtins["DemoEvents"] = DemoEvents
-        print(len(DemoEvents))
+
 
     # create a new set of globals with data that removes each user
     s3_keys = s3_helper.get_matching_s3_keys(proj_id)
-
     result = {}
     users = set(e.UserId for e in builtins["Events"])
     for user in users:
@@ -767,8 +770,9 @@ def setGlobals(events=None, proj_id="proj1"):
                                              f"{proj_id}/{user}_Events" in s3_keys)
         result[user]["DemoEvents"] = S3Reference(f"{proj_id}/{user}_DemoEvents", user_events,
                                                  f"{proj_id}/{user}_DemoEvents" in s3_keys)
-    builtins["Events"] = S3Reference(f"{proj_id}/Events", Events, f"{proj_id}/Events" in s3_keys)
-    builtins["DemoEvents"] = S3Reference(f"{proj_id}/DemoEvents", DemoEvents,
+
+    builtins["Events"] = S3Reference(f"{proj_id}/Events", builtins["Events"], f"{proj_id}/Events" in s3_keys)
+    builtins["DemoEvents"] = S3Reference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
                                          f"{proj_id}/DemoEvents" in s3_keys)
     result["All"] = copy.copy(builtins)
     return result
