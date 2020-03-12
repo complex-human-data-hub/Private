@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
-from Private.s3_reference import S3Reference
+#from Private.s3_reference import S3Reference
+from Private.redis_reference import RedisReference
 import shutil
 import io
 import re
@@ -575,7 +576,7 @@ class graph:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
                     res += "[PNG Image]"
-                elif type(self.globals["All"][name]) == S3Reference:
+                elif type(self.globals["All"][name]) == RedisReference:
                     res += self.globals["All"][name].display_value
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if longFormat:
@@ -1406,7 +1407,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
         else:
             value = eval(code, retrieve_s3_vars(globals), locals)
         if sys.getsizeof(value) > 1e6:
-            value = S3Reference(var_id, value)
+            value = RedisReference(var_id, value)
 
         return (jobname, name, user, value)
     except Exception as e:
@@ -1446,7 +1447,7 @@ def check_all_variables_s3(project_id, user_id, names):
 def retrieve_s3_vars(var_dict):
     ret_dict = {}
     for key in var_dict.keys():
-        if type(var_dict[key]) == S3Reference:
+        if type(var_dict[key]) == RedisReference:
             ret_dict[key] = var_dict[key].value()
         else:
             ret_dict[key] = var_dict[key]

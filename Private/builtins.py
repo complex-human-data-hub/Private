@@ -6,8 +6,8 @@ from __future__ import absolute_import
 import numpy.random
 import numpy
 from .event import Event
-from Private.s3_reference import S3Reference
-import Private.s3_helper as s3_helper
+from Private.redis_reference import RedisReference
+import Private.redis_helper as redis_helper
 import pymc3 as pm
 import copy
 import theano.tensor
@@ -760,19 +760,19 @@ def setGlobals(events=None, proj_id="proj1"):
 
 
     # create a new set of globals with data that removes each user
-    s3_keys = s3_helper.get_matching_s3_keys(proj_id)
+    project_keys = redis_helper.get_matching_keys(proj_id)
     result = {}
     users = set(e.UserId for e in builtins["Events"])
     for user in users:
         result[user] = copy.copy(builtins)
         user_events = [e for e in builtins["Events"] if e.UserId != user]
-        result[user]["Events"] = S3Reference(f"{proj_id}/{user}_Events", user_events,
-                                             f"{proj_id}/{user}_Events" in s3_keys)
-        result[user]["DemoEvents"] = S3Reference(f"{proj_id}/{user}_DemoEvents", user_events,
-                                                 f"{proj_id}/{user}_DemoEvents" in s3_keys)
+        result[user]["Events"] = RedisReference(f"{proj_id}/{user}_Events", user_events,
+                                             f"{proj_id}/{user}_Events" in project_keys)
+        result[user]["DemoEvents"] = RedisReference(f"{proj_id}/{user}_DemoEvents", user_events,
+                                                 f"{proj_id}/{user}_DemoEvents" in project_keys)
 
-    builtins["Events"] = S3Reference(f"{proj_id}/Events", builtins["Events"], f"{proj_id}/Events" in s3_keys)
-    builtins["DemoEvents"] = S3Reference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
-                                         f"{proj_id}/DemoEvents" in s3_keys)
+    builtins["Events"] = RedisReference(f"{proj_id}/Events", builtins["Events"], f"{proj_id}/Events" in project_keys)
+    builtins["DemoEvents"] = RedisReference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
+                                         f"{proj_id}/DemoEvents" in project_keys)
     result["All"] = copy.copy(builtins)
     return result
