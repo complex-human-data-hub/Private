@@ -1430,7 +1430,7 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
         return data
     except Exception as e:
         # This doesn't seem to be the right size, should be 6 items
-        return (jobname, user, names, e, "No Exception Variable")
+        return (jobname, user, names, e, "No Exception Variable", None)
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
