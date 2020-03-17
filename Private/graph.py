@@ -1,5 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
+
+import copy
 import hashlib
 import multiprocessing
 import reprlib
@@ -242,13 +244,13 @@ class graph:
 
         if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
             try:
+                s3_var_globals = retrieve_s3_vars(self.globals[user])
                 for func in [self.evalcode[func_name] for func_name in self.functions]:
-                    exec (func, self.globals[user])
+                    exec (func, s3_var_globals)
                 if code in self.functions:
                     val = self.evalcode[code]
                 else:
-                    user_globals = retrieve_s3_vars(self.globals[user])
-                    val = eval(code, user_globals, self.locals)
+                    val = eval(code, s3_var_globals, self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
                     result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
@@ -1369,7 +1371,11 @@ except Exception as e:
         deps = self.get_all_required_dependents(deps)
         for key in user_globals.keys():
             if key in deps:
-                job_globals[key] = user_globals[key]
+                if type(user_globals[key]) == RedisReference:
+                    job_globals[key] = copy.copy(user_globals[key])
+                    job_globals[key].empty_value()
+                else:
+                    job_globals[key] = user_globals[key]
         return job_globals
 
     def get_all_required_dependents(self, names):
