@@ -32,3 +32,4 @@ tqdm
 boto3
 dask
 distributed
+redis

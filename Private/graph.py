@@ -603,7 +603,7 @@ class graph:
             else:
                 res += "Private"
         else:
-            raise Exception("Exception: Unknown variable in getValue" + name)
+            raise Exception("Exception: Unknown variable in getValue " + name)
         return res
 
     def __repr__(self):
@@ -1395,9 +1395,10 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
     numpy.random.seed(seed)
+    s3_var_globals = retrieve_s3_vars(globals)
     for func in user_func:
         try:
-            exec (func, globals)
+            exec (func, s3_var_globals)
         except Exception as e:
             e = Exception("Error in User Function: " + func[4:10] + "...")
             return ((jobname, name, user, e))
@@ -1405,7 +1406,8 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
         if code.startswith("def"):
             value = "User Function"
         else:
-            value = eval(code, retrieve_s3_vars(globals), locals)
+            s3_var_locals = retrieve_s3_vars(locals)
+            value = eval(code, s3_var_globals, s3_var_locals)
         if sys.getsizeof(value) > 1e6:
             value = RedisReference(var_id, value)
 
