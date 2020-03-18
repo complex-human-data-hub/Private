@@ -1023,7 +1023,7 @@ try:
     softmax = __import__("theano").tensor.nnet.nnet.softmax
     traceback = __import__("traceback")
 
-
+    
     basic_model = pymc3.Model()
 
     
@@ -1087,6 +1087,7 @@ except Exception as e:
         return_exception = Exception(newErrorString)
         __private_result__ = (return_exception, exception_variable, None)
         with open("/tmp/private-worker.log", "a") as fp:
+            fp.write(traceback.format_exc() + "\\n")
             fp.write("Finished processing Error \\n")
     except Exception as e2:
         with open("/tmp/private-worker.log", "a") as fp:
@@ -1412,8 +1413,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
         if code.startswith("def"):
             value = "User Function"
         else:
-            s3_var_locals = retrieve_s3_vars(locals)
-            value = eval(code, s3_var_globals, s3_var_locals)
+            value = eval(code, s3_var_globals, locals)
         if sys.getsizeof(value) > 1e6:
             value = RedisReference(var_id, value)
 
@@ -1424,7 +1424,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
 def samplerjob(jobname, user, names, code, globals, locals, proj_id):
     numpy.random.seed(Private.config.numpy_seed)
     try:
-        exec (code, retrieve_s3_vars(globals), retrieve_s3_vars(locals))
+        exec (code, retrieve_s3_vars(globals), locals)
         value, exception_variable, model = locals["__private_result__"]
         data = (jobname, user, names, value, exception_variable, model)
         return data
