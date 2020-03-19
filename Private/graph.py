@@ -75,7 +75,8 @@ class graph:
         self.probdependson = {} # probabilistic dependencies
 
         # variables related to values
-
+        if events and type(events) == RedisReference:
+            events = events.value()
         self.project_id = project_id
         self.globals = setGlobals(events=events, proj_id=self.project_id)
         self.userids = setUserIds(events=events)
