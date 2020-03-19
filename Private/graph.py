@@ -253,10 +253,11 @@ class graph:
                     val = eval(code, s3_var_globals, self.locals)
                 if type(val) == io.BytesIO:
                     #res += reprlib.repr(val)
-                    result = "data:image/png;base64, " + base64.b64encode(val.getvalue())
+                    result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
                 else:
                     result = str(val)
             except Exception as e:
+                self.release()
                 raise Exception(e.__class__.__name__ + ": " + e.message)
             finally:
                 for func_name in self.functions:
