@@ -1160,7 +1160,6 @@ except Exception as e:
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            debug_logger(self.evalcode[name])
                             self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id)
                             self.jobs[jobname].add_done_callback(self.callback)
 
@@ -1198,7 +1197,6 @@ except Exception as e:
         self.acquire("callback")
         debug_logger("In callback")
         jobname, name, user, value = returnvalue
-        debug_logger([jobname, name, user, value])
         try:
             if isinstance(value, Exception):
                 if user == "All":
