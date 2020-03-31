@@ -208,11 +208,11 @@ class graph:
         self.acquire("eval_command_line_expression")
         result = ""
 
-        if code not in (self.deterministic or self.probabilistic or self.builtins):
+        if code not in (self.deterministic | self.probabilistic | self.builtins):
             result += code + " is undefined  "
         elif code not in self.uptodate[user]:
             result += code + " is not uptodate  "
-        elif code not in (self.public or self.unknown_privacy):
+        elif code not in (self.public | self.unknown_privacy):
             result += code + " is private  "
         elif code not in self.public:
             result += code + " is of unknown privacy  "
