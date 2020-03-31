@@ -771,8 +771,8 @@ def setGlobals(events=None, proj_id="proj1"):
         result[user]["DemoEvents"] = RedisReference(f"{proj_id}/{user}_DemoEvents", user_events,
                                                  keep_existing=f"{proj_id}/{user}_DemoEvents" in project_keys)
 
-    builtins["Events"] = RedisReference(f"{proj_id}/Events", builtins["Events"], keep_existing=f"{proj_id}/Events" in project_keys, keep_value=True)
+    builtins["Events"] = RedisReference(f"{proj_id}/Events", builtins["Events"], keep_existing=f"{proj_id}/Events" in project_keys)
     builtins["DemoEvents"] = RedisReference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
-                                         keep_existing=f"{proj_id}/DemoEvents" in project_keys, keep_value=True)
+                                         keep_existing=f"{proj_id}/DemoEvents" in project_keys)
     result["All"] = copy.copy(builtins)
     return result

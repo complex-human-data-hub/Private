@@ -387,7 +387,7 @@ help: this message
 
     def visit_command_line_expression(self, node, children):
         return result("command_line_expression",
-                      str(self.depGraph.eval_command_line_expression(node.value, node.value)))
+                      str(self.depGraph.eval_command_line_expression(node.value)))
 
 #def PrivateSemanticAnalyser(parse_tree):
 #    return visit_parse_tree(parse_tree, InputVisitor())
