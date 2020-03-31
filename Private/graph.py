@@ -1333,7 +1333,6 @@ except Exception as e:
             if key in deps:
                 if type(user_globals[key]) == RedisReference:
                     job_globals[key] = copy.copy(user_globals[key])
-                    job_globals[key].empty_value()
                 else:
                     job_globals[key] = user_globals[key]
         return job_globals

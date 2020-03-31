@@ -9,22 +9,14 @@ class RedisReference:
     redis_key = None
     display_value = None
 
-    def __init__(self, redis_key, value, keep_existing=False, keep_value=False):
+    def __init__(self, redis_key, value, keep_existing=False):
         self.redis_key = redis_key
         if not keep_existing:
             Private.redis_helper.save_results(redis_key, value)
         self.display_value = self.get_display_value(value)
-        self.ori_value = None
-        if keep_value:
-            self.ori_value = value
 
     def value(self):
-        if not self.ori_value:
-            self.ori_value = Private.redis_helper.read_results(self.redis_key)
-        return self.ori_value
-
-    def empty_value(self):
-        self.ori_value = None
+        return Private.redis_helper.read_results(self.redis_key)
 
     @staticmethod
     def get_display_value(value):
