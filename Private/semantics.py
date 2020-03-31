@@ -386,10 +386,8 @@ help: this message
         print(self.depGraph.getValue(node.value, longFormat=True))
 
     def visit_command_line_expression(self, node, children):
-        return result("command_line_expression", str(self.depGraph.eval_command_line_expression(children[0].evalcode, children[0].depend)))
-        #print "Because expressions may take a long time to compute you must assign them to a variable"
-        #print "and then query the variable to see the result. For example, instead of 4*b+5 type"
-        #print "t = 4*b+5 and then t."
+        return result("command_line_expression",
+                      str(self.depGraph.eval_command_line_expression(node.value, node.value)))
 
 #def PrivateSemanticAnalyser(parse_tree):
 #    return visit_parse_tree(parse_tree, InputVisitor())

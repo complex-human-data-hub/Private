@@ -111,7 +111,7 @@ def distribution_assignment():  return identifier, Optional("[", identifier, "]"
 def expression_assignment():    return identifier, "~", expression   # deterministic link within probabilistic model
 def probabilistic_assignment(): return [distribution_assignment, expression_assignment]
 def assignment():               return [deterministic_assignment, probabilistic_assignment], Optional(comment_string)
-def command_line_expression():  return expression
+def command_line_expression():  return identifier
 def line():                     return [command, assignment, command_line_expression, comment_line], EOF
 def function_body_line():       return [func_det_assignment, comment_line], ";"
 def function_header():          return keyword_define, identifier, left_bracket, [(argument, ZeroOrMore(comma, argument)), ""], right_bracket, colon

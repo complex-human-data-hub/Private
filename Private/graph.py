@@ -204,67 +204,26 @@ class graph:
             else:
                 return all(self.checkprivacydown(child) for child in children)
 
-    def eval_command_line_expression(self, code, dependson, user = "All"):
-        # determine status of all dependencies to see whether to evaluate
+    def eval_command_line_expression(self, code, user="All"):
         self.acquire("eval_command_line_expression")
         result = ""
 
-        # look for undefined
-
-        undefined = set(dependson) - self.deterministic - self.probabilistic - self.builtins
-        if len(undefined) == 1:
-            result += list(undefined)[0] + " is undefined  "
-        elif len(undefined) > 1:
-            result += ", ".join(list(undefined)) + " are undefined  "
-
-        # look for not uptodate
-
-        notuptodate = set(dependson) - undefined - self.uptodate[user]
-        if len(notuptodate) == 1:
-            result += list(notuptodate)[0] + " is not uptodate  "
-        elif len(notuptodate) > 1:
-            result += ", ".join(list(notuptodate)) + " are not uptodate  "
-
-        # look for private
-
-        private = set(dependson) - undefined - notuptodate - self.public - self.unknown_privacy
-        if len(private) == 1:
-            result += list(private)[0] + " is private  "
-        elif len(private) > 1:
-            result += ", ".join(list(private)) + " are private  "
-
-        # look for privacy unknown
-
-        unknown_privacy = set(dependson) - undefined - notuptodate - private - self.public
-        if len(unknown_privacy) == 1:
-            result += list(unknown_privacy)[0] + " is of unknown privacy"
-        elif len(unknown_privacy) > 1:
-            result += ", ".join(list(unknown_privacy)) + " are of unknown privacy"
-
-        # if they are all empty then evaluate the expression
-
-        if undefined == set() and notuptodate == set() and private == set() and unknown_privacy == set():
-            try:
-                s3_var_globals = retrieve_s3_vars(self.globals[user])
-                for func in [self.evalcode[func_name] for func_name in self.functions]:
-                    exec (func, s3_var_globals)
-                if code in self.functions:
-                    val = self.evalcode[code]
-                else:
-                    val = eval(code, s3_var_globals, self.locals)
-                if type(val) == io.BytesIO:
-                    #res += reprlib.repr(val)
-                    result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
-                else:
-                    result = str(val)
-            except Exception as e:
-                self.release()
-                raise Exception(e.__class__.__name__ + ": " + e.message)
-            finally:
-                for func_name in self.functions:
-                    if func_name in self.globals[user]:
-                        self.globals[user][func_name] = 'User Function'
-
+        if code not in (self.deterministic or self.probabilistic or self.builtins):
+            result += code + " is undefined  "
+        elif code not in self.uptodate[user]:
+            result += code + " is not uptodate  "
+        elif code not in (self.public or self.unknown_privacy):
+            result += code + " is private  "
+        elif code not in self.public:
+            result += code + " is of unknown privacy  "
+        elif type(self.globals[user][code]) == RedisReference:
+            result += code + " is too big to print  "
+        else:
+            val = self.globals[user][code]
+            if type(val) == io.BytesIO:
+                result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
+            else:
+                result = str(val)
         self.release()
         return result
 
