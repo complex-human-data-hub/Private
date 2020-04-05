@@ -254,8 +254,7 @@ class InputVisitor(PTNodeVisitor):
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children):
-        pyMC3_code = children[0].code + " = " + "pymc3." + "Deterministic" + "(\'" + children[0].code + "\', " + children[1].code + "%s)"
-        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=pyMC3_code)
+        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob = True, pyMC3code=children[0].code + " = " + children[1].code + "%s")
         return result("expression_assignment", children[0].code)
 
     def visit_probabilistic_assignment(self, node, children):
