@@ -1368,12 +1368,34 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
             value = "User Function"
         else:
             value = eval(code, s3_var_globals, locals)
-        if sys.getsizeof(value) > 1e6:
+        if get_size(value) > 1e6:
             value = RedisReference(var_id, value)
 
         return (jobname, name, user, value)
     except Exception as e:
         return((jobname, name, user, e))
+
+
+def get_size(obj, seen=None):
+    """Recursively finds size of objects"""
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+    return size
+
 
 def samplerjob(jobname, user, names, code, globals, locals, proj_id):
     numpy.random.seed(Private.config.numpy_seed)
