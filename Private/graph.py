@@ -1196,7 +1196,7 @@ except Exception as e:
         numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
 
-        myname, user, names, value, exception_variable, model = Private.s3_helper.read_results_s3(
+        myname, user, names, value, exception_variable, stats = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
@@ -1226,16 +1226,12 @@ except Exception as e:
                 self.log.debug("samplercallback: name in names ...done ")
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
-                if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
-                    gelman_rubin = pm.gelman_rubin(value)
-                    effective_n = pm.effective_n(value)
-                    waic = pm.stats.waic(value, model)
-                    loo = pm.stats.loo(value, model)
-                    for stat_key in gelman_rubin:
-                        self.globals[user]['gelmanRubin'][stat_key] = gelman_rubin[stat_key]
-                        self.globals[user]['effectiveN'][stat_key] = effective_n[stat_key]
-                        self.globals[user]['waic'][stat_key] = waic
-                        self.globals[user]['loo'][stat_key] = loo
+                if user == "All" and stats is not None: # if this is All then initiate comparisons with all of the users that have already returned
+                    for stat_key in stats["rhat"]:
+                        self.globals[user]['rhat'][stat_key] = stats["rhat"][stat_key]
+                        self.globals[user]['ess'][stat_key] = stats["ess"][stat_key]
+                        self.globals[user]['waic'][stat_key] = stats["waic"]
+                        self.globals[user]['loo'][stat_key] = stats["loo"]
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
@@ -1384,7 +1380,15 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
     try:
         exec (code, retrieve_s3_vars(globals), locals)
         value, exception_variable, model = locals["__private_result__"]
-        data = (jobname, user, names, value, exception_variable, model)
+        stats = None
+        if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
+            stats = {
+                "rhat": pm.stats.rhat(value),
+                "ess": pm.stats.ess(value),
+                "waic": pm.stats.waic(value, model),
+                "loo": pm.stats.loo(value, model)
+            }
+        data = (jobname, user, names, value, exception_variable, stats)
         return data
     except Exception as e:
         # This doesn't seem to be the right size, should be 6 items
