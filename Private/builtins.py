@@ -527,46 +527,46 @@ builtins = {\
 
             # Deterministic Continuous Distributions
 
-            "Uniform": Uniform, \
-            "Normal": Normal, \
-            "HalfNormal": HalfNormal, \
-            "SkewNormal": SkewNormal, \
-            "Beta": Beta, \
-            "Kumaraswamy": Kumaraswamy, \
-            "Exponential": Exponential, \
-            "Laplace": Laplace, \
-            "StudentT": StudentT, \
-            "HalfStudentT": HalfStudentT, \
-            "Cauchy": Cauchy, \
-            "HalfCauchy": HalfCauchy, \
-            "Gamma": Gamma, \
-            "Weibull": Weibull, \
-            "LogNormal": LogNormal, \
-            "ChiSquared": ChiSquared, \
-            "Wald": Wald, \
-            "Pareto": Pareto, \
-            "InverseGamma": InverseGamma, \
-            "ExGaussian": ExGaussian, \
-            "Triangular": Triangular, \
-            "Gumbel": Gumbel, \
-            "Logistic": Logistic, \
-            "LogitNormal": LogitNormal, \
+            "Uniform": Uniform,
+            "Normal": Normal,
+            "HalfNormal": HalfNormal,
+            "SkewNormal": SkewNormal,
+            "Beta": Beta,
+            "Kumaraswamy": Kumaraswamy,
+            "Exponential": Exponential,
+            "Laplace": Laplace,
+            "StudentT": StudentT,
+            "HalfStudentT": HalfStudentT,
+            "Cauchy": Cauchy,
+            "HalfCauchy": HalfCauchy,
+            "Gamma": Gamma,
+            "Weibull": Weibull,
+            "LogNormal": LogNormal,
+            "ChiSquared": ChiSquared,
+            "Wald": Wald,
+            "Pareto": Pareto,
+            "InverseGamma": InverseGamma,
+            "ExGaussian": ExGaussian,
+            "Triangular": Triangular,
+            "Gumbel": Gumbel,
+            "Logistic": Logistic,
+            "LogitNormal": LogitNormal,
 
             # Deterministic Discrete Distributions
 
-            "Binomial": Binomial, \
-            "ZeroInflatedBinomial": ZeroInflatedBinomial, \
-            "BetaBinomial": BetaBinomial, \
-            "Bernoulli": Bernoulli, \
-            "Poisson": Poisson, \
-            "ZeroInflatedPoisson": ZeroInflatedPoisson, \
-            "NegativeBinomial": NegativeBinomial, \
-            "ZeroInflatedNegativeBinomial": ZeroInflatedNegativeBinomial, \
-            "DiscreteUniform": DiscreteUniform, \
-            "Geometric": Geometric, \
-            "Categorical": Categorical, \
-            "DiscreteWeibull": DiscreteWeibull, \
-            "Constant": Constant, \
+            "Binomial": Binomial,
+            "ZeroInflatedBinomial": ZeroInflatedBinomial,
+            "BetaBinomial": BetaBinomial,
+            "Bernoulli": Bernoulli,
+            "Poisson": Poisson,
+            "ZeroInflatedPoisson": ZeroInflatedPoisson,
+            "NegativeBinomial": NegativeBinomial,
+            "ZeroInflatedNegativeBinomial": ZeroInflatedNegativeBinomial,
+            "DiscreteUniform": DiscreteUniform,
+            "Geometric": Geometric,
+            "Categorical": Categorical,
+            "DiscreteWeibull": DiscreteWeibull,
+            "Constant": Constant,
 
             # Theano Functions
             "dot": dot, 
@@ -577,123 +577,123 @@ builtins = {\
 
             # Plotting Functions
             #   Distribution plots
-            "jointplot": plot.jointplot, \
-            "pairplot": plot.pairplot, \
-            "distplot": plot.distplot, \
-            "kdeplot": plot.kdeplot, \
-            "rugplot": plot.rugplot, \
+            "jointplot": plot.jointplot,
+            "pairplot": plot.pairplot,
+            "distplot": plot.distplot,
+            "kdeplot": plot.kdeplot,
+            "rugplot": plot.rugplot,
 
             #   Relational and Categorical plots
-            "relplot": plot.relplot, \
-            "catplot": plot.catplot, \
+            "relplot": plot.relplot,
+            "catplot": plot.catplot,
 
             #   Regression plots
-            "lmplot": plot.lmplot, \
-            "regplot": plot.regplot, \
-            "residplot": plot.residplot, \
+            "lmplot": plot.lmplot,
+            "regplot": plot.regplot,
+            "residplot": plot.residplot,
 
             # Matrix plots
-            "heatmap": plot.heatmap, \
-            "clustermap": plot.clustermap, \
+            "heatmap": plot.heatmap,
+            "clustermap": plot.clustermap,
 
             # Control of Sampler
 
-            "NumberOfTuningSamples": 200, \
-            "NumberOfChains": 2, \
-            "NumberOfSamples": 1000, \
+            "NumberOfTuningSamples": 200,
+            "NumberOfChains": 2,
+            "NumberOfSamples": 1000,
 
             # Data
 
-            "DemoEvents": DemoEvents, \
-            "Events": Events, \
-            "Event": Event, \
-            "ExpEvents": ExpEvents, \
+            "DemoEvents": DemoEvents,
+            "Events": Events,
+            "Event": Event,
+            "ExpEvents": ExpEvents,
 
             # Summary Statistics
 
-            "array": private_array, \
-            "mean": private_mean, \
-            "median": private_median, \
-            "percentile": private_percentile, \
-            "std": private_std, \
+            "array": private_array,
+            "mean": private_mean,
+            "median": private_median,
+            "percentile": private_percentile,
+            "std": private_std,
 
             # Standard python builtins that don't generate privacy problems
 
-            "abs": private_abs, \
-            "all": private_all, \
-            "any":private_any, \
-            "bin":private_bin, \
-            "bool":private_bool, \
-            "chr":private_chr, \
-            "cmp":private_cmp, \
-            "complex":private_complex, \
-            "dict":private_dict, \
-            "divmod":private_divmod, \
-            "enumerate":private_enumerate, \
-            "exp":private_exp, \
-            "filter":private_filter, \
-            "float":private_float, \
-            "format":private_format, \
-            "frozenset":private_frozenset, \
-            "getattr":private_getattr, \
-            "hasattr":private_hasattr, \
-            "hex":private_hex, \
-            "int":private_int, \
-            "isinstance":private_isinstance, \
-            "issubclass":private_issubclass, \
-            "iter":private_iter, \
-            "len":private_len, \
-            "list":private_tuple, \
-            "long":private_long, \
-            "map":private_map, \
-            "min":private_min, \
-            "max":private_max, \
-            "object":private_object, \
-            "oct":private_oct, \
+            "abs": private_abs,
+            "all": private_all,
+            "any":private_any,
+            "bin":private_bin,
+            "bool":private_bool,
+            "chr":private_chr,
+            "cmp":private_cmp,
+            "complex":private_complex,
+            "dict":private_dict,
+            "divmod":private_divmod,
+            "enumerate":private_enumerate,
+            "exp":private_exp,
+            "filter":private_filter,
+            "float":private_float,
+            "format":private_format,
+            "frozenset":private_frozenset,
+            "getattr":private_getattr,
+            "hasattr":private_hasattr,
+            "hex":private_hex,
+            "int":private_int,
+            "isinstance":private_isinstance,
+            "issubclass":private_issubclass,
+            "iter":private_iter,
+            "len":private_len,
+            "list":private_tuple,
+            "long":private_long,
+            "map":private_map,
+            "min":private_min,
+            "max":private_max,
+            "object":private_object,
+            "oct":private_oct,
             "open":private_open,       ####### WARNING Do not ship with this line in ###########
-            "ord":private_ord, \
-            "pow":private_pow, \
-            "property":private_property, \
-            "range":private_range, \
-            "reduce":private_reduce, \
-            "repr":private_repr, \
-            "reversed":private_reversed, \
-            "round":private_round, \
-            "set": private_frozenset, \
-            "slice":private_slice, \
-            "sorted":private_sorted, \
-            "sqrt":private_sqrt, \
-            "str":private_str, \
-            "sum":private_sum, \
-            "tuple":private_tuple, \
-            "type":private_type, \
-            "unichr":private_unichr, \
-            "unicode":private_unicode, \
-            "vars":private_vars, \
-            "xrange":private_xrange, \
-            "zip":private_zip, \
+            "ord":private_ord,
+            "pow":private_pow,
+            "property":private_property,
+            "range":private_range,
+            "reduce":private_reduce,
+            "repr":private_repr,
+            "reversed":private_reversed,
+            "round":private_round,
+            "set": private_frozenset,
+            "slice":private_slice,
+            "sorted":private_sorted,
+            "sqrt":private_sqrt,
+            "str":private_str,
+            "sum":private_sum,
+            "tuple":private_tuple,
+            "type":private_type,
+            "unichr":private_unichr,
+            "unicode":private_unicode,
+            "vars":private_vars,
+            "xrange":private_xrange,
+            "zip":private_zip,
 
             # Pre-processing builtins
 
-            "fft": private_fft, \
-            "mfcc": private_mfcc, \
-            "zipDate": zip_date, \
-            "bucketDate": bucket_date, \
-            "eucDist": euclidean_distance, \
-            "eucDistAll": all_pair_euclidean_distance, \
-            "locDist": location_distance, \
-            "locDistAll": all_pair_location_distance, \
+            "fft": private_fft,
+            "mfcc": private_mfcc,
+            "zipDate": zip_date,
+            "bucketDate": bucket_date,
+            "eucDist": euclidean_distance,
+            "eucDistAll": all_pair_euclidean_distance,
+            "locDist": location_distance,
+            "locDistAll": all_pair_location_distance,
 
             #testing
-            "isclose": private_isclose,\
+            "isclose": private_isclose,
 
             # config builtins
-            "ArrayOutputThreshold": array_output_threshold, \
+            "ArrayOutputThreshold": array_output_threshold,
 
             # stat and diagnostic built-ins
-            "gelmanRubin": {}, \
-            "effectiveN": {}, \
-            "waic": {}, \
+            "rhat": {},
+            "ess": {},
+            "waic": {},
             "loo": {}
     }
 
@@ -703,7 +703,7 @@ prob_builtins = prob_builtins | {'dot', 'softmax'} # theano
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
 plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
-illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["gelmanRubin", "effectiveN", "waic", "loo"])
+illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["rhat", "ess", "waic", "loo"])
 data_builtins = {'Events', 'DemoEvents', 'Event', 'ExpEvents'}
 
 def setBuiltinPrivacy(graph):
