@@ -71,7 +71,7 @@ def calculate_similarity(vector1, vector2):
     return spatial.distance.cosine(vector1, vector2)
 
 
-def zip_date(lists, keys, max_distances=('minutes', 30), keep_unmatched=False):
+def zip_date(lists, keys, max_distances, keep_unmatched=False):
     """
     Merge 2 or more events list based on the time. Close events will be merged to a tuple and will compose a list of
     tuples of such events.
