@@ -71,7 +71,7 @@ def calculate_similarity(vector1, vector2):
     return spatial.distance.cosine(vector1, vector2)
 
 
-def zip_date(lists, keys, max_distances, keep_unmatched=True):
+def zip_date(lists, keys, max_distances=('minutes', 30), keep_unmatched=False):
     """
     Merge 2 or more events list based on the time. Close events will be merged to a tuple and will compose a list of
     tuples of such events.
@@ -84,21 +84,22 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
     :return: list of tuples, tuple will have close events from different lists
     """
     zipped_list = OrderedDict()
+    user_id_key = 'UserId'
 
     main_list = lists[0]
     if isinstance(keys, list):
         main_date_key = keys[0]
     else:
         main_date_key = keys
-    main_list.sort(key=lambda r: parse(getattr(r, main_date_key)))
+    main_list.sort(key=lambda r: (getattr(r, user_id_key), parse(getattr(r, main_date_key))))
     secondary_lists = lists[1:]
     for secondary_id, secondary_list in enumerate(secondary_lists):
         if isinstance(keys, list):
             secondary_date_key = keys[secondary_id]
         else:
             secondary_date_key = keys
-        secondary_list.sort(key=lambda r: parse(getattr(r, secondary_date_key)))
-        if isinstance(max_distances, list):
+        secondary_list.sort(key=lambda r: (getattr(r, user_id_key), parse(getattr(r, secondary_date_key))))
+        if isinstance(max_distances[0], list):
             max_distance = max_distances[secondary_id]
         else:
             max_distance = max_distances
@@ -107,42 +108,73 @@ def zip_date(lists, keys, max_distances, keep_unmatched=True):
         after_key = 1
         time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
         time_after = parse(getattr(secondary_list[after_key], secondary_date_key))
+        user_before = getattr(secondary_list[before_key], user_id_key)
+        user_after = getattr(secondary_list[after_key], user_id_key)
         for main_id, main_item in enumerate(main_list):
             if secondary_id == 0:
                 zipped_list[main_id] = [main_item]
             item_time = parse(getattr(main_item, main_date_key))
+            item_user = getattr(main_item, user_id_key)
             item_added = False
             while not item_added:
-                # if list 2 is over (time_after will be None) then we will group everything else in list 1 with the last
-                # item in list 2
                 item_added = True
-                if time_after is None:
-                    if time_before - item_time <= max_distance_time:
-                        zipped_list[main_id].append(secondary_list[before_key])
-                # item below and after both is greater than the item time, this mean below should be the closest one
-                elif item_time <= time_before:
-                    if time_before - item_time <= max_distance_time:
-                        zipped_list[main_id].append(secondary_list[before_key])
-                # if item time is between time before and time after, then one of these should be the closest one
-                elif time_before <= item_time <= time_after:
-                    if item_time - time_before > time_after - item_time:
-                        if time_after - item_time <= max_distance_time:
-                            zipped_list[main_id].append(secondary_list[after_key])
-                    else:
-                        if item_time - time_before <= max_distance_time:
-                            zipped_list[main_id].append(secondary_list[before_key])
-                # if both below and after is less than the item time we need to increase the pointer positions
-                else:
+                if user_before < item_user:
                     item_added = False
                     before_key += 1
                     after_key += 1
-                    # we might go off the array if list 2 is over, so check fo the length
-                    if after_key < len(secondary_list):
-                        time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
-                        time_after = parse(getattr(secondary_list[after_key], secondary_date_key))
+                    if before_key < len(secondary_list):
+                        if after_key < len(secondary_list):
+                            time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
+                            time_after = parse(getattr(secondary_list[after_key], secondary_date_key))
+                            user_before = getattr(secondary_list[before_key], user_id_key)
+                            user_after = getattr(secondary_list[after_key], user_id_key)
+                        else:
+                            time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
+                            time_after = None
+                            user_before = getattr(secondary_list[before_key], user_id_key)
+                            user_after = None
                     else:
-                        time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
-                        time_after = None
+                        # No matches
+                        before_key -= 1
+                        after_key -= 1
+                        item_added = True
+                elif user_before == item_user:
+                    # if secondary list is over of going to a different user
+                    if user_after is None or user_after > item_user:
+                        if max(time_before - item_time, item_time - time_before) <= max_distance_time:
+                            zipped_list[main_id].append(secondary_list[before_key])
+                    # item below and after both is greater than the item time, this mean below should be the closest one
+                    elif item_time <= time_before:
+                        if time_before - item_time <= max_distance_time:
+                            zipped_list[main_id].append(secondary_list[before_key])
+                    # if item time is between time before and time after, then one of these should be the closest one
+                    elif time_before <= item_time <= time_after:
+                        if item_time - time_before > time_after - item_time:
+                            if time_after - item_time <= max_distance_time:
+                                zipped_list[main_id].append(secondary_list[after_key])
+                        else:
+                            if item_time - time_before <= max_distance_time:
+                                zipped_list[main_id].append(secondary_list[before_key])
+                    # if both below and after is less than the item time we need to increase the pointer positions
+                    else:
+                        item_added = False
+                        before_key += 1
+                        after_key += 1
+                        # we might go off the array if list 2 is over, so check fo the length
+                        if after_key < len(secondary_list):
+                            time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
+                            time_after = parse(getattr(secondary_list[after_key], secondary_date_key))
+                            user_before = getattr(secondary_list[before_key], user_id_key)
+                            user_after = getattr(secondary_list[after_key], user_id_key)
+                        else:
+                            time_before = parse(getattr(secondary_list[before_key], secondary_date_key))
+                            time_after = None
+                            user_before = getattr(secondary_list[before_key], user_id_key)
+                            user_after = None
+                elif user_before > item_user:
+                    # No match fo this item
+                    item_added = True
+
     zipped_tuple_list = []
     for main_id in zipped_list:
         tup = tuple(zipped_list[main_id])

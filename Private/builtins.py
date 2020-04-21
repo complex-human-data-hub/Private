@@ -481,7 +481,7 @@ def private_mfcc(x):
     return pre.mfcc(x)
 
 
-def zip_date(lists, keys, max_distances, unmatched=True):
+def zip_date(lists, keys, max_distances=('minutes', 30), unmatched=False):
     return pre.zip_date(lists, keys, max_distances, keep_unmatched=unmatched)
 
 
