@@ -750,13 +750,15 @@ def setUserIds(events=None):
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 
-def setGlobals(events=None, proj_id="proj1"):
+def setGlobals(events=None, proj_id="proj1", load_demo_events=True):
     if events:
         builtins["Events"] = events
-        builtins["DemoEvents"] = events
+        if load_demo_events:
+            builtins["DemoEvents"] = events
     else:
         builtins["Events"] = Events
-        builtins["DemoEvents"] = DemoEvents
+        if load_demo_events: 
+            builtins["DemoEvents"] = DemoEvents
 
 
     # create a new set of globals with data that removes each user
@@ -768,11 +770,16 @@ def setGlobals(events=None, proj_id="proj1"):
         user_events = [e for e in builtins["Events"] if e.UserId != user]
         result[user]["Events"] = RedisReference(f"{proj_id}/{user}_Events", user_events,
                                              keep_existing=f"{proj_id}/{user}_Events" in project_keys)
-        result[user]["DemoEvents"] = RedisReference(f"{proj_id}/{user}_DemoEvents", user_events,
-                                                 keep_existing=f"{proj_id}/{user}_DemoEvents" in project_keys)
+        if load_demo_events: 
+            result[user]["DemoEvents"] = RedisReference(f"{proj_id}/{user}_DemoEvents", user_events,
+                                                keep_existing=f"{proj_id}/{user}_DemoEvents" in project_keys)
 
     builtins["Events"] = RedisReference(f"{proj_id}/Events", builtins["Events"], keep_existing=f"{proj_id}/Events" in project_keys)
-    builtins["DemoEvents"] = RedisReference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
+    if load_demo_events: 
+        builtins["DemoEvents"] = RedisReference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
                                          keep_existing=f"{proj_id}/DemoEvents" in project_keys)
+    else: 
+        builtins["DemoEvents"] = []
+
     result["All"] = copy.copy(builtins)
     return result

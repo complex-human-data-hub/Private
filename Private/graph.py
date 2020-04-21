@@ -60,7 +60,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self, events=None, project_id='proj1'):
+    def __init__(self, events=None, project_id='proj1', load_demo_events=True):
 
         # variable types
 
@@ -78,7 +78,8 @@ class graph:
         if events and type(events) == RedisReference:
             events = events.value()
         self.project_id = project_id
-        self.globals = setGlobals(events=events, proj_id=self.project_id)
+        self.load_demo_events = load_demo_events
+        self.globals = setGlobals(events=events, proj_id=self.project_id, load_demo_events=self.load_demo_events)
         self.userids = setUserIds(events=events)
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])

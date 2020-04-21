@@ -269,7 +269,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
-        self.depGraph.__init__(events=self.depGraph.globals["All"]["Events"], project_id=self.depGraph.project_id)
+        self.depGraph.__init__(events=self.depGraph.globals["All"]["Events"], project_id=self.depGraph.project_id, load_demo_events=self.depGraph.load_demo_events)
         return result("clear_variables", "All variables removed.")
     def visit_show_dependencies(self, node, children):        return result("show_dependencies", self.depGraph.show_dependencies())
     def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
