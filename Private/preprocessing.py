@@ -178,7 +178,7 @@ def zip_date(lists, keys, max_distances, keep_unmatched=False):
     zipped_tuple_list = []
     for main_id in zipped_list:
         tup = tuple(zipped_list[main_id])
-        if keep_unmatched or len(tup) > 1:
+        if keep_unmatched or len(tup) > len(secondary_lists):
             zipped_tuple_list.append(tup)
 
     return zipped_tuple_list
