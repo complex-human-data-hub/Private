@@ -719,9 +719,9 @@ def showNames(names, width=80):
     res = ""
     names.sort()
     columnWidth = max(len(s) for s in names)+2
-    numColumns = width / columnWidth
+    numColumns = width // columnWidth
 
-    numRows = len(names) / numColumns
+    numRows = len(names) // numColumns
     rows = [""] * numRows
     for i, name in enumerate(names):
         rows[i%numRows] += name.ljust(columnWidth)
@@ -730,7 +730,7 @@ def showNames(names, width=80):
 
 def showBuiltins():
     res = "Builtins\n\n"
-    res += showNames(builtins.keys())
+    res += showNames(list(builtins.keys()))
     return res
 
 
