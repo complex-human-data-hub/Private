@@ -5,6 +5,7 @@ from __future__ import absolute_import
                        # note these lines need to be at top of script
 import numpy.random
 import numpy
+from scipy import stats
 from .event import Event
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -263,6 +264,15 @@ def private_std(x, **kwargs):
 
 def private_abs(x):
     return abs(x)
+
+
+def private_pearsonr(*args, **kwargs):
+    return stats.pearsonr(*args, **kwargs)
+
+
+
+
+
 
 
 def private_all(iterable):
@@ -616,6 +626,11 @@ builtins = {\
             "median": private_median,
             "percentile": private_percentile,
             "std": private_std,
+
+
+            # Scipy Statistics
+            "pearsonr": private_pearsonr,
+
 
             # Standard python builtins that don't generate privacy problems
 
