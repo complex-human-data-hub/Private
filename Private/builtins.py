@@ -765,36 +765,39 @@ def setUserIds(events=None):
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 
-def setGlobals(events=None, proj_id="proj1", load_demo_events=True):
+def setGlobals(events=None, proj_id="proj1", shell_id="shell1", load_demo_events=True):
     if events:
         builtins["Events"] = events
         if load_demo_events:
             builtins["DemoEvents"] = events
     else:
         builtins["Events"] = Events
-        if load_demo_events: 
+        if load_demo_events:
             builtins["DemoEvents"] = DemoEvents
-
 
     # create a new set of globals with data that removes each user
     project_keys = redis_helper.get_matching_keys(proj_id)
     result = {}
     users = set(e.UserId for e in builtins["Events"])
     for user in users:
-        result[user] = copy.copy(builtins)
+        result[user] = copy.deepcopy(builtins)
         user_events = [e for e in builtins["Events"] if e.UserId != user]
-        result[user]["Events"] = RedisReference(f"{proj_id}/{user}_Events", user_events,
-                                             keep_existing=f"{proj_id}/{user}_Events" in project_keys)
-        if load_demo_events: 
-            result[user]["DemoEvents"] = RedisReference(f"{proj_id}/{user}_DemoEvents", user_events,
-                                                keep_existing=f"{proj_id}/{user}_DemoEvents" in project_keys)
+        rk_events = redis_helper.get_redis_key(user, "Events", proj_id, shell_id)
+        result[user]["Events"] = RedisReference(rk_events, user_events,
+                                                keep_existing=rk_events in project_keys)
+        if load_demo_events:
+            rk_demo_events = redis_helper.get_redis_key(user, "DemoEvents", proj_id, shell_id)
+            result[user]["DemoEvents"] = RedisReference(rk_demo_events, user_events,
+                                                        keep_existing=rk_demo_events in project_keys)
 
-    builtins["Events"] = RedisReference(f"{proj_id}/Events", builtins["Events"], keep_existing=f"{proj_id}/Events" in project_keys)
-    if load_demo_events: 
-        builtins["DemoEvents"] = RedisReference(f"{proj_id}/DemoEvents", builtins["DemoEvents"],
-                                         keep_existing=f"{proj_id}/DemoEvents" in project_keys)
-    else: 
+    rk_events = redis_helper.get_redis_key("All", "Events", proj_id, shell_id)
+    builtins["Events"] = RedisReference(rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
+    if load_demo_events:
+        rk_demo_events = redis_helper.get_redis_key("All", "DemoEvents", proj_id, shell_id)
+        builtins["DemoEvents"] = RedisReference(rk_demo_events, builtins["DemoEvents"],
+                                                keep_existing=rk_demo_events in project_keys)
+    else:
         builtins["DemoEvents"] = []
 
-    result["All"] = copy.copy(builtins)
+    result["All"] = copy.deepcopy(builtins)
     return result

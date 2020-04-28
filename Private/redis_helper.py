@@ -28,8 +28,13 @@ def _debug(msg):
         fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 def get_project_id(key):
-    project_id, _ = key.split("/")
+    project_id = key.split("/")[0]
     return project_id
+
+
+def get_redis_key(user_id, variable_name, project_id="proj1", shell_id="shell1"):
+    return f"{project_id}/{shell_id}/{user_id}_{variable_name}"
+
 
 def save_results(key, value, server_ip=redis_server_ip):
     """

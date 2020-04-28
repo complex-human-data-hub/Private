@@ -17,6 +17,7 @@ import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
 #from Private.s3_reference import S3Reference
 from Private.redis_reference import RedisReference
+import Private.redis_helper as redis_helper
 import shutil
 import io
 import re
@@ -60,7 +61,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self, events=None, project_id='proj1', load_demo_events=True):
+    def __init__(self, events=None, project_id='proj1', shell_id='shell1', load_demo_events=True):
 
         # variable types
 
@@ -78,8 +79,9 @@ class graph:
         if events and type(events) == RedisReference:
             events = events.value()
         self.project_id = project_id
+        self.shell_id = shell_id
         self.load_demo_events = load_demo_events
-        self.globals = setGlobals(events=events, proj_id=self.project_id, load_demo_events=self.load_demo_events)
+        self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)
         self.userids = setUserIds(events=events)
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
@@ -1120,7 +1122,7 @@ except Exception as e:
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
                             
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id)
+                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
                             self.jobs[jobname].add_done_callback(self.callback)
 
             for sub_graph_id, sub_graph in sub_graphs.items():
@@ -1351,8 +1353,8 @@ except Exception as e:
         return final_set
 
 
-def job(jobname, name, user, code, globals, locals, user_func, proj_id):
-    var_id = generate_variable_id(proj_id, user, name)
+def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id):
+    redis_key = redis_helper.get_redis_key(user, name, proj_id, shell_id)
     name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
@@ -1370,7 +1372,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id):
         else:
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
-            value = RedisReference(var_id, value)
+            value = RedisReference(redis_key, value)
 
         return (jobname, name, user, value)
     except Exception as e:
