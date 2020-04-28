@@ -61,10 +61,11 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self, events=None, project_id='proj1', shell_id='shell1', load_demo_events=True):
+    def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True):
 
         # variable types
-
+        if not shell_id:
+            shell_id='shell1'
         self.deterministic = set()
         self.probabilistic = set()
         self.functions = set()
