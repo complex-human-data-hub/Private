@@ -1431,14 +1431,6 @@ def getJobId(jobname, user, names, code, globals, locals):
     return folder_name + "/" + str(uuid.uuid4())
 
 
-def generate_variable_id(project_id, user_id, variable_id):
-    return f"{str(project_id)}/{str(user_id)}_{str(variable_id)}"
-
-
-def check_all_variables_s3(project_id, user_id, names):
-    return all([Private.s3_helper.if_exist(generate_variable_id(project_id, user_id, name)) for name in names])
-
-
 def retrieve_s3_vars(var_dict):
     ret_dict = {}
     for key in var_dict.keys():
