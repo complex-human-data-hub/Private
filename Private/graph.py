@@ -904,7 +904,7 @@ class graph:
         :param node: node (name of a variable)
         :return: set of nodes (strings)
         """
-        sub_graphs = self.get_all_sub_graphs([node])
+        sub_graphs = self.get_sub_graphs(node)
         for sub_graph_id, sub_graph in sub_graphs.items():
             if node in sub_graph:
                 return sub_graph
