@@ -1299,7 +1299,8 @@ except Exception as e:
                     if self.privacySamplerResults[variable] != "private":
                         self.privacySamplerResults[variable] = "public"
                         if len(self.globals['All'][variable]) > Private.config.max_sample_size:
-                            self.globals['All'][variable] = self.globals['All'][variable][::step_size]
+                            self.globals['All'][variable] = self.globals['All'][variable][::step_size][
+                                                            :Private.config.max_sample_size]
         except Exception as e:
             self.log.debug("manifold privacy " + str(e))
             print("manifold privacy " + str(e))
