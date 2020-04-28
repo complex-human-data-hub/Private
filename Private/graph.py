@@ -1299,12 +1299,8 @@ except Exception as e:
                 if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
                     if self.privacySamplerResults[variable] != "private":
                         self.privacySamplerResults[variable] = "public"
-                        debug_logger(f"before thining {variable}: " + str(len(self.globals['All'][variable])))
-                        debug_logger("sample size: " + str(sample_size))
-                        debug_logger("max sample size: " + str(Private.config.max_sample_size))
-                        debug_logger("step size: " + str(step_size))
-                        self.globals['All'][variable] = self.globals['All'][variable][::step_size]
-                        debug_logger(f"after thining {variable}: " + str(len(self.globals['All'][variable])))
+                        if len(self.globals['All'][variable]) > Private.config.max_sample_size:
+                            self.globals['All'][variable] = self.globals['All'][variable][::step_size]
         except Exception as e:
             self.log.debug("manifold privacy " + str(e))
             print("manifold privacy " + str(e))
