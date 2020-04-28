@@ -1295,7 +1295,6 @@ except Exception as e:
         
             # if we have all manifold processes back and there are variables that have not been set to private they are public
             for variable in self.numberOfManifoldPrivacyProcessesComplete.keys():
-                debug_logger(f"completed manifold {variable}: " + str(self.numberOfManifoldPrivacyProcessesComplete[variable]) + " users: " + str(len(self.userids)))
                 if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
                     if self.privacySamplerResults[variable] != "private":
                         self.privacySamplerResults[variable] = "public"
