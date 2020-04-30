@@ -1261,6 +1261,9 @@ except Exception as e:
                                         jobname = "Manifold: " + user + " " + name
                                         self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, user, self.globals[user][name], self.globals["All"][name])
                                         self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
+                                else:
+                                    # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
+                                    pass
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
 
@@ -1290,17 +1293,26 @@ except Exception as e:
             if self.privacySamplerResults.get(name, None) != "private":
                 if d > PrivacyCriterion:
                     self.privacySamplerResults[name] = "private"
+                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
+                    self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
                 else: 
                     self.privacySamplerResults[name] = "unknown_privacy"
         
             # if we have all manifold processes back and there are variables that have not been set to private they are public
-            for variable in self.numberOfManifoldPrivacyProcessesComplete.keys():
-                if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
-                    if self.privacySamplerResults[variable] != "private":
-                        self.privacySamplerResults[variable] = "public"
-                        if len(self.globals['All'][variable]) > Private.config.max_sample_size:
-                            self.globals['All'][variable] = self.globals['All'][variable][::step_size][
-                                                            :Private.config.max_sample_size]
+            #for variable in self.numberOfManifoldPrivacyProcessesComplete.keys():
+            #    if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
+            #        if self.privacySamplerResults[variable] != "private":
+            #            self.privacySamplerResults[variable] = "public"
+            #            if len(self.globals['All'][variable]) > Private.config.max_sample_size:
+            #                self.globals['All'][variable] = self.globals['All'][variable][::step_size][
+            #                                                :Private.config.max_sample_size]
+
+            if self.numberOfManifoldPrivacyProcessesComplete[name] == len(self.userids) -1: # -1 because we don't have results for All
+                if self.privacySamplerResults[name] != "private":
+                    self.privacySamplerResults[name] = "public"
+                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
+                    self.log.debug(user + ": " + name + ": PUBLIC")
+
         except Exception as e:
             self.log.debug("manifold privacy " + str(e))
             print("manifold privacy " + str(e))

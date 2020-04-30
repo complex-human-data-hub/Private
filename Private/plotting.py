@@ -141,6 +141,7 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
 
 def distplot(argument_names, kw_argument_names, *args, **kwargs):
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         sns.distplot(df[df.columns[0]], **kwargs)
         plt.title(title)
@@ -148,6 +149,7 @@ def distplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
