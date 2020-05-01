@@ -106,6 +106,7 @@ def jointplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
@@ -113,6 +114,7 @@ def jointplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -128,6 +130,7 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.pairplot(df, **kwargs)
         set_plot_title(g, title)
@@ -135,6 +138,7 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -165,6 +169,7 @@ def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         if len(args) > 1 is None:
             sns.kdeplot(df.ix[:,0], **kwargs)
@@ -175,6 +180,7 @@ def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -188,6 +194,7 @@ def rugplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         sns.rugplot(df.ix[:,0], **kwargs)
         plt.title(title)
@@ -195,6 +202,7 @@ def rugplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -213,6 +221,7 @@ def relplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         if len(args) == 3:
             g = sns.relplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
@@ -225,6 +234,7 @@ def relplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -259,6 +269,7 @@ def catplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         if len(args) == 3:
             g = sns.catplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
@@ -271,6 +282,7 @@ def catplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -286,6 +298,7 @@ def lmplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         if len(args) == 3:
             g = sns.lmplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
@@ -296,6 +309,7 @@ def lmplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -311,6 +325,7 @@ def regplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
@@ -318,6 +333,7 @@ def regplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -333,6 +349,7 @@ def residplot(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
@@ -340,6 +357,7 @@ def residplot(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -356,6 +374,7 @@ def heatmap(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.heatmap(df, **kwargs)
         set_plot_title(g, title)
@@ -363,6 +382,7 @@ def heatmap(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
 
@@ -378,6 +398,7 @@ def clustermap(argument_names, kw_argument_names, *args, **kwargs):
     :return: Data URL
     """
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    plt.figure()
     try:
         g = sns.clustermap(df, **kwargs)
         set_plot_title(g, title)
@@ -385,5 +406,6 @@ def clustermap(argument_names, kw_argument_names, *args, **kwargs):
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
+    plt.clf()
     plt.close()
     return buf
