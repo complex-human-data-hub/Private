@@ -955,7 +955,7 @@ class graph:
 
         return job_count
 
-    def constructPyMC3code(self, user=None, sub_graph=()):
+    def constructPyMC3code(self, user=None, sub_graph=set()):
         #try:
             locals = {}
             loggingcode = """
@@ -965,19 +965,25 @@ try:
     _log = logging.getLogger("Private")
     #logging.disable(100)
     _log.debug("Running PyMC3 Code")
-    with open("/tmp/private-worker.log", "a") as fp:
-        fp.write("Running PyMC3 Code\\n")
+    json = __import__("json")
+    def debug_logger(msg):
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write(msg + "\\n")
 
+    debug_logger("Running PyMC3 Code")
 """
 
             code = loggingcode
 
             # extract index variables
 
-            for indexvariable in list(set(self.hierarchical.values()) & sub_graph):
+            for indexvariable in list(set(self.hierarchical.values()) & set(sub_graph)):
                 code += "    global __%s_Dict \n" % indexvariable
                 code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
                 code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+                #code += "    debug_logger(['%s', __%s_Dict])" % (indexvariable, indexvariable)
                 if user:
                     locals[indexvariable] = self.globals[user][indexvariable]
 
@@ -1005,6 +1011,7 @@ try:
                 probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
 
             for name in probabilistic_only_names:
+                #code += '        debug_logger(["probabilistic_only_names", "%s"])' % (name) 
                 code += '        exception_variable = "%s"\n' % name
                 if name in self.hierarchical:
                     shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
@@ -1012,8 +1019,9 @@ try:
                 else:
                     code += "        " + self.pyMC3code[name] % ""+ "\n"
 
-            observed_names = list(self.probabilistic & self.deterministic & sub_graph)
+            observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
             for name in observed_names:
+                #code += '        debug_logger(["observed_names_names", "%s"])' % (name) 
                 code += '        exception_variable = "%s"\n' % name
                 obsname = "__private_%s_observed" % name
                 code += "        " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
@@ -1163,6 +1171,7 @@ except Exception as e:
         try:
             if isinstance(value, Exception):
                 if user == "All":
+                    debug_logger(["callback Exception", user, name, value])
                     self.globals[user][name] = str(value)
                     self.changeState(user, name, "exception")
             else:
@@ -1207,6 +1216,7 @@ except Exception as e:
             for name in names:
                 # ** Might need to remove the Exception message here
                 self.globals[user][name] = str(value)
+                debug_logger(["samplercallback Exception", user, name, value])
                 self.changeState(user, name, "exception")
             if exception_variable != "No Exception Variable":
                 m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
@@ -1387,6 +1397,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id
         else:
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
+        #if True:
             value = RedisReference(redis_key, value)
 
         return (jobname, name, user, value)
