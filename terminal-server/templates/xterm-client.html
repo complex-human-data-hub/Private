@@ -249,6 +249,18 @@ function createTerminal() {
     }
 
     term.send_cmd = function(cmd) {
+        var cmds = cmd.split(/\r/);
+        // Don't hammer the server if client
+        // wants to send 1000 lines of code
+        var cmd_delay = 300;
+        $.map(cmds, function(c, i){
+            window.setTimeout(function(){
+                term.send_individual_cmd(c);
+            }, 100+(i*cmd_delay));
+        });
+    }
+
+    term.send_individual_cmd = function(cmd){
 
       console.log("term.send_cmd2", cmd);
       console.log("term.send_cmd runningCMD", term.runningCMD);
@@ -258,14 +270,14 @@ function createTerminal() {
         //write_cmd(cmd);
         data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
         term.runningCMD = true;
-        _display_loader();
+        //_display_loader();
         $.ajax({
             type: "POST",
             url: '{{analyze_url}}',
             data: data,
             success: function(data){
                 console.log("ajax:success:cmd", cmd, data);
-                _hide_loader();
+                //_hide_loader();
                 term.runningCMD = false;
                 if(data.type == 'graph'){
                     term.show_graph(cmd, data)
@@ -275,7 +287,7 @@ function createTerminal() {
                 callback();
             },
             error: function(xhr, textStatus, errorThrown) {
-              _hide_loader();
+              //_hide_loader();
               term.runningCMD = false;
               console.log("ajax:fail:cmd", cmd);
               alert("Command could not be run at this time: " + cmd + ". Please try again");  
