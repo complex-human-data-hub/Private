@@ -923,6 +923,8 @@ class graph:
             if name not in self.uptodate[user]:
                 result = result and self.checkdown(user, name)
                 result = result and self.checkup(user, name)
+            if name in self.deterministic & self.probabilistic:
+                result = result and self.checkdown(user, name)
         return result
 
     @staticmethod
