@@ -238,7 +238,6 @@ function createTerminal() {
         input = ""
     };
     term.prompt()
-    term.runningCMD = false;
 
     // ---------------- Needs to send and receive data via ajax ----------------- //
 
@@ -248,28 +247,47 @@ function createTerminal() {
       term.writeln(res.replace(/\n/g, "\r\n   "));
     }
 
+    term.sending_cmd = false;
+    term.stop_cmd = false;
     term.send_cmd = function(cmd) {
-        var cmds = cmd.split(/\r/);
-        // Don't hammer the server if client
-        // wants to send 1000 lines of code
-        var cmd_delay = 300;
-        $.map(cmds, function(c, i){
+        // check first pas
+        cmds = cmd;
+        if(typeof cmd === 'string' || cmd instanceof String){
+            cmds = cmd.split(/\r/);
+        }
+
+        if(term.stop_cmd){
+            // If we need to stop the cmds 
+            // Empty out command queue
+            cmds = [];
+            term.stop_cmd = false;
+        }
+
+        if(term.sending_cmd){
+            // Already sending a command,
+            // Let's wait until that it finished
+            // to send the rest
             window.setTimeout(function(){
-                term.send_individual_cmd(c);
-            }, 100+(i*cmd_delay));
-        });
+                term.send_cmd(cmds);
+            }, 300);
+        }else{
+            term.sending_cmd = true;
+            term.send_individual_cmd( cmds.shift() );
+        }
+
+        for(var i = 0; i < cmds.length; i++){
+            term.send_individual_cmd(cmds[i]);
+        }
     }
+
 
     term.send_individual_cmd = function(cmd){
 
       console.log("term.send_cmd2", cmd);
-      console.log("term.send_cmd runningCMD", term.runningCMD);
-        if (term.runningCMD) return;
         if (!cmd) return;
 
         //write_cmd(cmd);
         data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
-        term.runningCMD = true;
         //_display_loader();
         $.ajax({
             type: "POST",
@@ -278,7 +296,6 @@ function createTerminal() {
             success: function(data){
                 console.log("ajax:success:cmd", cmd, data);
                 //_hide_loader();
-                term.runningCMD = false;
                 if(data.type == 'graph'){
                     term.show_graph(cmd, data)
                 }else if(data.response){
@@ -288,11 +305,13 @@ function createTerminal() {
             },
             error: function(xhr, textStatus, errorThrown) {
               //_hide_loader();
-              term.runningCMD = false;
               console.log("ajax:fail:cmd", cmd);
               alert("Command could not be run at this time: " + cmd + ". Please try again");  
               callback();
             },
+            complete: function(xhr, textStatus){
+                term.sending_cmd = false;
+            },            
             dataType: "json"
         });
     }
@@ -366,7 +385,6 @@ function createTerminal() {
 
     term.enter = function () {
         // Enter key has been pressed
-        if(term.runningCMD) return;
 
         console.log("term.enter", input);
         if(term._record_function){ 
@@ -537,7 +555,6 @@ function createTerminal() {
 
 
     term.on('paste', function (rawdata, ev) {
-        if(term.runningCMD) return;
 
         console.log("paste")
         rawdata = $.trim(rawdata) + "\r";
@@ -649,8 +666,6 @@ function createTerminal() {
 
 
     term.on('key', function (key, ev) {
-        console.log("key term.runningCMD", term.runningCMD);
-        if(term.runningCMD) return;
 
         var printable = (
             !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
