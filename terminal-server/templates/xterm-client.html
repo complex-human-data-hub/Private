@@ -272,7 +272,8 @@ function createTerminal() {
         // Send first command 
         if(! term.sending_cmd){
             term.sending_cmd = true;
-            term.send_individual_cmd( cmds.shift() );
+            var returnPrompt = cmds.length == 1;
+            term.send_individual_cmd( cmds.shift(), returnPrompt );
         }
 
         window.setTimeout(function(){
@@ -284,7 +285,7 @@ function createTerminal() {
     }
 
 
-    term.send_individual_cmd = function(cmd){
+    term.send_individual_cmd = function(cmd, returnPrompt=true){
 
       console.log("term.send_cmd2", cmd);
         if (!cmd){
@@ -315,7 +316,7 @@ function createTerminal() {
             },
             complete: function(xhr, textStatus){
                 term.sending_cmd = false;
-                callback();
+                callback(returnPrompt);
             },            
             dataType: "json"
         });
@@ -424,7 +425,7 @@ function createTerminal() {
 
     }
 
-    callback = function() {
+    callback = function(returnPrompt=true) {
         // Call this function after ajax processes are complete
         console.log("callback");
 
@@ -448,7 +449,7 @@ function createTerminal() {
         post = ""
 
         // Start a new line
-        if(!term.sending_cmd) term.prompt()
+        if(returnPrompt) term.prompt()
     }
 
     // -------------------------------------------------------------------------- //
