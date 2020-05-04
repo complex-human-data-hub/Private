@@ -250,11 +250,12 @@ function createTerminal() {
     term.sending_cmd = false;
     term.stop_cmd = false;
     term.send_cmd = function(cmd) {
-        // check first pas
+        // check first pass
         cmds = cmd;
         if(typeof cmd === 'string' || cmd instanceof String){
             cmds = cmd.split(/\r/);
         }
+        console.log("cmds", cmds, cmds.length);
 
         if(term.stop_cmd){
             // If we need to stop the cmds 
@@ -263,28 +264,33 @@ function createTerminal() {
             term.stop_cmd = false;
         }
 
-        if(term.sending_cmd){
-            // Already sending a command,
-            // Let's wait until that it finished
-            // to send the rest
-            window.setTimeout(function(){
-                term.send_cmd(cmds);
-            }, 300);
-        }else{
+        // Stop on empty queue
+        if(cmds.length == 0){
+            return;
+        }
+
+        // Send first command 
+        if(! term.sending_cmd){
             term.sending_cmd = true;
             term.send_individual_cmd( cmds.shift() );
         }
 
-        for(var i = 0; i < cmds.length; i++){
-            term.send_individual_cmd(cmds[i]);
-        }
+        window.setTimeout(function(){
+            // Send off other commands
+            // empty queue will be picked up above
+            term.send_cmd(cmds);
+        }, 300);
+        
     }
 
 
     term.send_individual_cmd = function(cmd){
 
       console.log("term.send_cmd2", cmd);
-        if (!cmd) return;
+        if (!cmd){
+            term.sending_cmd = false;
+            return;
+        }        
 
         //write_cmd(cmd);
         data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
@@ -301,16 +307,15 @@ function createTerminal() {
                 }else if(data.response){
                     term.write_response(data.response)
                 }
-                callback();
             },
             error: function(xhr, textStatus, errorThrown) {
               //_hide_loader();
               console.log("ajax:fail:cmd", cmd);
               alert("Command could not be run at this time: " + cmd + ". Please try again");  
-              callback();
             },
             complete: function(xhr, textStatus){
                 term.sending_cmd = false;
+                callback();
             },            
             dataType: "json"
         });
@@ -443,7 +448,7 @@ function createTerminal() {
         post = ""
 
         // Start a new line
-        term.prompt()
+        if(!term.sending_cmd) term.prompt()
     }
 
     // -------------------------------------------------------------------------- //
