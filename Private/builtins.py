@@ -765,7 +765,8 @@ def setUserIds(events=None):
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
 
-def setGlobals(events=None, proj_id="proj1", shell_id="shell1", load_demo_events=True):
+def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events=True):
+    shell_id = "shared"
     if events:
         builtins["Events"] = events
         if load_demo_events:
