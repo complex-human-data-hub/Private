@@ -30,7 +30,7 @@ import uuid
 import pymc3 as pm
 from dask.distributed import Client
 from datetime import datetime
-
+from ordered_set import OrderedSet
 from .config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
 import json
 #logging.basicConfig(filename=logfile,level=logging.DEBUG)
@@ -781,11 +781,12 @@ class graph:
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
+        enter = OrderedSet( sorted(list(enter)) )
         GRAY, BLACK = 0, 1
 
         def dfs(node):
             state[node] = GRAY
-            for k in self.dependson.get(node, set()) | self.probdependson.get(node, set()):
+            for k in sorted( list( self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
                 sk = state.get(k, None)
                 try:
                     if sk == GRAY: raise ValueError("cycle")
@@ -1308,6 +1309,7 @@ except Exception as e:
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
                     self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
                 else: 
+                    self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
                     self.privacySamplerResults[name] = "unknown_privacy"
         
             # if we have all manifold processes back and there are variables that have not been set to private they are public
