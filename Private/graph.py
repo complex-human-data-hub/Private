@@ -83,12 +83,13 @@ class graph:
         self.shell_id = shell_id
         self.load_demo_events = load_demo_events
         if user_ids:
+            if not 'All' in user_ids:
+                user_ids.append('All')
             self.userids = set(user_ids)
             self.globals = setGlobals2(user_ids)
         else:
             self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)
             self.userids = setUserIds(events=events)
-            debug_logger(["user_ids", self.userids])
 
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
@@ -1413,7 +1414,6 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id
         if code.startswith("def"):
             value = "User Function"
         else:
-            debug_logger(["job eval", code])
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
         #if True:
