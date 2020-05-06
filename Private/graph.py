@@ -14,7 +14,7 @@ import logging
 import matplotlib.pyplot as plt
 import networkx as nx
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins, setGlobals2
 #from Private.s3_reference import S3Reference
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -61,7 +61,7 @@ def ppset(s):
 
 class graph:
 
-    def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True):
+    def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True, user_ids=None):
 
         # variable types
         if not shell_id:
@@ -82,8 +82,14 @@ class graph:
         self.project_id = project_id
         self.shell_id = shell_id
         self.load_demo_events = load_demo_events
-        self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)
-        self.userids = setUserIds(events=events)
+        if user_ids:
+            self.userids = set(user_ids)
+            self.globals = setGlobals2(user_ids)
+        else:
+            self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)
+            self.userids = setUserIds(events=events)
+            debug_logger(["user_ids", self.userids])
+
         self.locals = {}   # do we need this?
         self.stale = dict([(u, set() ) for u in self.userids])
         self.computing = dict([(u, set() ) for u in self.userids])
@@ -133,7 +139,14 @@ class graph:
         #print "Starting pp with", self.server.get_ncpus(), "workers"
         #self.nxgraph = nx.DiGraph()
         self.SamplerParameterUpdated = False
+
         setBuiltinPrivacy(self) # set privacy of builtins
+
+        if user_ids:
+            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"])
+            if self.load_demo_events:
+                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)", dependson=["getDemoEvents"])
+
 
     def check_ppserver_connection(self):
 
@@ -1132,6 +1145,7 @@ except Exception as e:
                         if jobname not in self.jobs:
                             self.changeState(user, name, "computing")
                             self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+                            debug_logger("Calculate: " + user + " " + name + " " + self.code[name])
                             
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
@@ -1349,7 +1363,7 @@ except Exception as e:
 
     def get_globals(self, names, user):
         user_globals = self.globals[user]
-        job_globals = {}
+        job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
         for name in names:
             if name in self.dependson:
@@ -1399,6 +1413,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id
         if code.startswith("def"):
             value = "User Function"
         else:
+            debug_logger(["job eval", code])
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
         #if True:

@@ -523,6 +523,19 @@ def private_isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     return numpy.isclose(a, b, rtol, atol, equal_nan)
 
 
+
+# how do we stop the user guessing the at a project_id and user_id
+# from a different project??
+def private_get_events(project_id, user_id):
+    rk_events = redis_helper.get_redis_key(user_id, "Events", project_id, "shared")
+    return RedisReference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
+
+
+def private_get_demo_events(project_id,user_id):
+    rk_events = redis_helper.get_redis_key(user_id, "DemoEvents", project_id, "shared")
+    return RedisReference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
+
+
 builtins = {\
 
             # make __bultins__ None
@@ -709,7 +722,10 @@ builtins = {\
             "rhat": {},
             "ess": {},
             "waic": {},
-            "loo": {}
+            "loo": {},
+
+            "getEvents": private_get_events,
+            "getDemoEvents": private_get_demo_events,
     }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
@@ -728,6 +744,7 @@ def setBuiltinPrivacy(graph):
         graph.setPrivacy(name, "public")
 
     graph.setPrivacy("Events", "private")
+    graph.setPrivacy("getEvents", "private")
 
 
 def showNames(names, width=80):
@@ -764,6 +781,14 @@ def setUserIds(events=None):
 
     return set([e.UserId for e in builtins["Events"]] + ["All"])
 
+
+def setGlobals2(user_ids):
+    result = {}
+    for u in user_ids:
+        result[u] = copy.deepcopy(builtins)
+
+    result["All"] = copy.deepcopy(builtins)
+    return result
 
 def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events=True):
     shell_id = "shared"
