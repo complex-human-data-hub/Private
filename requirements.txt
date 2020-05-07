@@ -33,3 +33,4 @@ boto3
 dask
 distributed
 redis
+ordered-set
