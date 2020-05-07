@@ -246,13 +246,16 @@ function createTerminal() {
       term.write("\r\n   ")
       term.writeln(res.replace(/\n/g, "\r\n   "));
     }
-
+    
+    term.sending_batch = false;
     term.sending_cmd = false;
     term.stop_cmd = false;
     term.send_cmd = function(cmd) {
-        // check first pass
         cmds = cmd;
         if(typeof cmd === 'string' || cmd instanceof String){
+            // check first pass
+            term.sending_batch = true;
+            _display_loader();
             cmds = cmd.split(/\r/);
         }
         console.log("cmds", cmds, cmds.length);
@@ -317,6 +320,10 @@ function createTerminal() {
             complete: function(xhr, textStatus){
                 term.sending_cmd = false;
                 callback(returnPrompt);
+                if(returnPrompt){
+                    _hide_loader();
+                    term.sending_batch = false;
+                }
             },            
             dataType: "json"
         });
@@ -391,7 +398,7 @@ function createTerminal() {
 
     term.enter = function () {
         // Enter key has been pressed
-
+        if( term.sending_batch ) return ;
         console.log("term.enter", input);
         if(term._record_function){ 
             term._record_function += input + ";";
@@ -561,7 +568,7 @@ function createTerminal() {
 
 
     term.on('paste', function (rawdata, ev) {
-
+        if( term.sending_batch ) return ;
         console.log("paste")
         rawdata = $.trim(rawdata) + "\r";
 
@@ -672,7 +679,7 @@ function createTerminal() {
 
 
     term.on('key', function (key, ev) {
-
+        if( term.sending_batch ) return ;
         var printable = (
             !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
         );
