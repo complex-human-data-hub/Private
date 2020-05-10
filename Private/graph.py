@@ -66,6 +66,9 @@ class graph:
         # variable types
         if not shell_id:
             shell_id='shell1'
+        # clear the cache for the shell
+        redis_helper.delete_user_keys(project_id, shell_id)
+
         self.deterministic = set()
         self.probabilistic = set()
         self.functions = set()
@@ -85,7 +88,7 @@ class graph:
         if user_ids:
             if not 'All' in user_ids:
                 user_ids.append('All')
-            self.userids = set(user_ids)
+            self.userids = OrderedSet(user_ids)
             self.globals = setGlobals2(user_ids)
         else:
             self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)

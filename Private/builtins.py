@@ -5,6 +5,7 @@ from __future__ import absolute_import
                        # note these lines need to be at top of script
 import numpy.random
 import numpy
+from ordered_set import OrderedSet
 from scipy import stats
 from .event import Event
 from Private.redis_reference import RedisReference
@@ -779,7 +780,7 @@ def setUserIds(events=None):
         builtins["Events"] = Events
         builtins["DemoEvents"] = DemoEvents
 
-    return set([e.UserId for e in builtins["Events"]] + ["All"])
+    return OrderedSet(["All"] + [e.UserId for e in builtins["Events"]])
 
 
 def setGlobals2(user_ids):
