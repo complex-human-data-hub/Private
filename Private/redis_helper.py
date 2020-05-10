@@ -113,14 +113,14 @@ def get_matching_keys(prefix='', server_ip=redis_server_ip):
     return list(map(lambda x: x.decode('utf-8'), r.smembers(prefix)))
 
 
-def delete_user_defined_keys(prefix='', server_ip=redis_server_ip):
+def delete_user_keys(project_id, shell_id, server_ip=redis_server_ip):
     """
     Delete the redis keys under a given prefix
 
-    :param prefix: redis key prefix
+    :param project_id: redis key prefix
+    :param shell_id: shell id
     :param server_ip: redis server IP
     """
     r = redis.Redis(host=server_ip)
-    keys = get_matching_keys(prefix, server_ip)
-    for key in keys:
+    for key in r.scan_iter(f"{project_id}/{shell_id}/*"):
         r.delete(key)
