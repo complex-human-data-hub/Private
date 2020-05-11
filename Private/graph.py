@@ -1202,6 +1202,9 @@ except Exception as e:
                     if name in config_builtins:
                         builtins.get(name)(value)
                     if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+                        if name == "NumberOfSamples":
+                            if value > 4000:
+                                self.globals[user][name] = 4000
                         self.SamplerParameterUpdated = True
                     if type(value) == io.BytesIO:   # write image to file
                         value.seek(0)
