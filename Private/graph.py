@@ -87,7 +87,7 @@ class graph:
         self.load_demo_events = load_demo_events
         if user_ids:
             if not 'All' in user_ids:
-                user_ids.append('All')
+                user_ids = ['All'] + user_ids
             self.userids = OrderedSet(user_ids)
             self.globals = setGlobals2(user_ids)
         else:
