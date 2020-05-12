@@ -5,9 +5,18 @@ import sys
 from scipy.stats import norm
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
+from datetime import datetime 
+import json
 
 
 np.set_printoptions(precision=4)
+
+def debug_logger(msg):
+    with open("/tmp/manifold-privacy.log", "a") as fp:
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 
 def distManifold(Sminus, Sall, returnAll=False):
