@@ -1014,7 +1014,8 @@ try:
     softmax = __import__("theano").tensor.nnet.nnet.softmax
     traceback = __import__("traceback")
 
-    
+    numpy = __import__("numpy") 
+    numpy.random.seed(987654321)
     basic_model = pymc3.Model()
 
     
@@ -1258,6 +1259,7 @@ except Exception as e:
                         name_long = int("".join(map(str, [ord(c) for c in name])))
                         # 4294967291 seems to be the largest prime under 2**32 (int limit)
                         seed = name_long % 4294967291
+                        debug_logger("name_seed {}: {} ({})".format(name, seed, name_long))
                         numpy.random.seed(seed) 
                         self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
                     else:                                                                # manifold privacy is applied to individual variables
@@ -1330,6 +1332,13 @@ except Exception as e:
             if self.privacySamplerResults.get(name, None) != "private":
                 if d > PrivacyCriterion:
                     self.privacySamplerResults[name] = "private"
+                    #for j in list(self.jobs.keys()):
+                    #    if not j.startswith("Manifold:"):
+                    #        continue
+                    #    elif j.endswith(name):
+                    #        debug_logger(f"Cancelling: {j}")
+                    #        self.jobs[j].cancel()
+                    #        del self.jobs[j]
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
                     self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
                 else: 
@@ -1475,6 +1484,9 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
+    debug_logger("{} [{}] Shape sminus: {} \nSall {}".format(name, user, firstarray.shape, secondarray.shape) )
+    debug_logger("{} [{}] Sum sminus: {} \nSall {}".format(name, user, firstarray.sum(), secondarray.sum()) )
+
     d = distManifold(firstarray, secondarray) * 100.
     return jobname, name, user, d
 
