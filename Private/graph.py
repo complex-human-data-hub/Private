@@ -1230,7 +1230,6 @@ except Exception as e:
 
     def samplercallback(self, returnvalue):
         returnvalue = returnvalue.result()
-        numpy.random.seed(numpy_seed)
         self.acquire("samplercallback")
 
         myname, user, names, value, exception_variable, stats = Private.s3_helper.read_results_s3(
@@ -1256,6 +1255,10 @@ except Exception as e:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
                     if name in value.varnames:
+                        name_long = int("".join(map(str, [ord(c) for c in name])))
+                        # 4294967291 seems to be the largest prime under 2**32 (int limit)
+                        seed = name_long % 4294967291
+                        numpy.random.seed(seed) 
                         self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
                     else:                                                                # manifold privacy is applied to individual variables
                         self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
