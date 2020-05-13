@@ -1339,13 +1339,13 @@ except Exception as e:
             if self.privacySamplerResults.get(name, None) != "private":
                 if d > PrivacyCriterion:
                     self.privacySamplerResults[name] = "private"
-                    for j in list(self.jobs.keys()):
-                        if not j.startswith("Manifold:"):
-                            continue
-                        elif j.endswith(name):
-                            debug_logger(f"Cancelling: {j}")
-                            self.jobs[j].cancel()
-                            del self.jobs[j]
+                    #for j in list(self.jobs.keys()):
+                    #    if not j.startswith("Manifold:"):
+                    #        continue
+                    #    elif j.endswith(name):
+                    #        debug_logger(f"Cancelling: {j}")
+                    #        self.jobs[j].cancel()
+                    #        del self.jobs[j]
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
                     self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
                 else: 
