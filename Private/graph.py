@@ -1269,12 +1269,16 @@ except Exception as e:
                 self.log.debug("samplercallback: name in names ...done ")
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
-                if user == "All" and stats is not None: # if this is All then initiate comparisons with all of the users that have already returned
-                    for stat_key in stats["rhat"]:
-                        self.globals[user]['rhat'][stat_key] = stats["rhat"][stat_key]
-                        self.globals[user]['ess'][stat_key] = stats["ess"][stat_key]
-                        self.globals[user]['waic'][stat_key] = stats["waic"]
-                        self.globals[user]['loo'][stat_key] = stats["loo"]
+
+                if self.globals[user][name] == "Not retained.":
+                    self.privacySamplerResults[name] = "public"
+                elif user == "All": # if this is All then initiate comparisons with all of the users that have already returned
+                    if stats:
+                        for stat_key in stats["rhat"]:
+                            self.globals[user]['rhat'][stat_key] = stats["rhat"][stat_key]
+                            self.globals[user]['ess'][stat_key] = stats["ess"][stat_key]
+                            self.globals[user]['waic'][stat_key] = stats["waic"]
+                            self.globals[user]['loo'][stat_key] = stats["loo"]
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
