@@ -967,7 +967,7 @@ class graph:
         :return: count (int)
         """
         return len(self.jobs)
-        job_count = 0
+        #job_count = 0
         #for job_names in self.jobs.keys():
         #    if job_names.endswith(str(sub_graph_id)):
         #        job_count += 1
