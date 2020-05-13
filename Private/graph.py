@@ -952,6 +952,8 @@ class graph:
         :param nodes: set of variables in the cluster
         :return: string
         """
+        ### *** This set isn't ordered, so is it appropriate to use with the hash??
+
         hash_object = hashlib.sha384(str(nodes).encode('utf-8'))
         hex_dig = hash_object.hexdigest()
         return hex_dig
@@ -964,16 +966,17 @@ class graph:
         :param sub_graph: set() of variable names
         :return: count (int)
         """
+        return len(self.jobs)
         job_count = 0
-        for job_names in self.jobs.keys():
-            if job_names.endswith(str(sub_graph_id)):
-                job_count += 1
-            else:
-                for node in sub_graph:
-                    if job_names.endswith(node):
-                        job_count += 1
+        #for job_names in self.jobs.keys():
+        #    if job_names.endswith(str(sub_graph_id)):
+        #        job_count += 1
+        #    else:
+        #        for node in sub_graph:
+        #            if job_names.endswith(node):
+        #                job_count += 1
 
-        return job_count
+        #return job_count
 
     def constructPyMC3code(self, user=None, sub_graph=set()):
         #try:
@@ -1155,7 +1158,7 @@ except Exception as e:
                             user_func = [self.evalcode[func_name] for func_name in self.functions]
                             self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
                             self.jobs[jobname].add_done_callback(self.callback)
-
+            debug_logger(["sub_graphs", sub_graphs])
             for sub_graph_id, sub_graph in sub_graphs.items():
                 if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
                     sampler_names = self.variablesToBeSampled()
@@ -1331,7 +1334,7 @@ except Exception as e:
         self.acquire("manifoldprivacycallback")
         jobname, name, user, d = returnvalue
         try:
-            self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+            self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
             self.numberOfManifoldPrivacyProcessesComplete[name] = self.numberOfManifoldPrivacyProcessesComplete.get(name, 0) + 1
             if self.privacySamplerResults.get(name, None) != "private":
                 if d > PrivacyCriterion:
@@ -1344,9 +1347,9 @@ except Exception as e:
                     #        self.jobs[j].cancel()
                     #        del self.jobs[j]
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
-                    self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
+                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
                 else: 
-                    self.log.debug(user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
+                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
                     self.privacySamplerResults[name] = "unknown_privacy"
         
             # if we have all manifold processes back and there are variables that have not been set to private they are public
@@ -1362,7 +1365,7 @@ except Exception as e:
                 if self.privacySamplerResults[name] != "private":
                     self.privacySamplerResults[name] = "public"
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
-                    self.log.debug(user + ": " + name + ": PUBLIC")
+                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
 
         except Exception as e:
             self.log.debug("manifold privacy " + str(e))
@@ -1470,7 +1473,11 @@ def get_size(obj, seen=None):
 def samplerjob(jobname, user, names, code, globals, locals, proj_id):
     numpy.random.seed(Private.config.numpy_seed)
     try:
-        exec (code, retrieve_s3_vars(globals), locals)
+        s3vars = retrieve_s3_vars(globals)
+        fridayS3vars = "".join( [ '1' if v else '0' for v in s3vars.get("Friday", []) ] )
+        fridayGlobals = "".join( [ '1' if v else '0' for v in globals.get("Friday", []) ] )
+        debug_logger([f"Friday from s3_vars: {user}", fridayS3vars, fridayGlobals])
+        exec (code, s3vars, locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
         if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
@@ -1488,8 +1495,8 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
-    debug_logger("{} [{}] Shape sminus: {} \nSall {}".format(name, user, firstarray.shape, secondarray.shape) )
-    debug_logger("{} [{}] Sum sminus: {} \nSall {}".format(name, user, firstarray.sum(), secondarray.sum()) )
+    debug_logger("manifoldprivacyjob : {} [{}] Shape sminus: {} \nSall {}".format(name, user, firstarray.shape, secondarray.shape) )
+    debug_logger("manifoldprivacyjob : {} [{}] Sum sminus: {} \nSall {}".format(name, user, firstarray.sum(), secondarray.sum()) )
 
     d = distManifold(firstarray, secondarray) * 100.
     return jobname, name, user, d
