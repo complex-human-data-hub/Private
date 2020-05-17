@@ -196,9 +196,36 @@ class graph:
         return result
 
     def show_jobs(self):
-        result = "%d jobs\n" % len(self.jobs)
-        for k,v in self.jobs.items():
-            result += k + "\n"
+        """
+        Returns a list of jobs currently running, divided into compute, sampler and manifold
+
+        :return: String(list of jobs)
+        """
+        job_keys = self.jobs.keys()
+        sampler_jobs = 0
+        compute_jobs = 0
+        manifold_jobs = 0
+
+        sampler_vars = set()
+        compute_vars = set()
+        manifold_vars = set()
+
+        for job_id in job_keys:
+            job_type = job_id.split(" ")[0]
+            job_var = job_id.split(" ")[-1]
+            if job_type == 'Compute:':
+                compute_jobs += 1
+                compute_vars.add(job_var)
+            elif job_type == 'Sampler:':
+                sampler_jobs += 1
+                sampler_vars.add(job_var)
+            elif job_type == 'Manifold:':
+                manifold_jobs += 1
+                manifold_vars.add(job_var)
+        result = f"Total jobs: {compute_jobs + sampler_jobs + manifold_jobs}\n" \
+            f"Compute Jobs: {compute_jobs}\t{compute_vars if compute_vars else ''}\n" \
+            f"Sampler Jobs: {sampler_jobs}\n" \
+            f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
         return result
 
     def checkprivacyup(self, name):
