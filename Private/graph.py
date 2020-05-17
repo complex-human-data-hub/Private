@@ -1278,8 +1278,8 @@ except Exception as e:
                 elif user == "All": # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
                         for stat_key in stats["rhat"]:
-                            self.globals[user]['rhat'][stat_key] = stats["rhat"][stat_key]
-                            self.globals[user]['ess'][stat_key] = stats["ess"][stat_key]
+                            self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
+                            self.globals[user]['ess'][stat_key] = numpy.array(stats["ess"][stat_key]).tolist()
                             self.globals[user]['waic'][stat_key] = stats["waic"]
                             self.globals[user]['loo'][stat_key] = stats["loo"]
                     for u in whichsamplersarecomplete:
