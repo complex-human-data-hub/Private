@@ -940,6 +940,9 @@ class graph:
         :return: dictionary of sub graphs
         """
         sub_graphs = self.get_all_sub_graphs()
+        # return all sub graphs if sampler variables are changed
+        if node in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+            return sub_graphs
         result_dict = {}
         for sub_graph_id, sub_graph in sub_graphs.items():
             if node in sub_graph:
@@ -1201,7 +1204,8 @@ except Exception as e:
                                 self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
                                 if self.is_sub_graph_complete(user, sub_graph):
                                     sampler_names = sub_graph - self.deterministic
-                                    if sampler_names & self.uptodate[user] == sampler_names:
+                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
+                                            not self.SamplerParameterUpdated:
                                         continue
                                     for name in sampler_names:
                                         self.changeState(user, name, "computing")
@@ -1213,7 +1217,7 @@ except Exception as e:
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
                                     self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
-                        self.SamplerParameterUpdated = False
+                    self.SamplerParameterUpdated = False
         except Exception as e:
             print("in compute " + str(e))
             traceback.print_exc()
