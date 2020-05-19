@@ -1300,9 +1300,7 @@ except Exception as e:
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
 
-                if self.globals[user][name] == "Not retained.":
-                    self.privacySamplerResults[name] = "public"
-                elif user == "All": # if this is All then initiate comparisons with all of the users that have already returned
+                if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
                         for stat_key in stats["rhat"]:
                             self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
@@ -1312,7 +1310,9 @@ except Exception as e:
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
-                            if self.privacySamplerResults.get(name, None) != "private":
+                            if self.globals[user][name] == "Not retained.":
+                                self.privacySamplerResults[name] = "public"
+                            elif self.privacySamplerResults.get(name, None) != "private":
                                 if name in self.globals[u].keys() and name in self.globals["All"].keys():
                                      if self.globals[u][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
                                           self.privacySamplerResults[name] = "private"
@@ -1326,7 +1326,9 @@ except Exception as e:
                     if self.haveSamples("All"):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
-                            if self.privacySamplerResults.get(name, None) != "private":
+                            if self.globals[user][name] == "Not retained.":
+                                self.privacySamplerResults[name] = "public"
+                            elif self.privacySamplerResults.get(name, None) != "private":
                                 if name in self.globals[user].keys() and name in self.globals["All"].keys():
                                     if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
                                         self.privacySamplerResults[name] = "private"
