@@ -1310,7 +1310,7 @@ except Exception as e:
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
-                            if self.globals[user][name] == "Not retained.":
+                            if isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.":
                                 self.privacySamplerResults[name] = "public"
                             elif self.privacySamplerResults.get(name, None) != "private":
                                 if name in self.globals[u].keys() and name in self.globals["All"].keys():
@@ -1326,7 +1326,7 @@ except Exception as e:
                     if self.haveSamples("All"):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in value.varnames:
-                            if self.globals[user][name] == "Not retained.":
+                            if isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.":
                                 self.privacySamplerResults[name] = "public"
                             elif self.privacySamplerResults.get(name, None) != "private":
                                 if name in self.globals[user].keys() and name in self.globals["All"].keys():
