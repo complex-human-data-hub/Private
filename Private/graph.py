@@ -1231,6 +1231,7 @@ except Exception as e:
                     self.globals[user][name] = str(value)
                     self.changeState(user, name, "exception")
             else:
+                original_value = self.globals[user].get(name, '')
                 self.globals[user][name] = value
                 self.changeState(user, name, "uptodate")
                 if user == "All":
@@ -1239,7 +1240,8 @@ except Exception as e:
                     if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
                         if name == "NumberOfSamples":
                             if value > 4000:
-                                self.globals[user][name] = 4000
+                                self.comment[name] = "# Maximum Number of Samples is 4000"
+                                self.globals[user][name] = original_value
                         self.SamplerParameterUpdated = True
                     if type(value) == io.BytesIO:   # write image to file
                         value.seek(0)
