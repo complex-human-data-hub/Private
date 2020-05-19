@@ -7,7 +7,7 @@ User=ubuntu
 Group=ubuntu
 WorkingDirectory=/home/ubuntu/
 Environment="PATH=/home/ubuntu/pp_client/venv/bin:/usr/bin"
-ExecStart=/bin/bash -a -c 'source /home/ubuntu/pp_client/venv/bin/activate && dask-worker localhost:8786 --no-nanny --nthreads 2 --resources "process=1" --worker-port WORKER_PORT'
+ExecStart=/bin/bash -a -c 'source /home/ubuntu/venv/bin/activate && dask-worker 172.31.0.28:8786 --no-nanny --nthreads 2 --resources "process=1" --worker-port WORKER_PORT'
 Restart=always
 RestartSec=5s
 
