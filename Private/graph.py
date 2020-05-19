@@ -582,7 +582,11 @@ class graph:
             elif name in self.private:
                 res += "Private"
             elif name in self.unknown_privacy:
-                res += "Privacy Unknown"
+                if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
+                 'All'].get(name) == "Not retained.":
+                    res += "Not retained."
+                else:
+                    res += "Privacy Unknown"
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
                 #res += reprlib.repr(self.globals["All"][name])
@@ -1275,13 +1279,13 @@ except Exception as e:
             if exception_variable != "No Exception Variable":
                 m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
                 if m:
-                    value = str(int(m.group(1))-1) + " arguments required."
+                    value = str(int(m.group(1)) - 1) + " arguments required."
                 self.samplerexception[user][exception_variable] = str(value)
             else:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        else: # successful sampler return
+        else:  # successful sampler return
             try:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
@@ -1290,17 +1294,19 @@ except Exception as e:
                         # 4294967291 seems to be the largest prime under 2**32 (int limit)
                         seed = name_long % 4294967291
                         debug_logger("name_seed {}: {} ({})".format(name, seed, name_long))
-                        numpy.random.seed(seed) 
-                        self.globals[user][name] = numpy.random.permutation(value[name]) # permute to break the joint information across variables
-                    else:                                                                # manifold privacy is applied to individual variables
-                        self.globals[user][name] = "Not retained."                       # so there could be more information in the joint information
+                        numpy.random.seed(seed)
+                        self.globals[user][name] = numpy.random.permutation(
+                            value[name])  # permute to break the joint information across variables
+                    else:  # manifold privacy is applied to individual variables
+                        self.globals[user][
+                            name] = "Not retained."  # so there could be more information in the joint information
                     self.changeState(user, name, "uptodate")
 
                 self.log.debug("samplercallback: name in names ...done ")
 
                 whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
 
-                if user == "All": # if this is All then initiate comparisons with all of the users that have already returned
+                if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
                         for stat_key in stats["rhat"]:
                             self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
@@ -1309,32 +1315,38 @@ except Exception as e:
                             self.globals[user]['loo'][stat_key] = stats["loo"]
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in value.varnames:
-                            if isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.":
-                                self.privacySamplerResults[name] = "public"
-                            elif self.privacySamplerResults.get(name, None) != "private":
+                        for name in names:
+                            if self.privacySamplerResults.get(name, None) != "private" and not (
+                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
+                                    name) == "Not retained."):
                                 if name in self.globals[u].keys() and name in self.globals["All"].keys():
-                                     if self.globals[u][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
-                                          self.privacySamplerResults[name] = "private"
-                                     else:
-                                          jobname = "Manifold: " + u + " " + name
-                                          self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, u, self.globals[u][name], self.globals["All"][name])
-                                          self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
+                                    if self.globals[u][name].shape != self.globals["All"][
+                                     name].shape:  # if shape is affected by dropping a user then this variable is private
+                                        self.privacySamplerResults[name] = "private"
+                                    else:
+                                        jobname = "Manifold: " + u + " " + name
+                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, u,
+                                                                                self.globals[u][name],
+                                                                                self.globals["All"][name])
+                                        self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
 
-                else: # else compare All to this users samples using manifold privacy calculation
+                else:  # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
                     if self.haveSamples("All"):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in value.varnames:
-                            if isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.":
-                                self.privacySamplerResults[name] = "public"
-                            elif self.privacySamplerResults.get(name, None) != "private":
+                        for name in names:
+                            if self.privacySamplerResults.get(name, None) != "private" and not (
+                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
+                                    name) == "Not retained."):
                                 if name in self.globals[user].keys() and name in self.globals["All"].keys():
-                                    if self.globals[user][name].shape != self.globals["All"][name].shape: # if shape is affected by dropping a user then this variable is private
+                                    if self.globals[user][name].shape != self.globals["All"][
+                                     name].shape:  # if shape is affected by dropping a user then this variable is private
                                         self.privacySamplerResults[name] = "private"
                                     else:
                                         jobname = "Manifold: " + user + " " + name
-                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, user, self.globals[user][name], self.globals["All"][name])
+                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, user,
+                                                                                self.globals[user][name],
+                                                                                self.globals["All"][name])
                                         self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
                                 else:
                                     # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
