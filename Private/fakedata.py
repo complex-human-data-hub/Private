@@ -1,7 +1,7 @@
 from __future__ import print_function
 from faker import Faker
 from random import choice, randint, gauss, uniform, shuffle, expovariate
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from pprint import PrettyPrinter
 
 
@@ -379,12 +379,11 @@ def to_utc(date_time):
 
 
 if __name__ == "__main__":
-    # print "Set the locale to Australia"
-    FakeEvent.set_locale(
-        "en_AU")  # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
-    # print
-    print(FakeEvent("__SEMA__"))
-    # for eventType in FakeEvent.eventTypes:
+    #print "Set the locale to Australia"
+    FakeEvent.set_locale("en_AU")   # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
+    #print
+
+    #for eventType in FakeEvent.eventTypes:
     #  print eventType + " Event"
     #  print
     #  print FakeEvent(eventType)
@@ -392,13 +391,13 @@ if __name__ == "__main__":
 
     # using list comprehensions to filter events ala examples from paper
 
-    # someEvents = [FakeEvent() for _ in range(50)]
-    # print [e.latitude for e in someEvents if e.type == "App" and e.hasField("latitude")]
+    #someEvents = [FakeEvent() for _ in range(50)]
+    #print [e.latitude for e in someEvents if e.type == "App" and e.hasField("latitude")]
 
     # generate many events for a small set of users
 
-    # events = []
-    # for user in range(10):
+    #events = []
+    #for user in range(10):
     #    i = randint(5,10)
     #    ev = FakeEvent()
     #    userid = ev.UserId
@@ -406,43 +405,47 @@ if __name__ == "__main__":
     #    if user == 0:
     #        RainProb = 0.5
     #    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9, RainProb=RainProb) for _ in range(i)])
-    # print events
+    #print events
 
-    # NumUsers = 10
-    # users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
-    #
-    # Events = []
-    # for user in users:
-    #   SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
-    #   month = randint(1,12)
-    #   firstday = randint(1,20)
-    #   for day in range(firstday,firstday+7):
-    #     for hour in range(0,24):
-    #         lat = gauss(-37.814, 1.)
-    #         long = gauss(144.96332, 1.5)
-    #         eApp = FakeEvent(eventType="App", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #         Events.append(eApp)
-    #         if randint(0,1+abs(hour-12)) == 0:
-    #             e = FakeEvent(eventType="Gmail", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #             Events.append(e)
-    #         if randint(0,4+abs(hour-12)) == 0:
-    #             e = FakeEvent(eventType="SMS", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #             Events.append(e)
-    #         if randint(0,6+abs(hour-12)) == 0:
-    #             e = FakeEvent(eventType="Call", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #             Events.append(e)
-    #         if randint(0,9+abs(hour-12)) == 0:
-    #             if "Saturday" in eApp.keywords or "Sunday" in eApp.keywords:
-    #                 e = FakeEvent(eventType="Button", buttonType = "Happy", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #             else:
-    #                 e = FakeEvent(eventType="Button", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-    #             Events.append(e)
-    #
-    #     # SEMA data
-    #
-    #     semahours = [randint(9,12), randint(13,16), randint(17, 20)]
-    #     for semahour in semahours:
-    #         e = FakeEvent(eventType="SEMA", UserId=user, SEMAParticipantId = SEMAParticipantId, DateTime = datetime(2019, month, day, semahour), Latitude=lat, Longitude=long)
-    #         Events.append(e)
 
-    # print(Events)
+
+    NumUsers = 10
+    users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
+
+    Events = []
+    for user in users:
+      SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
+      month = randint(1,12)
+      firstday = randint(1,20)
+      for day in range(firstday,firstday+7):
+        for hour in range(0,24):
+            lat = gauss(-37.814, 1.)
+            long = gauss(144.96332, 1.5)
+            eApp = FakeEvent(event_type="App", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+            Events.append(eApp)
+            if randint(0,1+abs(hour-12)) == 0:
+                e = FakeEvent(event_type="Gmail", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+                Events.append(e)
+            if randint(0,4+abs(hour-12)) == 0:
+                e = FakeEvent(event_type="SMS", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+                Events.append(e)
+            if randint(0,6+abs(hour-12)) == 0:
+                e = FakeEvent(event_type="Call", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+                Events.append(e)
+            if randint(0,9+abs(hour-12)) == 0:
+                if "Saturday" in eApp.keywords or "Sunday" in eApp.keywords:
+                    e = FakeEvent(event_type="Button", button_type = "Happy", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+                else:
+                    e = FakeEvent(event_type="Button", user_id=user, date_time = datetime(2019, month, day, hour), latitude=lat, longitude=long)
+                Events.append(e)
+
+        # SEMA data
+
+        semahours = [randint(9,12), randint(13,16), randint(17, 20)]
+        for semahour in semahours:
+            lat = gauss(-37.814, 1.)
+            long = gauss(144.96332, 1.5)
+            e = FakeEvent(event_type="SEMA", user_id=user, sema_participant_id = SEMAParticipantId, date_time = datetime(2019, month, day, semahour), latitude=lat, longitude=long)
+            Events.append(e)
+
+    print(Events)
