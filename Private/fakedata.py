@@ -19,7 +19,7 @@ def season(DateTime):
 
 class FakeEvent:
     fake = Faker()
-    eventTypes = ["App", "Button", "Gmail", "SMS", "PhoneCall"]
+    eventTypes = ["__App__", "__SEMA__", "Button", "Gmail", "SMS", "PhoneCall"]
     placeType = ["church", "cafe"]
     weatherType = ["clear", "overcast", "cloudy", "rain"]
     moonPhaseType = ["waning_gibbous", "waxing_gibbous"]
@@ -96,7 +96,75 @@ class FakeEvent:
                 self.keywords.append(choice(FakeEvent.moonPhaseType))
                 if randint(0, 6) == 0:
                     self.keywords.append(choice(FakeEvent.placeType))
+        elif eventType == "SEMA":
+            self.keywords = []
+            self.keywords.append("SEMA")
+            if SEMAParticipantId:
+                self.SEMAParticipantId = SEMAParticipantId
+            else:
+                self.SEMAParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
+            self.ParticipantTimeZone = "Australia/Melbourne"
+            self.StudyName = "DemoStudy"
+            self.keywords.append(self.StudyName)
+            self.StudyVersion = 1
+            self.SurveyName = "Personal Experience Sampling Study"
+            self.keywords.append(self.SurveyName)
+            self.Trigger = "scheduled"
+            expired = randint(1, 3) == 1
+            if expired:
+                self.keywords.append("Expired")
+                self.ScheduledTime = str(self.StartDateTimeLocal)
+                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
+                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
+                self.StartDateTime = str(self.StartDateTime)
+                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(hours=2)
+                self.EndDateTime = str(self.EndDateTimeLocal - timedelta(hours=11))
+                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
+            else:
+                self.keywords.append("Completed")
+                self.ScheduledTime = str(self.StartDateTimeLocal)
+                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
+                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
+                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4, 40))
+                self.EndDateTime = str(self.StartDateTime - timedelta(hours=11))
+                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
+                self.StartDateTime = str(self.StartDateTime)
 
+                self.TotalRT = randint(1, 100000)
+                if "Saturday" in self.keywords or "Sunday" in self.keywords:
+                    self.Happy = randint(7, 10)
+                else:
+                    self.Happy = randint(1, 10)
+                self.HappyRT = randint(100, 10000)
+                if "Saturday" in self.keywords or "Sunday" in self.keywords:
+                    self.Relaxed = randint(7, 10)
+                else:
+                    self.Relaxed = randint(1, 10)
+                self.RelaxedRT = randint(100, 10000)
+                self.Confident = randint(1, 10)
+                self.ConfidentRT = randint(100, 10000)
+                self.Excited = randint(1, 10)
+                self.ExcitedRT = randint(100, 10000)
+                self.Content = randint(1, 10)
+                self.ContentRT = randint(100, 10000)
+                self.Sad = randint(1, 10)
+                self.SadRT = randint(100, 10000)
+                if "Wednesday" in self.keywords or "Thursday" in self.keywords:
+                    self.Anxious = randint(7, 10)
+                else:
+                    self.Anxious = randint(1, 10)
+                self.AnxiousRT = randint(100, 10000)
+                self.Angry = randint(1, 10)
+                self.AngryRT = randint(100, 10000)
+                self.Bored = randint(1, 10)
+                self.BoredRT = randint(100, 10000)
+                self.Disappointed = randint(1, 10)
+                self.DisappointedRT = randint(100, 10000)
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.keywords.append(self.StartDateTimeLocal.year)
+            self.keywords.append(season(self.StartDateTimeLocal))
+            self.StartDateTimeLocal = str(self.StartDateTimeLocal)
         elif eventType == "Gmail":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
@@ -184,75 +252,6 @@ class FakeEvent:
                     self.longitude = Longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
-        elif eventType == "SEMA":
-            self.keywords = []
-            self.keywords.append("SEMA")
-            if SEMAParticipantId:
-                self.SEMAParticipantId = SEMAParticipantId
-            else:
-                self.SEMAParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
-            self.ParticipantTimeZone = "Australia/Melbourne"
-            self.StudyName = "DemoStudy"
-            self.keywords.append(self.StudyName)
-            self.StudyVersion = 1
-            self.SurveyName = "Personal Experience Sampling Study"
-            self.keywords.append(self.SurveyName)
-            self.Trigger = "scheduled"
-            expired = randint(1, 3) == 1
-            if expired:
-                self.keywords.append("Expired")
-                self.ScheduledTime = str(self.StartDateTimeLocal)
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
-                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
-                self.StartDateTime = str(self.StartDateTime)
-                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(hours=2)
-                self.EndDateTime = str(self.EndDateTimeLocal - timedelta(hours=11))
-                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
-            else:
-                self.keywords.append("Completed")
-                self.ScheduledTime = str(self.StartDateTimeLocal)
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
-                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
-                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4, 40))
-                self.EndDateTime = str(self.StartDateTime - timedelta(hours=11))
-                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
-                self.StartDateTime = str(self.StartDateTime)
-
-                self.TotalRT = randint(1, 100000)
-                if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Happy = randint(7, 10)
-                else:
-                    self.Happy = randint(1, 10)
-                self.HappyRT = randint(100, 10000)
-                if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Relaxed = randint(7, 10)
-                else:
-                    self.Relaxed = randint(1, 10)
-                self.RelaxedRT = randint(100, 10000)
-                self.Confident = randint(1, 10)
-                self.ConfidentRT = randint(100, 10000)
-                self.Excited = randint(1, 10)
-                self.ExcitedRT = randint(100, 10000)
-                self.Content = randint(1, 10)
-                self.ContentRT = randint(100, 10000)
-                self.Sad = randint(1, 10)
-                self.SadRT = randint(100, 10000)
-                if "Wednesday" in self.keywords or "Thursday" in self.keywords:
-                    self.Anxious = randint(7, 10)
-                else:
-                    self.Anxious = randint(1, 10)
-                self.AnxiousRT = randint(100, 10000)
-                self.Angry = randint(1, 10)
-                self.AngryRT = randint(100, 10000)
-                self.Bored = randint(1, 10)
-                self.BoredRT = randint(100, 10000)
-                self.Disappointed = randint(1, 10)
-                self.DisappointedRT = randint(100, 10000)
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
-            self.StartDateTimeLocal = str(self.StartDateTimeLocal)
 
     def __repr__(self):
         return (FakeEvent.pp.pformat(self.__dict__))
