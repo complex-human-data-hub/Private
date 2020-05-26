@@ -33,25 +33,25 @@ class FakeEvent:
     pp = PrettyPrinter(indent=2)
 
     @classmethod
-    def setLocale(cls, locale):
+    def set_locale(cls, locale):
         FakeEvent.fake = Faker(locale)
 
-    def __init__(self, eventType=None, UserId=None, SEMAParticipantId=None, Latitude=None, Longitude=None,
-                 buttonType=None, DateTime=None):
-        if not eventType:
-            eventType = choice(FakeEvent.eventTypes)
-        self.type = eventType
-        if UserId:
-            self.UserId = UserId
+    def __init__(self, event_type=None, user_id=None, sema_participant_id=None, latitude=None, longitude=None,
+                 button_type=None, date_time=None):
+        if not event_type:
+            event_type = choice(FakeEvent.eventTypes)
+        self.type = event_type
+        if user_id:
+            self.UserId = user_id
         else:
             self.UserId = FakeEvent.fake.uuid4()
-        if DateTime:
-            self.StartDateTimeLocal = DateTime
+        if date_time:
+            self.StartDateTimeLocal = date_time
         else:
             self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
                                                                       after_today=False)  # type: date
 
-        if eventType == "App":
+        if event_type == "App":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime + timedelta(hours=1))
             self.StartDateTime = str(self.StartDateTime)
@@ -76,12 +76,12 @@ class FakeEvent:
             if randint(0, 10) != 0:  # add a few events that don't have location information
                 self.Kilometers = expovariate(1.)
                 self.LocationCount = randint(1, 12)
-                if Latitude:
-                    self.latitude = Latitude + gauss(0, 1)
+                if latitude:
+                    self.latitude = latitude + gauss(0, 1)
                 else:
                     self.latitude = float(FakeEvent.fake.latitude())
-                if Longitude:
-                    self.longitude = Longitude + gauss(0, 1)
+                if longitude:
+                    self.longitude = longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
                 self.address = FakeEvent.fake.address()
@@ -98,11 +98,11 @@ class FakeEvent:
                 self.keywords.append(choice(FakeEvent.moonPhaseType))
                 if randint(0, 6) == 0:
                     self.keywords.append(choice(FakeEvent.placeType))
-        elif eventType == "SEMA":
+        elif event_type == "SEMA":
             self.keywords = []
             self.keywords.append("SEMA")
-            if SEMAParticipantId:
-                self.ParticipantId = SEMAParticipantId
+            if sema_participant_id:
+                self.ParticipantId = sema_participant_id
             else:
                 self.ParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
             self.ParticipantTz = "Australia/Melbourne"
@@ -167,7 +167,7 @@ class FakeEvent:
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-        elif eventType == "Gmail":
+        elif event_type == "Gmail":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
@@ -188,7 +188,7 @@ class FakeEvent:
                 self.keywords.append("Sent")
                 self.To = FakeEvent.fake.email()
 
-        elif eventType == "SMS":
+        elif event_type == "SMS":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
@@ -208,7 +208,7 @@ class FakeEvent:
             else:
                 self.keywords.append("Sent")
 
-        elif eventType == "Call":
+        elif event_type == "Call":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
@@ -228,7 +228,7 @@ class FakeEvent:
             else:
                 self.keywords.append("Sent")
 
-        elif eventType == "Button":
+        elif event_type == "Button":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
@@ -240,18 +240,18 @@ class FakeEvent:
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords.append("Button")
-            if buttonType:
-                self.keywords.append(buttonType)
+            if button_type:
+                self.keywords.append(button_type)
             else:
                 self.keywords.append(choice(FakeEvent.buttonType))
             self.keywords.append("Button")
             if randint(0, 10) != 0:  # add a few events that don't have location information
-                if Latitude:
-                    self.latitude = Latitude + gauss(0, 1)
+                if latitude:
+                    self.latitude = latitude + gauss(0, 1)
                 else:
                     self.latitude = float(FakeEvent.fake.latitude())
-                if Longitude:
-                    self.longitude = Longitude + gauss(0, 1)
+                if longitude:
+                    self.longitude = longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
 
@@ -264,7 +264,7 @@ class FakeEvent:
 
 if __name__ == "__main__":
     # print "Set the locale to Australia"
-    FakeEvent.setLocale(
+    FakeEvent.set_locale(
         "en_AU")  # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
     # print
     print(FakeEvent("SEMA"))
