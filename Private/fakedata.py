@@ -50,6 +50,8 @@ class FakeEvent:
         else:
             self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
                                                                       after_today=False)  # type: date
+        self.id = FakeEvent.fake.uuid4()
+        start_date_time_local = self.StartDateTimeLocal
 
         if event_type == "__App__":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
@@ -100,38 +102,61 @@ class FakeEvent:
                     self.keywords.append(choice(FakeEvent.placeType))
 
         elif event_type == "__SEMA__":
-            self.keywords = []
-            self.keywords.append("SEMA")
+            expired = randint(1, 3) == 1
+            created_ts = start_date_time_local + timedelta(minutes=randint(1, 110))
+            completed_ts = start_date_time_local + timedelta(hours=2)
+
             if sema_participant_id:
                 self.ParticipantId = sema_participant_id
             else:
                 self.ParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
             self.ParticipantTz = "Australia/Melbourne"
+            self.ExportTz = "Australia/Melbourne"
+
             self.StudyName = "DemoStudy"
-            self.keywords.append(self.StudyName)
+            self.StudyId = "WKjsuNhsa"
             self.StudyVersion = 1
             self.SurveyName = "Personal Experience Sampling Study"
-            self.keywords.append(self.SurveyName)
+            self.SurveyId = "n8_i_jUrMl"
             self.Trigger = "scheduled"
-            expired = randint(1, 3) == 1
+
+            self.ScheduledTs = str(start_date_time_local)
+            self.ScheduledUtcTs = str(to_utc(start_date_time_local))
+
+            self.CreatedTs = str(created_ts)
+            self.CreatedUtcTs = str(to_utc(created_ts))
+
+            self.StartDateTimeLocal = str(created_ts)
+            self.StartDateTime = str(to_utc(created_ts))
+
+            self.StartedTs = str(created_ts)
+            self.StartedUtcTs = str(to_utc(created_ts))
+
+            self.EndDateTimeLocal = str(completed_ts)
+            self.EndDateTime = str(to_utc(completed_ts))
+
+            self.keywords = []
+            self.keywords.append("SEMA")
+            self.keywords.append(self.StudyName)
+            self.keywords.append(self.SurveyName)
+            self.keywords.append(FakeEvent.months[start_date_time_local.month - 1])
+            self.keywords.append(FakeEvent.days[start_date_time_local.weekday()])
+            self.keywords.append(start_date_time_local.year)
+            self.keywords.append(season(start_date_time_local))
+
             if expired:
                 self.keywords.append("Expired")
-                self.ScheduledTs = str(self.StartDateTimeLocal)
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
-                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
-                self.StartDateTime = str(self.StartDateTime)
-                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(hours=2)
-                self.EndDateTime = str(self.EndDateTimeLocal - timedelta(hours=11))
-                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
+
+                self.ExpiredTs = str(completed_ts)
+                self.ExpiredUtcTs = str(to_utc(completed_ts))
             else:
                 self.keywords.append("Completed")
-                self.ScheduledTs = str(self.StartDateTimeLocal)
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
-                self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
-                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4, 40))
-                self.EndDateTime = str(self.StartDateTime - timedelta(hours=11))
-                self.EndDateTimeLocal = str(self.EndDateTimeLocal)
-                self.StartDateTime = str(self.StartDateTime)
+
+                self.CompletedTs = str(completed_ts)
+                self.CompletedUtcTs = str(to_utc(completed_ts))
+
+                self.UploadedTs = str(completed_ts)
+                self.UploadedUtcTs = str(to_utc(completed_ts))
 
                 self.TotalRt = randint(1, 100000)
                 if "Saturday" in self.keywords or "Sunday" in self.keywords:
@@ -163,11 +188,11 @@ class FakeEvent:
                 self.BoredRt = randint(100, 10000)
                 self.Disappointed = randint(1, 10)
                 self.DisappointedRt = randint(100, 10000)
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
-            self.StartDateTimeLocal = str(self.StartDateTimeLocal)
+                self.Irritable = randint(1, 10)
+                self.IrritableRt = randint(100, 10000)
+                self.Location = randint(1, 100)
+                self.LocationRt = randint(1000, 100000)
+                self.Suggestions = []
 
         elif event_type == "Gmail":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
@@ -262,6 +287,10 @@ class FakeEvent:
 
     def hasField(self, field):
         return (field in self.__dict__.keys())
+
+
+def to_utc(date_time):
+    return date_time - timedelta(hours=11)
 
 
 if __name__ == "__main__":
