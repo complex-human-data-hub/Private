@@ -58,11 +58,11 @@ class FakeEvent:
             self.EndDateTime = str(self.StartDateTime + timedelta(hours=1))
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal + timedelta(hours=1))
-            self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
+            self.Keywords = []
+            self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.AccelerometryCount = randint(1, 12)
             self.AudioProcessedCount = randint(1, 12)
@@ -155,7 +155,7 @@ class FakeEvent:
                 }]
             self.Suggestions = []
             for i in range(t):
-                self.keywords.append(FakeEvent.audioClassType[i])
+                self.Keywords.append(FakeEvent.audioClassType[i])
 
             if randint(0, 10) != 0:  # add a few events that don't have location information
                 self.Kilometers = expovariate(1.)
@@ -171,17 +171,17 @@ class FakeEvent:
                 self.address = FakeEvent.fake.address()
                 self.MoonIllumination = uniform(0., 1.)
                 self.MoonAge = uniform(0.0, 30.0)
-                if "Summer" in self.keywords:
+                if "Summer" in self.Keywords:
                     self.Temperature = gauss(28, 5)
-                elif "Winter" in self.keywords:
+                elif "Winter" in self.Keywords:
                     self.Temperature = gauss(15, 5)
                 else:
                     self.Temperature = gauss(20, 5)
                 self.Weather = choice(FakeEvent.weatherType)
-                self.keywords.append(self.Weather)
-                self.keywords.append(choice(FakeEvent.moonPhaseType))
+                self.Keywords.append(self.Weather)
+                self.Keywords.append(choice(FakeEvent.moonPhaseType))
                 if randint(0, 6) == 0:
-                    self.keywords.append(choice(FakeEvent.placeType))
+                    self.Keywords.append(choice(FakeEvent.placeType))
 
         elif event_type == "__SEMA__":
             expired = randint(1, 3) == 1
@@ -211,23 +211,23 @@ class FakeEvent:
             self.EndDateTimeLocal = str(completed_ts)
             self.EndDateTime = str(to_utc(completed_ts))
 
-            self.keywords = []
-            self.keywords.append("SEMA")
-            self.keywords.append(self.StudyName)
-            self.keywords.append(self.SurveyName)
-            self.keywords.append(FakeEvent.months[start_date_time_local.month - 1])
-            self.keywords.append(FakeEvent.days[start_date_time_local.weekday()])
-            self.keywords.append(start_date_time_local.year)
-            self.keywords.append(season(start_date_time_local))
+            self.Keywords = []
+            self.Keywords.append("SEMA")
+            self.Keywords.append(self.StudyName)
+            self.Keywords.append(self.SurveyName)
+            self.Keywords.append(FakeEvent.months[start_date_time_local.month - 1])
+            self.Keywords.append(FakeEvent.days[start_date_time_local.weekday()])
+            self.Keywords.append(start_date_time_local.year)
+            self.Keywords.append(season(start_date_time_local))
 
             if expired:
-                self.keywords.append("Expired")
-                self.keywords.append("uncompleted")
+                self.Keywords.append("Expired")
+                self.Keywords.append("uncompleted")
 
                 self.ExpiredTs = str(completed_ts)
                 self.ExpiredUtcTs = str(to_utc(completed_ts))
             else:
-                self.keywords.append("Completed")
+                self.Keywords.append("Completed")
 
                 self.CreatedTs = str(created_ts)
                 self.CreatedUtcTs = str(to_utc(created_ts))
@@ -267,13 +267,13 @@ class FakeEvent:
                 self.Location = randint(1, 100)
                 self.LocationRt = randint(1000, 100000)
                 # Special Patterns
-                if "Saturday" in self.keywords or "Sunday" in self.keywords:
+                if "Saturday" in self.Keywords or "Sunday" in self.Keywords:
                     self.Happy = randint(7, 10)
                     self.Relaxed = randint(7, 10)
                     self.Bored = randint(5, 10)
-                if "Wednesday" in self.keywords or "Thursday" in self.keywords:
+                if "Wednesday" in self.Keywords or "Thursday" in self.Keywords:
                     self.Anxious = randint(7, 10)
-                if "Monday" in self.keywords or "Tuesday" in self.keywords:
+                if "Monday" in self.Keywords or "Tuesday" in self.Keywords:
                     self.Sad = randint(5, 10)
                     self.Angry = randint(5, 10)
 
@@ -284,20 +284,20 @@ class FakeEvent:
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
+            self.Keywords = []
+            self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords.append("Gmail")
+            self.Keywords.append("Gmail")
             self.Subject = FakeEvent.fake.text(20)
             self.Message = FakeEvent.fake.text(400)
             if randint(0, 1) == 0:
-                self.keywords.append("Received")
+                self.Keywords.append("Received")
                 self.From = FakeEvent.fake.email()
             else:
-                self.keywords.append("Sent")
+                self.Keywords.append("Sent")
                 self.To = FakeEvent.fake.email()
 
         elif event_type == "SMS":
@@ -305,58 +305,58 @@ class FakeEvent:
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
+            self.Keywords = []
+            self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords.append("SMS")
+            self.Keywords.append("SMS")
             self.Text = FakeEvent.fake.text(30)
             self.Name = FakeEvent.fake.name()
             self.Number = FakeEvent.fake.phone_number()
             if randint(0, 1) == 0:
-                self.keywords.append("Received")
+                self.Keywords.append("Received")
             else:
-                self.keywords.append("Sent")
+                self.Keywords.append("Sent")
 
         elif event_type == "Call":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
+            self.Keywords = []
+            self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords.append("Call")
+            self.Keywords.append("Call")
             self.Duration = int(expovariate(1. / 120.))
             self.Name = FakeEvent.fake.name()
             self.Number = FakeEvent.fake.phone_number()
             if randint(0, 1) == 0:
-                self.keywords.append("Received")
+                self.Keywords.append("Received")
             else:
-                self.keywords.append("Sent")
+                self.Keywords.append("Sent")
 
         elif event_type == "Button":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
-            self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.keywords.append(self.StartDateTimeLocal.year)
-            self.keywords.append(season(self.StartDateTimeLocal))
+            self.Keywords = []
+            self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
+            self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
+            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-            self.keywords.append("Button")
+            self.Keywords.append("Button")
             if button_type:
-                self.keywords.append(button_type)
+                self.Keywords.append(button_type)
             else:
-                self.keywords.append(choice(FakeEvent.buttonType))
-            self.keywords.append("Button")
+                self.Keywords.append(choice(FakeEvent.buttonType))
+            self.Keywords.append("Button")
             if randint(0, 10) != 0:  # add a few events that don't have location information
                 if latitude:
                     self.latitude = latitude + gauss(0, 1)
@@ -415,7 +415,7 @@ if __name__ == "__main__":
                                   latitude=lat, longitude=long)
                     Events.append(e)
                 if randint(0, 9 + abs(hour - 12)) == 0:
-                    if "Saturday" in eApp.keywords or "Sunday" in eApp.keywords:
+                    if "Saturday" in eApp.Keywords or "Sunday" in eApp.Keywords:
                         e = FakeEvent(event_type="Button", button_type="Happy", user_id=user,
                                       date_time=datetime(2019, month, day, hour), latitude=lat, longitude=long)
                     else:
