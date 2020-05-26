@@ -123,14 +123,8 @@ class FakeEvent:
             self.ScheduledTs = str(start_date_time_local)
             self.ScheduledUtcTs = str(to_utc(start_date_time_local))
 
-            self.CreatedTs = str(created_ts)
-            self.CreatedUtcTs = str(to_utc(created_ts))
-
             self.StartDateTimeLocal = str(created_ts)
             self.StartDateTime = str(to_utc(created_ts))
-
-            self.StartedTs = str(created_ts)
-            self.StartedUtcTs = str(to_utc(created_ts))
 
             self.EndDateTimeLocal = str(completed_ts)
             self.EndDateTime = str(to_utc(completed_ts))
@@ -146,11 +140,18 @@ class FakeEvent:
 
             if expired:
                 self.keywords.append("Expired")
+                self.keywords.append("uncompleted")
 
                 self.ExpiredTs = str(completed_ts)
                 self.ExpiredUtcTs = str(to_utc(completed_ts))
             else:
                 self.keywords.append("Completed")
+
+                self.CreatedTs = str(created_ts)
+                self.CreatedUtcTs = str(to_utc(created_ts))
+
+                self.StartedTs = str(created_ts)
+                self.StartedUtcTs = str(to_utc(created_ts))
 
                 self.CompletedTs = str(completed_ts)
                 self.CompletedUtcTs = str(to_utc(completed_ts))
@@ -159,15 +160,9 @@ class FakeEvent:
                 self.UploadedUtcTs = str(to_utc(completed_ts))
 
                 self.TotalRt = randint(1, 100000)
-                if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Happy = randint(7, 10)
-                else:
-                    self.Happy = randint(1, 10)
+                self.Happy = randint(1, 10)
+                self.Relaxed = randint(1, 10)
                 self.HappyRt = randint(100, 10000)
-                if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Relaxed = randint(7, 10)
-                else:
-                    self.Relaxed = randint(1, 10)
                 self.RelaxedRt = randint(100, 10000)
                 self.Confident = randint(1, 10)
                 self.ConfidentRt = randint(100, 10000)
@@ -177,10 +172,7 @@ class FakeEvent:
                 self.ContentRt = randint(100, 10000)
                 self.Sad = randint(1, 10)
                 self.SadRt = randint(100, 10000)
-                if "Wednesday" in self.keywords or "Thursday" in self.keywords:
-                    self.Anxious = randint(7, 10)
-                else:
-                    self.Anxious = randint(1, 10)
+                self.Anxious = randint(1, 10)
                 self.AnxiousRt = randint(100, 10000)
                 self.Angry = randint(1, 10)
                 self.AngryRt = randint(100, 10000)
@@ -192,6 +184,17 @@ class FakeEvent:
                 self.IrritableRt = randint(100, 10000)
                 self.Location = randint(1, 100)
                 self.LocationRt = randint(1000, 100000)
+                # Special Patterns
+                if "Saturday" in self.keywords or "Sunday" in self.keywords:
+                    self.Happy = randint(7, 10)
+                    self.Relaxed = randint(7, 10)
+                    self.Bored = randint(5, 10)
+                if "Wednesday" in self.keywords or "Thursday" in self.keywords:
+                    self.Anxious = randint(7, 10)
+                if "Monday" in self.keywords or "Tuesday" in self.keywords:
+                    self.Sad = randint(5, 10)
+                    self.Angry = randint(5, 10)
+
                 self.Suggestions = []
 
         elif event_type == "Gmail":
@@ -298,7 +301,7 @@ if __name__ == "__main__":
     FakeEvent.set_locale(
         "en_AU")  # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
     # print
-    print(FakeEvent("SEMA"))
+    print(FakeEvent("__SEMA__"))
     # for eventType in FakeEvent.eventTypes:
     #  print eventType + " Event"
     #  print
