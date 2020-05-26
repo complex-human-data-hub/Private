@@ -1,7 +1,7 @@
 from __future__ import print_function
 from faker import Faker
 from random import choice, randint, gauss, uniform, shuffle, expovariate
-from datetime import timedelta, datetime
+from datetime import timedelta, date
 from pprint import PrettyPrinter
 
 
@@ -48,7 +48,9 @@ class FakeEvent:
         if DateTime:
             self.StartDateTimeLocal = DateTime
         else:
-            self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True, after_today=False)
+            self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
+                                                                      after_today=False)  # type: date
+
         if eventType == "App":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime + timedelta(hours=1))
@@ -100,10 +102,10 @@ class FakeEvent:
             self.keywords = []
             self.keywords.append("SEMA")
             if SEMAParticipantId:
-                self.SEMAParticipantId = SEMAParticipantId
+                self.ParticipantId = SEMAParticipantId
             else:
-                self.SEMAParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
-            self.ParticipantTimeZone = "Australia/Melbourne"
+                self.ParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
+            self.ParticipantTz = "Australia/Melbourne"
             self.StudyName = "DemoStudy"
             self.keywords.append(self.StudyName)
             self.StudyVersion = 1
@@ -122,7 +124,7 @@ class FakeEvent:
                 self.EndDateTimeLocal = str(self.EndDateTimeLocal)
             else:
                 self.keywords.append("Completed")
-                self.ScheduledTime = str(self.StartDateTimeLocal)
+                self.ScheduledTs = str(self.StartDateTimeLocal)
                 self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
                 self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
                 self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4, 40))
