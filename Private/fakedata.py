@@ -51,7 +51,7 @@ class FakeEvent:
             self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
                                                                       after_today=False)  # type: date
 
-        if event_type == "App":
+        if event_type == "__App__":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime + timedelta(hours=1))
             self.StartDateTime = str(self.StartDateTime)
@@ -98,7 +98,8 @@ class FakeEvent:
                 self.keywords.append(choice(FakeEvent.moonPhaseType))
                 if randint(0, 6) == 0:
                     self.keywords.append(choice(FakeEvent.placeType))
-        elif event_type == "SEMA":
+
+        elif event_type == "__SEMA__":
             self.keywords = []
             self.keywords.append("SEMA")
             if sema_participant_id:
@@ -115,7 +116,7 @@ class FakeEvent:
             expired = randint(1, 3) == 1
             if expired:
                 self.keywords.append("Expired")
-                self.ScheduledTime = str(self.StartDateTimeLocal)
+                self.ScheduledTs = str(self.StartDateTimeLocal)
                 self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
                 self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
                 self.StartDateTime = str(self.StartDateTime)
@@ -167,6 +168,7 @@ class FakeEvent:
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
+
         elif event_type == "Gmail":
             self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
             self.EndDateTime = str(self.StartDateTime)
