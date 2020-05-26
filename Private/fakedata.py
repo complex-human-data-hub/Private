@@ -378,6 +378,11 @@ def to_utc(date_time):
     return date_time - timedelta(hours=11)
 
 
+def write_file(events):
+    with open('test-events.py', 'w') as fp:
+        fp.write(str(events))
+
+
 if __name__ == "__main__":
     # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
     FakeEvent.set_locale("en_AU")
@@ -394,7 +399,7 @@ if __name__ == "__main__":
             for hour in range(0, 24):
                 lat = gauss(-37.814, 1.)
                 long = gauss(144.96332, 1.5)
-                eApp = FakeEvent(event_type="App", user_id=user, date_time=datetime(2019, month, day, hour),
+                eApp = FakeEvent(event_type="__App__", user_id=user, date_time=datetime(2019, month, day, hour),
                                  latitude=lat, longitude=long)
                 Events.append(eApp)
                 if randint(0, 1 + abs(hour - 12)) == 0:
@@ -423,8 +428,8 @@ if __name__ == "__main__":
             for sema_hour in sema_hours:
                 lat = gauss(-37.814, 1.)
                 long = gauss(144.96332, 1.5)
-                e = FakeEvent(event_type="SEMA", user_id=user, sema_participant_id=SEMAParticipantId,
+                e = FakeEvent(event_type="__SEMA__", user_id=user, sema_participant_id=SEMAParticipantId,
                               date_time=datetime(2019, month, day, sema_hour), latitude=lat, longitude=long)
                 Events.append(e)
 
-    print(Events)
+    write_file(Events)
