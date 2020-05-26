@@ -5,13 +5,13 @@ from datetime import timedelta, date
 from pprint import PrettyPrinter
 
 
-def season(DateTime):
-    month = DateTime.month
-    if 2 <= month and month <= 4:
+def season(date_time):
+    month = date_time.month
+    if 2 <= month <= 4:
         return "Autumn"
-    elif 5 <= month and month <= 7:
+    elif 5 <= month <= 7:
         return "Winter"
-    elif 8 <= month and month <= 10:
+    elif 8 <= month <= 10:
         return "Spring"
     else:
         return "Summer"
