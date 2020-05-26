@@ -71,7 +71,89 @@ class FakeEvent:
             self.BatteryLevel = randint(1, 100)
             t = min(int(expovariate(1.)) + 1, len(FakeEvent.audioClassType))
             shuffle(FakeEvent.audioClassType)
-
+            self.Name = None
+            self.BatteryDataFiles = [
+                {
+                    "type": "localfs",
+                    "filepath": "/data/battery_20190616140000Z_ffc4284d-7aa3-415e-a3dd-b9125c556388.csv"
+                }],
+            self.StreetViewThumbnail = "https://s3-us-west-1.amazonaws.com/unforgettable-dev-usw1/userhome/" \
+                 "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/2019/06/08/streetview_thumb_4a28b74a-1608-448b-b8e4-7831b6d5f858.jpeg"
+            self.hasAudioProcessedDataFiles = True
+            self.AudioProcessedDataFiles = [
+                {
+                    "type": "localfs",
+                    "filepath": "/data/audio_20190616141007Z_28868a90-f7bd-4ad5-9264-e35c9b36e109.mfcc"
+                },
+                {
+                    "type": "localfs",
+                    "filepath": "/data/audio_20190616142007Z_53f62074-5bc5-4902-9f5e-841d25e3684f.mfcc"
+                },
+                {
+                    "type": "localfs",
+                    "filepath": "/data/audio_20190616143008Z_020d149b-8e99-485f-9337-7b43d9096169.mfcc"
+                }]
+            self.hasAccelerometryDataFiles = True
+            self.AccelerometryDataFiles = [
+                {
+                    "type": "localfs",
+                    "filepath": "/data/accel_20190616141000Z_b3944396-b87e-4b29-9acc-a05d00ed868f.bin"
+                },
+                {
+                    "type": "localfs",
+                    "filepath": "/data/accel_20190616142000Z_0983b4e0-8cab-4d29-bd78-e33278c0095f.bin"
+                },
+                {
+                    "type": "localfs",
+                    "filepath": "/data/accel_20190616143001Z_1503e036-bd86-4a29-87e3-b1ff73ec7929.bin"
+                }]
+            self.StreetViewImage = "https://s3-us-west-1.amazonaws.com/unforgettable-dev-usw1/userhome/" \
+                "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/2019/06/08/streetview_full_4a28b74a-1608-448b-b8e4-7831b6d5f858.jpeg"
+            self.UserImages = []
+            self.hasGpsLocations = True
+            self.GpsLocations = [
+                {
+                    "lat": -37.7929697,
+                    "time_local": "2019-06-17 00:01:25",
+                    "lon": 144.9888915,
+                    "time": "2019-06-16 14:01:25Z"
+                },
+                {
+                    "lat": -37.7929776,
+                    "time_local": "2019-06-17 00:12:15",
+                    "lon": 144.988879,
+                    "time": "2019-06-16 14:12:15Z"
+                },
+                {
+                    "lat": -37.792762010358274,
+                    "time_local": "2019-06-17 00:22:17",
+                    "lon": 144.98914819210768,
+                    "time": "2019-06-16 14:22:17Z"
+                },
+                {
+                    "lat": -37.7930073,
+                    "time_local": "2019-06-17 00:32:12",
+                    "lon": 144.9889067,
+                    "time": "2019-06-16 14:32:12Z"
+                },
+                {
+                    "lat": -37.7929881,
+                    "time_local": "2019-06-17 00:42:15",
+                    "lon": 144.9889107,
+                    "time": "2019-06-16 14:42:15Z"
+                },
+                {
+                    "lat": -37.7929881,
+                    "time_local": "2019-06-17 00:52:13",
+                    "lon": 144.9889107,
+                    "time": "2019-06-16 14:52:13Z"
+                }]
+            self.GpsDataFiles = [
+                {
+                    "type": "localfs",
+                    "filepath": "/data/location_ffc4284d-7aa3-415e-a3dd-b9125c556388.csv"
+                }]
+            self.Suggestions = []
             for i in range(t):
                 self.keywords.append(FakeEvent.audioClassType[i])
 
@@ -286,7 +368,7 @@ class FakeEvent:
                     self.longitude = float(FakeEvent.fake.longitude())
 
     def __repr__(self):
-        return (FakeEvent.pp.pformat(self.__dict__))
+        return FakeEvent.pp.pformat(self.__dict__)
 
     def hasField(self, field):
         return (field in self.__dict__.keys())
