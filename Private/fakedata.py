@@ -4,6 +4,7 @@ from random import choice, randint, gauss, uniform, shuffle, expovariate
 from datetime import timedelta, datetime
 from pprint import PrettyPrinter
 
+
 def season(DateTime):
     month = DateTime.month
     if 2 <= month and month <= 4:
@@ -15,8 +16,8 @@ def season(DateTime):
     else:
         return "Summer"
 
-class FakeEvent:
 
+class FakeEvent:
     fake = Faker()
     eventTypes = ["App", "Button", "Gmail", "SMS", "PhoneCall"]
     placeType = ["church", "cafe"]
@@ -25,7 +26,8 @@ class FakeEvent:
     audioClassType = ["audio_voice", "audio_home", "audio_street", "audio_car", "audio_home"]
     seasonType = ["summer", "winter", "autumn", "spring"]
     buttonType = ["Happy", "Excited", "Tired", "Depressed"]
-    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+              "November", "December"]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     pp = PrettyPrinter(indent=2)
@@ -34,7 +36,8 @@ class FakeEvent:
     def setLocale(cls, locale):
         FakeEvent.fake = Faker(locale)
 
-    def __init__(self, eventType = None, UserId = None, SEMAParticipantId = None, Latitude = None, Longitude = None, buttonType = None, DateTime = None):
+    def __init__(self, eventType=None, UserId=None, SEMAParticipantId=None, Latitude=None, Longitude=None,
+                 buttonType=None, DateTime=None):
         if not eventType:
             eventType = choice(FakeEvent.eventTypes)
         self.type = eventType
@@ -52,31 +55,31 @@ class FakeEvent:
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal + timedelta(hours=1))
             self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
-            self.AccelerometryCount = randint(1,12)
-            self.AudioProcessedCount = randint(1,12)
+            self.AccelerometryCount = randint(1, 12)
+            self.AudioProcessedCount = randint(1, 12)
 
-            self.BatteryCount = randint(1,12)
-            self.BatteryLevel = randint(1,100)
-            t = min(int(expovariate(1.))+1, len(FakeEvent.audioClassType))
+            self.BatteryCount = randint(1, 12)
+            self.BatteryLevel = randint(1, 100)
+            t = min(int(expovariate(1.)) + 1, len(FakeEvent.audioClassType))
             shuffle(FakeEvent.audioClassType)
 
             for i in range(t):
                 self.keywords.append(FakeEvent.audioClassType[i])
 
-            if randint(0, 10) != 0: # add a few events that don't have location information
+            if randint(0, 10) != 0:  # add a few events that don't have location information
                 self.Kilometers = expovariate(1.)
-                self.LocationCount = randint(1,12)
+                self.LocationCount = randint(1, 12)
                 if Latitude:
-                    self.latitude = Latitude + gauss(0,1)
+                    self.latitude = Latitude + gauss(0, 1)
                 else:
                     self.latitude = float(FakeEvent.fake.latitude())
                 if Longitude:
-                    self.longitude = Longitude + gauss(0,1)
+                    self.longitude = Longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
                 self.address = FakeEvent.fake.address()
@@ -91,7 +94,7 @@ class FakeEvent:
                 self.Weather = choice(FakeEvent.weatherType)
                 self.keywords.append(self.Weather)
                 self.keywords.append(choice(FakeEvent.moonPhaseType))
-                if randint(0,6) == 0:
+                if randint(0, 6) == 0:
                     self.keywords.append(choice(FakeEvent.placeType))
 
         elif eventType == "Gmail":
@@ -100,7 +103,7 @@ class FakeEvent:
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
@@ -108,7 +111,7 @@ class FakeEvent:
             self.keywords.append("Gmail")
             self.Subject = FakeEvent.fake.text(20)
             self.Message = FakeEvent.fake.text(400)
-            if randint(0,1) == 0:
+            if randint(0, 1) == 0:
                 self.keywords.append("Received")
                 self.From = FakeEvent.fake.email()
             else:
@@ -121,7 +124,7 @@ class FakeEvent:
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
@@ -130,7 +133,7 @@ class FakeEvent:
             self.Text = FakeEvent.fake.text(30)
             self.Name = FakeEvent.fake.name()
             self.Number = FakeEvent.fake.phone_number()
-            if randint(0,1) == 0:
+            if randint(0, 1) == 0:
                 self.keywords.append("Received")
             else:
                 self.keywords.append("Sent")
@@ -141,16 +144,16 @@ class FakeEvent:
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords.append("Call")
-            self.Duration = int(expovariate(1./120.))
+            self.Duration = int(expovariate(1. / 120.))
             self.Name = FakeEvent.fake.name()
             self.Number = FakeEvent.fake.phone_number()
-            if randint(0,1) == 0:
+            if randint(0, 1) == 0:
                 self.keywords.append("Received")
             else:
                 self.keywords.append("Sent")
@@ -161,7 +164,7 @@ class FakeEvent:
             self.StartDateTime = str(self.StartDateTime)
             self.EndDateTimeLocal = str(self.StartDateTimeLocal)
             self.keywords = []
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
@@ -172,13 +175,13 @@ class FakeEvent:
             else:
                 self.keywords.append(choice(FakeEvent.buttonType))
             self.keywords.append("Button")
-            if randint(0, 10) != 0: # add a few events that don't have location information
+            if randint(0, 10) != 0:  # add a few events that don't have location information
                 if Latitude:
-                    self.latitude = Latitude + gauss(0,1)
+                    self.latitude = Latitude + gauss(0, 1)
                 else:
                     self.latitude = float(FakeEvent.fake.latitude())
                 if Longitude:
-                    self.longitude = Longitude + gauss(0,1)
+                    self.longitude = Longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
         elif eventType == "SEMA":
@@ -187,7 +190,7 @@ class FakeEvent:
             if SEMAParticipantId:
                 self.SEMAParticipantId = SEMAParticipantId
             else:
-                self.SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
+                self.SEMAParticipantId = "".join([str(randint(1, 9))] + [str(randint(0, 9)) for _ in range(8)])
             self.ParticipantTimeZone = "Australia/Melbourne"
             self.StudyName = "DemoStudy"
             self.keywords.append(self.StudyName)
@@ -195,11 +198,11 @@ class FakeEvent:
             self.SurveyName = "Personal Experience Sampling Study"
             self.keywords.append(self.SurveyName)
             self.Trigger = "scheduled"
-            expired = randint(1,3) == 1
+            expired = randint(1, 3) == 1
             if expired:
                 self.keywords.append("Expired")
-                self.ScheduledTime = str(self.StartDateTimeLocal )
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1,110))
+                self.ScheduledTime = str(self.StartDateTimeLocal)
+                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
                 self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
                 self.StartDateTime = str(self.StartDateTime)
                 self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(hours=2)
@@ -208,64 +211,63 @@ class FakeEvent:
             else:
                 self.keywords.append("Completed")
                 self.ScheduledTime = str(self.StartDateTimeLocal)
-                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1,110))
+                self.StartDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(1, 110))
                 self.StartDateTime = self.StartDateTimeLocal - timedelta(hours=11)
-                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4,40))
+                self.EndDateTimeLocal = self.StartDateTimeLocal + timedelta(minutes=randint(4, 40))
                 self.EndDateTime = str(self.StartDateTime - timedelta(hours=11))
                 self.EndDateTimeLocal = str(self.EndDateTimeLocal)
                 self.StartDateTime = str(self.StartDateTime)
 
-                self.TotalRT = randint(1,100000)
+                self.TotalRT = randint(1, 100000)
                 if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Happy = randint(7,10)
+                    self.Happy = randint(7, 10)
                 else:
-                    self.Happy = randint(1,10)
-                self.HappyRT = randint(100,10000)
+                    self.Happy = randint(1, 10)
+                self.HappyRT = randint(100, 10000)
                 if "Saturday" in self.keywords or "Sunday" in self.keywords:
-                    self.Relaxed = randint(7,10)
+                    self.Relaxed = randint(7, 10)
                 else:
-                    self.Relaxed = randint(1,10)
-                self.RelaxedRT = randint(100,10000)
-                self.Confident = randint(1,10)
-                self.ConfidentRT = randint(100,10000)
-                self.Excited = randint(1,10)
-                self.ExcitedRT = randint(100,10000)
-                self.Content = randint(1,10)
-                self.ContentRT = randint(100,10000)
-                self.Sad = randint(1,10)
-                self.SadRT = randint(100,10000)
+                    self.Relaxed = randint(1, 10)
+                self.RelaxedRT = randint(100, 10000)
+                self.Confident = randint(1, 10)
+                self.ConfidentRT = randint(100, 10000)
+                self.Excited = randint(1, 10)
+                self.ExcitedRT = randint(100, 10000)
+                self.Content = randint(1, 10)
+                self.ContentRT = randint(100, 10000)
+                self.Sad = randint(1, 10)
+                self.SadRT = randint(100, 10000)
                 if "Wednesday" in self.keywords or "Thursday" in self.keywords:
-                    self.Anxious = randint(7,10)
+                    self.Anxious = randint(7, 10)
                 else:
-                    self.Anxious = randint(1,10)
-                self.AnxiousRT = randint(100,10000)
-                self.Angry = randint(1,10)
-                self.AngryRT = randint(100,10000)
-                self.Bored = randint(1,10)
-                self.BoredRT = randint(100,10000)
-                self.Disappointed = randint(1,10)
-                self.DisappointedRT = randint(100,10000)
-            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month-1])
+                    self.Anxious = randint(1, 10)
+                self.AnxiousRT = randint(100, 10000)
+                self.Angry = randint(1, 10)
+                self.AngryRT = randint(100, 10000)
+                self.Bored = randint(1, 10)
+                self.BoredRT = randint(100, 10000)
+                self.Disappointed = randint(1, 10)
+                self.DisappointedRT = randint(100, 10000)
+            self.keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
             self.keywords.append(self.StartDateTimeLocal.year)
             self.keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
 
-
     def __repr__(self):
-        return(FakeEvent.pp.pformat(self.__dict__))
+        return (FakeEvent.pp.pformat(self.__dict__))
 
     def hasField(self, field):
-        return(field in self.__dict__.keys())
-
+        return (field in self.__dict__.keys())
 
 
 if __name__ == "__main__":
-    #print "Set the locale to Australia"
-    FakeEvent.setLocale("en_AU")   # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
-    #print
-
-    #for eventType in FakeEvent.eventTypes:
+    # print "Set the locale to Australia"
+    FakeEvent.setLocale(
+        "en_AU")  # set the locale to Australia - this affects the kinds of values filled in for many fields (e.g. address, name ...)
+    # print
+    print(FakeEvent("SEMA"))
+    # for eventType in FakeEvent.eventTypes:
     #  print eventType + " Event"
     #  print
     #  print FakeEvent(eventType)
@@ -273,13 +275,13 @@ if __name__ == "__main__":
 
     # using list comprehensions to filter events ala examples from paper
 
-    #someEvents = [FakeEvent() for _ in range(50)]
-    #print [e.latitude for e in someEvents if e.type == "App" and e.hasField("latitude")]
+    # someEvents = [FakeEvent() for _ in range(50)]
+    # print [e.latitude for e in someEvents if e.type == "App" and e.hasField("latitude")]
 
     # generate many events for a small set of users
 
-    #events = []
-    #for user in range(10):
+    # events = []
+    # for user in range(10):
     #    i = randint(5,10)
     #    ev = FakeEvent()
     #    userid = ev.UserId
@@ -287,45 +289,43 @@ if __name__ == "__main__":
     #    if user == 0:
     #        RainProb = 0.5
     #    events.extend([FakeEvent("App", UserId=userid, Latitude = -37.79, Longitude = 144.9, RainProb=RainProb) for _ in range(i)])
-    #print events
+    # print events
 
+    # NumUsers = 10
+    # users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
+    #
+    # Events = []
+    # for user in users:
+    #   SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
+    #   month = randint(1,12)
+    #   firstday = randint(1,20)
+    #   for day in range(firstday,firstday+7):
+    #     for hour in range(0,24):
+    #         lat = gauss(-37.814, 1.)
+    #         long = gauss(144.96332, 1.5)
+    #         eApp = FakeEvent(eventType="App", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #         Events.append(eApp)
+    #         if randint(0,1+abs(hour-12)) == 0:
+    #             e = FakeEvent(eventType="Gmail", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #             Events.append(e)
+    #         if randint(0,4+abs(hour-12)) == 0:
+    #             e = FakeEvent(eventType="SMS", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #             Events.append(e)
+    #         if randint(0,6+abs(hour-12)) == 0:
+    #             e = FakeEvent(eventType="Call", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #             Events.append(e)
+    #         if randint(0,9+abs(hour-12)) == 0:
+    #             if "Saturday" in eApp.keywords or "Sunday" in eApp.keywords:
+    #                 e = FakeEvent(eventType="Button", buttonType = "Happy", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #             else:
+    #                 e = FakeEvent(eventType="Button", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
+    #             Events.append(e)
+    #
+    #     # SEMA data
+    #
+    #     semahours = [randint(9,12), randint(13,16), randint(17, 20)]
+    #     for semahour in semahours:
+    #         e = FakeEvent(eventType="SEMA", UserId=user, SEMAParticipantId = SEMAParticipantId, DateTime = datetime(2019, month, day, semahour), Latitude=lat, Longitude=long)
+    #         Events.append(e)
 
-    
-    NumUsers = 10
-    users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
-
-    Events = []
-    for user in users:
-      SEMAParticipantId = "".join([str(randint(1,9))] + [str(randint(0,9)) for _ in range(8)])
-      month = randint(1,12)
-      firstday = randint(1,20)
-      for day in range(firstday,firstday+7):
-        for hour in range(0,24):
-            lat = gauss(-37.814, 1.)
-            long = gauss(144.96332, 1.5)
-            eApp = FakeEvent(eventType="App", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-            Events.append(eApp)
-            if randint(0,1+abs(hour-12)) == 0:
-                e = FakeEvent(eventType="Gmail", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-                Events.append(e)
-            if randint(0,4+abs(hour-12)) == 0:
-                e = FakeEvent(eventType="SMS", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-                Events.append(e)
-            if randint(0,6+abs(hour-12)) == 0:
-                e = FakeEvent(eventType="Call", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-                Events.append(e)
-            if randint(0,9+abs(hour-12)) == 0:
-                if "Saturday" in eApp.keywords or "Sunday" in eApp.keywords:
-                    e = FakeEvent(eventType="Button", buttonType = "Happy", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-                else:
-                    e = FakeEvent(eventType="Button", UserId=user, DateTime = datetime(2019, month, day, hour), Latitude=lat, Longitude=long)
-                Events.append(e)
-
-        # SEMA data
-
-        semahours = [randint(9,12), randint(13,16), randint(17, 20)]
-        for semahour in semahours:
-            e = FakeEvent(eventType="SEMA", UserId=user, SEMAParticipantId = SEMAParticipantId, DateTime = datetime(2019, month, day, semahour), Latitude=lat, Longitude=long)
-            Events.append(e)
-
-    print(Events)
+    # print(Events)
