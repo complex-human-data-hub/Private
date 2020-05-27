@@ -18,8 +18,9 @@ from .config import numpy_seed
 import os
 from . import preprocessing as pre
 from . import plotting as plot
-from .demo_experiment_events import ExpEvents
+from .demo_experiment_events import ExpEvents, DemoProjects
 import json
+import reprlib
 #from demo_events import Events, DemoEvents
 
 # Import our source data 
@@ -534,7 +535,8 @@ def private_get_events(project_id, user_id):
 
 def private_get_demo_events(project_id,user_id):
     rk_events = redis_helper.get_redis_key(user_id, "DemoEvents", project_id, "shared")
-    return RedisReference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
+    display_data = DemoProjects.get(project_id, []) 
+    return RedisReference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
 
 
 builtins = {\

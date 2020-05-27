@@ -1,6 +1,26 @@
 from __future__ import absolute_import
 from .event import Event
 
+# DemoProject truncated data to present display values
+# when loading in Demo Projects 
+DemoProjects = {
+    'proj1': [
+        {
+            "AccelerometryCount": 5,
+            "type": "__App__",
+        },
+    ],
+    'b9d2a45a430f3006f490911b33c0d7f7': [
+        {
+            "AccelerometryCount": 5,
+            "type": "__App__",
+        },
+    ]
+}
+
+
+# Experiment results (ExpEvents) 
+
 data = [
     {
         "Language": "en-US,en;q=0.9",
@@ -1122,3 +1142,5 @@ data = [
 
 ExpEvents = [Event(d) for d in data]
 DemoExpEvents = ExpEvents
+
+
