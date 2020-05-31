@@ -424,7 +424,8 @@ if __name__ == "__main__":
                     Events.append(e)
 
             # SEMA data
-            sema_hours = [randint(9, 12), randint(13, 16), randint(17, 20)]
+            sema_hours = [randint(0, 2), randint(3, 5), randint(6, 8), randint(9, 11), randint(12, 14), randint(15, 17),
+                          randint(18, 20), randint(21, 23)]
             for sema_hour in sema_hours:
                 lat = gauss(-37.814, 1.)
                 long = gauss(144.96332, 1.5)
