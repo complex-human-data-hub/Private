@@ -1536,6 +1536,8 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
         stats = None
         if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
             stats = {}
+            # For loop is here to make sure failure of one computation doesn't impact the other.
+            # Exceptions are handled for all at once
             for stat_name in ["rhat", "ess", "waic", "loo"]:
                 try:
                     if stat_name == "rhat":
