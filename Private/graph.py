@@ -1535,12 +1535,19 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
         value, exception_variable, model = locals["__private_result__"]
         stats = None
         if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
-            stats = {
-                "rhat": pm.stats.rhat(value),
-                "ess": pm.stats.ess(value),
-                "waic": pm.stats.waic(value, model),
-                "loo": pm.stats.loo(value, model)
-            }
+            stats = {}
+            for stat_name in ["rhat", "ess", "waic", "loo"]:
+                try:
+                    if stat_name == "rhat":
+                        stats[stat_name] = pm.stats.rhat(value)
+                    elif stat_name == "ess":
+                        stats[stat_name] = pm.stats.ess(value)
+                    elif stat_name == "waic":
+                        stats[stat_name] = pm.stats.waic(value, model)
+                    elif stat_name == "loo":
+                        stats[stat_name] = pm.stats.loo(value, model)
+                except Exception as e:
+                    stats[stat_name] = "Exception: " + str(e)
         data = (jobname, user, names, value, exception_variable, stats)
         return data
     except Exception as e:
