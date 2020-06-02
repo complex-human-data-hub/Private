@@ -493,8 +493,8 @@ def private_mfcc(x):
     return pre.mfcc(x)
 
 
-def zip_date(lists, keys='StartDateTime', max_distances=('minutes', 30), unmatched=False):
-    return pre.zip_date(lists, keys, max_distances, keep_unmatched=unmatched)
+def zip_date(lists, keys='StartDateTime', maxdist=('minutes', 30), unmatched=False):
+    return pre.zip_date(lists, keys, maxdist, keep_unmatched=unmatched)
 
 
 def bucket_date(lists, keys, interval, start=None, empty=False):
