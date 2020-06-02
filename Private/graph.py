@@ -1000,17 +1000,24 @@ class graph:
         :param sub_graph: set() of variable names
         :return: count (int)
         """
-        return len(self.jobs)
-        #job_count = 0
-        #for job_names in self.jobs.keys():
+        # return len(self.jobs)
+        job_count = 0
+        for job_names in self.jobs.keys():
+            if job_names.endswith(str(sub_graph_id)):
+                job_count += 1
+            elif job_names.startswith("Compute:"):
+                job_count += 1
+        return job_count
+        # job_count = 0
+        # for job_names in self.jobs.keys():
         #    if job_names.endswith(str(sub_graph_id)):
         #        job_count += 1
         #    else:
         #        for node in sub_graph:
         #            if job_names.endswith(node):
         #                job_count += 1
-
-        #return job_count
+        #
+        # return job_count
 
     def constructPyMC3code(self, user=None, sub_graph=set()):
         #try:
