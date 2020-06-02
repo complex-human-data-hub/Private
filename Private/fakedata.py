@@ -37,7 +37,7 @@ class FakeEvent:
         FakeEvent.fake = Faker(locale)
 
     def __init__(self, event_type=None, user_id=None, sema_participant_id=None, latitude=None, longitude=None,
-                 button_type=None, date_time=None):
+                 button_type=None, date_time=None, app_event=None):
         if not event_type:
             event_type = choice(FakeEvent.eventTypes)
         self.type = event_type
@@ -276,6 +276,8 @@ class FakeEvent:
                 if "Monday" in self.Keywords or "Tuesday" in self.Keywords:
                     self.Sad = randint(5, 10)
                     self.Angry = randint(5, 10)
+                if app_event and app_event.has_field('Temperature') and app_event.Temperature > 20:
+                    self.Happy = randint(7, 10)
 
                 self.Suggestions = []
 
@@ -396,6 +398,9 @@ if __name__ == "__main__":
         month = randint(1, 12)
         first_day = randint(1, 20)
         for day in range(first_day, first_day + 7):
+            sema_hours = [randint(0, 2), randint(3, 5), randint(6, 8), randint(9, 11), randint(12, 14), randint(15, 17),
+                          randint(18, 20), randint(21, 23)]
+
             for hour in range(0, 24):
                 lat = gauss(-37.814, 1.)
                 long = gauss(144.96332, 1.5)
@@ -423,14 +428,11 @@ if __name__ == "__main__":
                                       latitude=lat, longitude=long)
                     Events.append(e)
 
-            # SEMA data
-            sema_hours = [randint(0, 2), randint(3, 5), randint(6, 8), randint(9, 11), randint(12, 14), randint(15, 17),
-                          randint(18, 20), randint(21, 23)]
-            for sema_hour in sema_hours:
-                lat = gauss(-37.814, 1.)
-                long = gauss(144.96332, 1.5)
-                e = FakeEvent(event_type="__SEMA__", user_id=user, sema_participant_id=SEMAParticipantId,
-                              date_time=datetime(2019, month, day, sema_hour), latitude=lat, longitude=long)
-                Events.append(e)
+                # SEMA data
+                if hour in sema_hours:
+                    e = FakeEvent(event_type="__SEMA__", user_id=user, sema_participant_id=SEMAParticipantId,
+                                  date_time=datetime(2019, month, day, hour), latitude=lat, longitude=long,
+                                  app_event=eApp)
+                    Events.append(e)
 
     write_file(Events)
