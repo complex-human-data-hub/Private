@@ -474,8 +474,8 @@ class graph:
             self.probabilistic.add(name)
             self.probcode[name] = code
             self.pyMC3code[name] = pyMC3code
-            sampler_variables = ['NumberOfTuningSamples', 'NumberOfChains', 'NumberOfSamples']
-            dependson.extend(sampler_variables)
+            # sampler_variables = ['NumberOfTuningSamples', 'NumberOfChains', 'NumberOfSamples']
+            # dependson.extend(sampler_variables)
             if dependson != []:
                 self.probdependson[name] = set(dependson)
             for n in (self.probabilistic - self.deterministic) & self.get_sub_graph(name):
