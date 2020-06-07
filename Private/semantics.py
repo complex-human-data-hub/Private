@@ -207,7 +207,7 @@ class InputVisitor(PTNodeVisitor):
             arguments = ", ".join(c if type(c) == str else c.code for c in children[1:])
         else:
             arguments = ""
-        code = fn + "(" + argument_names + kw_argument_names + arguments + ")"
+        code = fn + "(" + ", ".join(c if type(c) == str else c.code for c in children[1:]) + ")"
         evalcode = fn + "(" + argument_names + kw_argument_names + arguments + ")"
         return result("function_call", code, children, evalcode=evalcode)
 
