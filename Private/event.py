@@ -24,6 +24,7 @@ class Event:
         for key in list(self.__dict__):
             if key.endswith("DataFiles"):
                 self.__dict__[key + "Itr"] = FileIterator(self.__dict__[key], aws_profile=self.aws_profile)
+                del self.__dict__[key]
 
     def __getitem__(self, item):
         return getattr(self, item)
