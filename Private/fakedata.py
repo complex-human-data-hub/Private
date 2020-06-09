@@ -12,19 +12,19 @@ from pprint import PrettyPrinter
 def season(date_time):
     var_month = date_time.month
     if 2 <= var_month <= 4:
-        return "autumn"
+        return "Autumn"
     elif 5 <= var_month <= 7:
-        return "winter"
+        return "Winter"
     elif 8 <= var_month <= 10:
-        return "spring"
+        return "Spring"
     else:
-        return "summer"
+        return "Summer"
 
 
 class FakeEvent:
     fake = Faker()
     eventTypes = ["__App__", "__SEMA__", "Button", "Gmail", "SMS", "PhoneCall"]
-    placeType = ["church", "cafe"]
+    placeType = ["Church", "Cafe"]
     weatherType = ["Clear", "Dangerously Windy", "Dangerously Windy and Mostly Cloudy",
                    "Dangerously Windy and Partly Cloudy", "Drizzle", "Heavy Rain", "Humid", "Humid and Mostly Cloudy",
                    "Humid and Partly Cloudy", "Light Rain", "Light Rain and Windy", "Mostly Cloudy", "Overcast",
@@ -32,9 +32,9 @@ class FakeEvent:
                    "Possible Drizzle and Windy", "Possible Light Rain", "Possible Light Rain and Dangerously Windy",
                    "Possible Light Rain and Windy", "Rain", "Rain and Windy", "Windy", "Windy and Mostly Cloudy",
                    "Windy and Overcast", "Windy and Partly Cloudy"]
-    moonPhaseType = ["waning_gibbous", "waxing_gibbous"]
-    audioClassType = ["audio_voice", "audio_home", "audio_street", "audio_car", "audio_home"]
-    seasonType = ["summer", "winter", "autumn", "spring"]
+    moonPhaseType = ["WaningGibbous", "WaxingGibbous"]
+    audioClassType = ["AudioVoice", "AudioHome", "AudioStreet", "AudioCar", "AudioHome"]
+    seasonType = ["Summer", "Winter", "Autumn", "Spring"]
     buttonType = ["Happy", "Excited", "Tired", "Depressed"]
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
               "November", "December"]
@@ -61,7 +61,7 @@ class FakeEvent:
             self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
                                                                       after_today=False)  # type: date
         # self.id = FakeEvent.fake.uuid4()
-        self.id = 'ap-northeast-1:' + FakeEvent.fake.uuid4() + '::' + FakeEvent.fake.uuid4()
+        self.Id = 'ap-northeast-1:' + FakeEvent.fake.uuid4() + '::' + FakeEvent.fake.uuid4()
         start_date_time_local = self.StartDateTimeLocal
 
         if event_type == "__App__":
@@ -185,9 +185,9 @@ class FakeEvent:
                 self.Name = [str(address_list)]
                 self.MoonIllumination = uniform(0., 1.)
                 self.MoonAge = uniform(0.0, 30.0)
-                if "summer" in self.Keywords:
+                if "Summer" in self.Keywords:
                     self.Temperature = gauss(28, 5)
-                elif "winter" in self.Keywords:
+                elif "Winter" in self.Keywords:
                     self.Temperature = gauss(15, 5)
                 else:
                     self.Temperature = gauss(20, 5)
