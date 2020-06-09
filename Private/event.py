@@ -22,7 +22,7 @@ class Event:
 
     def convert_data_files(self):
         for key in list(self.__dict__):
-            if key.endswith("DataFiles"):
+            if key.endswith("DataFiles") and not key.startswith('has'):
                 self.__dict__[key + "Itr"] = FileIterator(self.__dict__[key], aws_profile=self.aws_profile)
                 del self.__dict__[key]
 
