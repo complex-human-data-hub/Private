@@ -1,4 +1,8 @@
 from __future__ import print_function
+
+import re
+import uuid
+
 from faker import Faker
 from random import choice, randint, gauss, uniform, shuffle, expovariate
 from datetime import timedelta, date, datetime
@@ -8,20 +12,26 @@ from pprint import PrettyPrinter
 def season(date_time):
     var_month = date_time.month
     if 2 <= var_month <= 4:
-        return "Autumn"
+        return "autumn"
     elif 5 <= var_month <= 7:
-        return "Winter"
+        return "winter"
     elif 8 <= var_month <= 10:
-        return "Spring"
+        return "spring"
     else:
-        return "Summer"
+        return "summer"
 
 
 class FakeEvent:
     fake = Faker()
     eventTypes = ["__App__", "__SEMA__", "Button", "Gmail", "SMS", "PhoneCall"]
     placeType = ["church", "cafe"]
-    weatherType = ["clear", "overcast", "cloudy", "rain"]
+    weatherType = ["Clear", "Dangerously Windy", "Dangerously Windy and Mostly Cloudy",
+                   "Dangerously Windy and Partly Cloudy", "Drizzle", "Heavy Rain", "Humid", "Humid and Mostly Cloudy",
+                   "Humid and Partly Cloudy", "Light Rain", "Light Rain and Windy", "Mostly Cloudy", "Overcast",
+                   "Partly Cloudy", "Possible Drizzle", "Possible Drizzle and Dangerously Windy",
+                   "Possible Drizzle and Windy", "Possible Light Rain", "Possible Light Rain and Dangerously Windy",
+                   "Possible Light Rain and Windy", "Rain", "Rain and Windy", "Windy", "Windy and Mostly Cloudy",
+                   "Windy and Overcast", "Windy and Partly Cloudy"]
     moonPhaseType = ["waning_gibbous", "waxing_gibbous"]
     audioClassType = ["audio_voice", "audio_home", "audio_street", "audio_car", "audio_home"]
     seasonType = ["summer", "winter", "autumn", "spring"]
@@ -44,13 +54,14 @@ class FakeEvent:
         if user_id:
             self.UserId = user_id
         else:
-            self.UserId = FakeEvent.fake.uuid4()
+            self.UserId = uuid.uuid4().hex + uuid.uuid4().hex
         if date_time:
             self.StartDateTimeLocal = date_time
         else:
             self.StartDateTimeLocal = FakeEvent.fake.date_this_decade(before_today=True,
                                                                       after_today=False)  # type: date
-        self.id = FakeEvent.fake.uuid4()
+        # self.id = FakeEvent.fake.uuid4()
+        self.id = 'ap-northeast-1:' + FakeEvent.fake.uuid4() + '::' + FakeEvent.fake.uuid4()
         start_date_time_local = self.StartDateTimeLocal
 
         if event_type == "__App__":
@@ -61,7 +72,7 @@ class FakeEvent:
             self.Keywords = []
             self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(str(self.StartDateTimeLocal.year))
             self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.AccelerometryCount = randint(1, 12)
@@ -71,7 +82,6 @@ class FakeEvent:
             self.BatteryLevel = randint(1, 100)
             t = min(int(expovariate(1.)) + 1, len(FakeEvent.audioClassType))
             shuffle(FakeEvent.audioClassType)
-            self.Name = None
             self.BatteryDataFiles = [
                 {
                     "type": "localfs",
@@ -168,12 +178,16 @@ class FakeEvent:
                     self.longitude = longitude + gauss(0, 1)
                 else:
                     self.longitude = float(FakeEvent.fake.longitude())
-                self.address = FakeEvent.fake.address()
+                address = FakeEvent.fake.address()
+                address = address.replace('\n', ', ')
+                address_list = address.split(', ')
+                address_list.append(address)
+                self.Name = [str(address_list)]
                 self.MoonIllumination = uniform(0., 1.)
                 self.MoonAge = uniform(0.0, 30.0)
-                if "Summer" in self.Keywords:
+                if "summer" in self.Keywords:
                     self.Temperature = gauss(28, 5)
-                elif "Winter" in self.Keywords:
+                elif "winter" in self.Keywords:
                     self.Temperature = gauss(15, 5)
                 else:
                     self.Temperature = gauss(20, 5)
@@ -213,11 +227,11 @@ class FakeEvent:
 
             self.Keywords = []
             self.Keywords.append("SEMA")
-            self.Keywords.append(self.StudyName)
-            self.Keywords.append(self.SurveyName)
+            self.Keywords.append(self.StudyId)
+            self.Keywords.append(self.SurveyId)
             self.Keywords.append(FakeEvent.months[start_date_time_local.month - 1])
             self.Keywords.append(FakeEvent.days[start_date_time_local.weekday()])
-            self.Keywords.append(start_date_time_local.year)
+            self.Keywords.append(str(start_date_time_local.year))
             self.Keywords.append(season(start_date_time_local))
 
             if expired:
@@ -289,7 +303,7 @@ class FakeEvent:
             self.Keywords = []
             self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(str(self.StartDateTimeLocal.year))
             self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.Keywords.append("Gmail")
@@ -310,7 +324,7 @@ class FakeEvent:
             self.Keywords = []
             self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(str(self.StartDateTimeLocal.year))
             self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.Keywords.append("SMS")
@@ -330,7 +344,7 @@ class FakeEvent:
             self.Keywords = []
             self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(str(self.StartDateTimeLocal.year))
             self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.Keywords.append("Call")
@@ -350,7 +364,7 @@ class FakeEvent:
             self.Keywords = []
             self.Keywords.append(FakeEvent.months[self.StartDateTimeLocal.month - 1])
             self.Keywords.append(FakeEvent.days[self.StartDateTimeLocal.weekday()])
-            self.Keywords.append(self.StartDateTimeLocal.year)
+            self.Keywords.append(str(self.StartDateTimeLocal.year))
             self.Keywords.append(season(self.StartDateTimeLocal))
             self.StartDateTimeLocal = str(self.StartDateTimeLocal)
             self.Keywords.append("Button")
@@ -390,7 +404,7 @@ if __name__ == "__main__":
     FakeEvent.set_locale("en_AU")
 
     NumUsers = 10
-    users = [FakeEvent.fake.uuid4() for _ in range(NumUsers)]
+    users = [uuid.uuid4().hex + uuid.uuid4().hex for _ in range(NumUsers)]
 
     Events = []
     for user in users:
