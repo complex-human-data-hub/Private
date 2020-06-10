@@ -4,8 +4,10 @@ from .file_iterator import FileIterator
 
 pp = pprint.PrettyPrinter()
 
+
 class Event:
     aws_profile = None
+
     def __init__(self, mydict, aws_profile=None):
         self.__dict__ = mydict
         self.convert_data_files(aws_profile)
