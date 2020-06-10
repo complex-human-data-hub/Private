@@ -25,7 +25,7 @@ s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 
 #dask config
-dask_scheduler_ip = "10.0.2.15"
+dask_scheduler_ip = "localhost"
 dask_scheduler_port = 8786
 
 #redis config 
