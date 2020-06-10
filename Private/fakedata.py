@@ -50,7 +50,7 @@ class FakeEvent:
                  button_type=None, date_time=None, app_event=None):
         if not event_type:
             event_type = choice(FakeEvent.eventTypes)
-        self.type = event_type
+        self.Type = event_type
         if user_id:
             self.UserId = user_id
         else:
@@ -171,13 +171,13 @@ class FakeEvent:
                 self.Kilometers = expovariate(1.)
                 self.LocationCount = randint(1, 12)
                 if latitude:
-                    self.latitude = latitude + gauss(0, 1)
+                    self.Latitude = latitude + gauss(0, 1)
                 else:
-                    self.latitude = float(FakeEvent.fake.latitude())
+                    self.Latitude = float(FakeEvent.fake.latitude())
                 if longitude:
-                    self.longitude = longitude + gauss(0, 1)
+                    self.Longitude = longitude + gauss(0, 1)
                 else:
-                    self.longitude = float(FakeEvent.fake.longitude())
+                    self.Longitude = float(FakeEvent.fake.longitude())
                 address = FakeEvent.fake.address()
                 address = address.replace('\n', ', ')
                 address_list = address.split(', ')
@@ -375,13 +375,13 @@ class FakeEvent:
             self.Keywords.append("Button")
             if randint(0, 10) != 0:  # add a few events that don't have location information
                 if latitude:
-                    self.latitude = latitude + gauss(0, 1)
+                    self.Latitude = latitude + gauss(0, 1)
                 else:
-                    self.latitude = float(FakeEvent.fake.latitude())
+                    self.Latitude = float(FakeEvent.fake.latitude())
                 if longitude:
-                    self.longitude = longitude + gauss(0, 1)
+                    self.Longitude = longitude + gauss(0, 1)
                 else:
-                    self.longitude = float(FakeEvent.fake.longitude())
+                    self.Longitude = float(FakeEvent.fake.longitude())
 
     def __repr__(self):
         return FakeEvent.pp.pformat(self.__dict__)
