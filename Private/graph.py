@@ -490,6 +490,9 @@ class graph:
             self.dependson[name] = set(dependson)
             for user in self.userids:
                 self.changeState(user, name, "stale")
+            for n in (self.probabilistic - self.deterministic) & self.probabilisticParents(name):
+                for user in self.userids:
+                    self.changeState(user, n, "stale")
         self.release()
         self.compute_privacy(self.get_sub_graphs(name)) # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute(self.get_sub_graphs(name))
@@ -1092,6 +1095,13 @@ try:
                         locals[obsname] = self.globals["All"][name]
                 else:
                     locals = None
+            other_locals = list((self.deterministic - self.probabilistic) & set(sub_graph))
+            for other in other_locals:
+                if self.probabilisticParents(other) & set(sub_graph) and user:
+                    if other in self.globals[user]:
+                        locals[other] = self.globals[user][other]
+                    else:
+                        locals[other] = self.globals["All"][other]
 
             code += """
         __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
