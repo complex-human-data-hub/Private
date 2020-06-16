@@ -1226,7 +1226,7 @@ except Exception as e:
 
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, sub_graph, resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                     self.SamplerParameterUpdated = False
         except Exception as e:
@@ -1284,7 +1284,7 @@ except Exception as e:
         returnvalue = returnvalue.result()
         self.acquire("samplercallback")
 
-        myname, user, names, value, exception_variable, stats = Private.s3_helper.read_results_s3(
+        myname, user, names, value, exception_variable, stats, sub_graph = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
@@ -1303,6 +1303,7 @@ except Exception as e:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         else:  # successful sampler return
+            print("sampler return", sub_graph)
             try:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
@@ -1528,7 +1529,7 @@ def get_size(obj, seen=None):
     return size
 
 
-def samplerjob(jobname, user, names, code, globals, locals, proj_id):
+def samplerjob(jobname, user, names, code, globals, locals, proj_id, sub_graph):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_s3_vars(globals)
@@ -1554,11 +1555,11 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
                         stats[stat_name] = pm.stats.loo(value, model)
                 except Exception as e:
                     stats[stat_name] = "Exception: " + str(e)
-        data = (jobname, user, names, value, exception_variable, stats)
+        data = (jobname, user, names, value, exception_variable, stats, sub_graph)
         return data
     except Exception as e:
         # This doesn't seem to be the right size, should be 6 items
-        return (jobname, user, names, e, "No Exception Variable", None)
+        return (jobname, user, names, e, "No Exception Variable", None, sub_graph)
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
