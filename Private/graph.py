@@ -1004,24 +1004,16 @@ class graph:
         """
         # return len(self.jobs)
         job_count = 0
-        for job_names in self.jobs.keys():
-            if job_names.endswith(str(sub_graph_id)):
+        for job_name in self.jobs.keys():
+            if job_name.endswith(str(sub_graph_id)):
                 job_count += 1
-            elif job_names.startswith("Compute:"):
-                node = job_names.split(" ")[-1]
+            elif job_name.startswith("Compute:") or job_name.startswith('Manifold:'):
+                print(job_name)
+                node = job_name.split(" ")[-1]
                 if node in sub_graph:
                     job_count += 1
         return job_count
-        # job_count = 0
-        # for job_names in self.jobs.keys():
-        #    if job_names.endswith(str(sub_graph_id)):
-        #        job_count += 1
-        #    else:
-        #        for node in sub_graph:
-        #            if job_names.endswith(node):
-        #                job_count += 1
-        #
-        # return job_count
+
 
     def constructPyMC3code(self, user=None, sub_graph=set()):
         #try:
