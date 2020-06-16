@@ -490,11 +490,14 @@ class graph:
             self.dependson[name] = set(dependson)
             for user in self.userids:
                 self.changeState(user, name, "stale")
-            for sub_graph in self.get_sub_graphs(name).values():
-                if (self.probabilistic - self.deterministic) & self.probabilisticParents(name):
-                    for n in (self.probabilistic - self.deterministic) & sub_graph:
-                        for user in self.userids:
-                            self.changeState(user, n, "stale")
+            for n in (self.probabilistic - self.deterministic) & self.probabilisticParents(name):
+                for user in self.userids:
+                    self.changeState(user, n, "stale")
+            # for sub_graph in self.get_sub_graphs(name).values():
+            #     if (self.probabilistic - self.deterministic) & self.probabilisticParents(name):
+            #         for n in (self.probabilistic - self.deterministic) & sub_graph:
+            #             for user in self.userids:
+            #                 self.changeState(user, n, "stale")
         self.release()
         self.compute_privacy(self.get_sub_graphs(name)) # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute(self.get_sub_graphs(name))
