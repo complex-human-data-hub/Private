@@ -1008,7 +1008,6 @@ class graph:
             if job_name.endswith(str(sub_graph_id)):
                 job_count += 1
             elif job_name.startswith("Compute:") or job_name.startswith('Manifold:'):
-                print(job_name)
                 node = job_name.split(" ")[-1]
                 if node in sub_graph:
                     job_count += 1
