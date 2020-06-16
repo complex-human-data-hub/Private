@@ -1275,10 +1275,10 @@ except Exception as e:
         self.compute(self.get_sub_graphs(name))
         self.compute_privacy(self.get_sub_graphs(name))
 
-    def haveSamples(self, user):
+    def haveSamples(self, user, sub_graph):
         # have to allow for possibility that some probabilistic variables are not retained and therefore won't have samples
         # so see if any of the probabilistic variables have samples
-        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
+        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in (self.probabilistic & set(sub_graph)))
 
     def samplercallback(self, returnvalue):
         returnvalue = returnvalue.result()
@@ -1303,7 +1303,6 @@ except Exception as e:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         else:  # successful sampler return
-            print("sampler return", sub_graph)
             try:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
@@ -1322,7 +1321,7 @@ except Exception as e:
 
                 self.log.debug("samplercallback: name in names ...done ")
 
-                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
+                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u, sub_graph)]
 
                 if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
@@ -1350,7 +1349,7 @@ except Exception as e:
 
                 else:  # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
-                    if self.haveSamples("All"):
+                    if self.haveSamples("All", sub_graph):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in names:
                             if self.privacySamplerResults.get(name, None) != "private" and not (
