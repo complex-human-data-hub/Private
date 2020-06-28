@@ -877,6 +877,43 @@ class graph:
         """
         return
 
+    def draw_inferential_graph(self):
+        """
+        Original i_graph keeps the nodes in more ground level with more information.
+        We are getting a abstract representation by modifing it.
+        :return: graph as a base 64 string
+        """
+
+        # Generating modified graph
+        m_graph = self.i_graph
+        p_nodes = self.i_graph.graph[P_KEY]
+        if len(p_nodes) > 1:
+            edge_permutations = set(permutations(p_nodes, 2))
+            edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
+            while edges_to_remove:
+                e = edges_to_remove.pop()
+                node_0 = m_graph.nodes[e[0]][LABEL_KEY]
+                node_1 = m_graph.nodes[e[1]][LABEL_KEY]
+                node_label = node_0 + ', ' + node_1
+                if node_0.startswith(PD_KEY):
+                    node_label = node_1
+                elif node_1.startswith(PD_KEY):
+                    node_label = node_0
+
+                m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
+                m_graph.nodes[e[0]][LABEL_KEY] = node_label
+                edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
+
+        pos = nx.spring_layout(m_graph)
+        nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, LABEL_KEY))
+        buf = io.BytesIO()
+        plt.axis('off')
+        plt.savefig(buf, format="png")
+        plt.show()
+        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
+        plt.close()
+        return result
+
     def draw_generative_graph(self):
         G = nx.DiGraph()
         visited, stack = set(), list(self.probabilistic | self.deterministic)
