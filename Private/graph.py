@@ -6,6 +6,7 @@ import hashlib
 import multiprocessing
 import reprlib
 import sys
+from itertools import permutations
 
 import numpy
 import numpy.random
@@ -41,6 +42,12 @@ numpy.set_printoptions(threshold=2000)
 
 PrivacyCriterion = 10.0   # percent
 display_precision = 3
+
+# inferential dependency graph keys
+PD_KEY = 'p_'
+P_KEY = 'p'
+D_KEY = 'd'
+LABEL_KEY = 'label'
 
 
 def debug_logger(msg):
@@ -132,6 +139,8 @@ class graph:
         self.last_server_connect = 0
         self.server = None
         self.check_ppserver_connection()
+        self.i_graph = None
+        self.init_inferential_graph()
 
         #if not ppservers:
         #    # Running locally, let ncpus default to the number of system processors
@@ -490,6 +499,8 @@ class graph:
             self.dependson[name] = set(dependson)
             for user in self.userids:
                 self.changeState(user, name, "stale")
+        if name not in {'Events', 'DemoEvents'}:
+            self.add_to_inf_graph(name, dependson, hier, prob)
         self.release()
         self.compute_privacy(self.get_sub_graphs(name)) # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute(self.get_sub_graphs(name))
@@ -541,6 +552,7 @@ class graph:
             self.dependson.pop(name, None)
             self.probdependson.pop(name, None)
             self.comment.pop(name, None)
+            self.del_from_inf_graph(name)
             res = ""
         else:
             res = name + " not found."
@@ -804,7 +816,68 @@ class graph:
         else:
             return any(self.isAncestor(name1, parent) for parent in parents)
 
-    def draw_dependency_graph(self):
+    def init_inferential_graph(self):
+        """
+        This method initializes the inferential graph.
+        Creates empty arrays (graph attributes) to hold the deterministic nodes and the probabilistic nodes
+        """
+        self.i_graph = nx.DiGraph()
+        self.i_graph.graph[D_KEY] = []
+        self.i_graph.graph[P_KEY] = []
+
+    def add_to_inf_graph(self, name, linked_nodes, h_node, is_prob):
+        """
+        Adds a node to the inferential graph (i_graph)
+        :param name: String, Node name
+        :param linked_nodes: Array of Strings, Other linked nodes (depends_on)
+        :param h_node: String, hierarchical nodes, if any
+        :param is_prob: Boolean, if it's a probabilistic node
+        :return:
+        """
+
+        # Add a new node. It get automatically added, when adding a edge but we need to set the id
+        if name not in self.i_graph.nodes:
+            self.i_graph.add_node(name)
+            self.i_graph.nodes[name][LABEL_KEY] = name
+        else:
+            if is_prob and name in self.i_graph.graph[D_KEY]:
+                linked_nodes.append(name)
+                name = PD_KEY + name
+                self.i_graph.add_node(name)
+                self.i_graph.nodes[name][LABEL_KEY] = name
+            elif (not is_prob) and name in self.i_graph.graph[P_KEY]:
+                nx.relabel_nodes(self.i_graph, {name: PD_KEY + name}, copy=False)
+                self.i_graph.nodes[PD_KEY + name][LABEL_KEY] = PD_KEY + name
+                self.i_graph.graph[P_KEY].remove(name)
+                self.i_graph.graph[P_KEY].append(PD_KEY + name)
+                self.i_graph.add_node(name)
+                self.i_graph.nodes[name][LABEL_KEY] = name
+                self.i_graph.add_edge(name, PD_KEY + name)
+
+        # Add the linked nodes as well
+        for node in linked_nodes:
+            if node not in self.i_graph.nodes:
+                self.i_graph.add_node(node)
+                self.i_graph.nodes[node][LABEL_KEY] = node
+
+        # Adding the edges
+        if is_prob:
+            self.i_graph.graph[P_KEY].append(name)
+            edges = [(a, name) for a in set(linked_nodes)]
+            self.i_graph.add_edges_from(edges)
+        else:
+            self.i_graph.graph[D_KEY].append(name)
+            edges = [(a, name) for a in set(linked_nodes) - {h_node}]
+            self.i_graph.add_edges_from(edges)
+
+    def del_from_inf_graph(self, name):
+        """
+        Delete a node from the inferential graph (i_graph), **Yet to implement
+        :param name: String, name of the node
+        """
+        return
+
+    def draw_generative_graph(self):
         G = nx.DiGraph()
         visited, stack = set(), list(self.probabilistic | self.deterministic)
         while stack:
