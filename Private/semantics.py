@@ -265,7 +265,13 @@ class InputVisitor(PTNodeVisitor):
             self.depGraph.add_comment(children[0].code, children[1].code)
         #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
-    def visit_draw_tree(self, node, children):                return result("draw_tree", self.depGraph.draw_dependency_graph())
+
+    def visit_draw_generative_graph(self, node, children):
+        return result("draw_generative_graph", self.depGraph.draw_generative_graph())
+
+    def visit_draw_inferential_graph(self, node, children):
+        return result("draw_inferential_graph", self.depGraph.draw_inferential_graph())
+
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
@@ -294,7 +300,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_help(self, node, children):
         res = """
 clear: remove all variables and restart
-dt: draw variable dependency tree
+dgg: draw generative graph
+dig: draw inferential graph
 sv: show variables
 sd: show dependencies
 spp: show pp stats

@@ -906,11 +906,12 @@ class graph:
 
         pos = nx.spring_layout(m_graph)
         nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, LABEL_KEY))
+        plt.title("dig")
         buf = io.BytesIO()
-        plt.axis('off')
         plt.savefig(buf, format="png")
-        plt.show()
-        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
+        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
+        plt.savefig('inferential_graph.png')
+        plt.clf()
         plt.close()
         return result
 
@@ -932,10 +933,10 @@ class graph:
                 pos[p][1] += 0.15
         nx.draw_networkx_labels(G, pos, font_size=10)
         buf = io.BytesIO()
-        plt.axis('off')
         plt.savefig(buf, format="png")
-        plt.show()
-        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue())
+        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
+        plt.savefig('generative_graph.png')
+        plt.clf()
         plt.close()
         return result
 
