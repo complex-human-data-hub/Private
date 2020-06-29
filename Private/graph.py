@@ -840,6 +840,7 @@ class graph:
             self.i_graph.add_node(name)
             self.i_graph.nodes[name][LABEL_KEY] = name
         else:
+            # identifying probabilistic and deterministic nodes
             if is_prob and name in self.i_graph.graph[D_KEY]:
                 linked_nodes.append(name)
                 name = PD_KEY + name
@@ -877,13 +878,13 @@ class graph:
         """
         return
 
-    def draw_inferential_graph(self):
+    def modified_inferential_graph(self):
         """
         Original i_graph keeps the nodes in more ground level with more information.
-        We are getting a abstract representation by modifing it.
-        :return: graph as a base 64 string
-        """
+        We are getting a abstract representation by modifying it.
 
+        :return: networkX graph
+        """
         # Generating modified graph
         m_graph = self.i_graph
         p_nodes = self.i_graph.graph[P_KEY]
@@ -904,6 +905,16 @@ class graph:
                 m_graph.nodes[e[0]][LABEL_KEY] = node_label
                 edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
 
+        return m_graph
+
+
+    def draw_inferential_graph(self):
+        """
+        Draws the modified inferential graph
+
+        :return: graph as a base 64 string
+        """
+        m_graph = self.modified_inferential_graph()
         pos = nx.spring_layout(m_graph)
         nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, LABEL_KEY))
         plt.title("dig")
