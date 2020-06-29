@@ -48,6 +48,8 @@ PD_KEY = 'p_'
 P_KEY = 'p'
 D_KEY = 'd'
 LABEL_KEY = 'label'
+IS_PROB = 'is_prob'
+SUB_GRAPH = 'sub_graph'
 
 
 def debug_logger(msg):
@@ -839,6 +841,7 @@ class graph:
         if name not in self.i_graph.nodes:
             self.i_graph.add_node(name)
             self.i_graph.nodes[name][LABEL_KEY] = name
+            self.i_graph.nodes[name][SUB_GRAPH] = [name]
         else:
             # identifying probabilistic and deterministic nodes
             if is_prob and name in self.i_graph.graph[D_KEY]:
@@ -903,6 +906,8 @@ class graph:
 
                 m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
                 m_graph.nodes[e[0]][LABEL_KEY] = node_label
+                m_graph.nodes[e[0]][IS_PROB] = True
+                self.i_graph.nodes[e[0]][SUB_GRAPH].extend(self.i_graph.nodes[e[1]][SUB_GRAPH])
                 edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
 
         return m_graph
