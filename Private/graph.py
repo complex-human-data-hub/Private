@@ -1348,7 +1348,6 @@ except Exception as e:
         debug_logger("in compute")
         try:
             for user in self.userids:
-                print(self.get_idg_computable_nodes(user))
                 for name in self.variablesToBeCalculated(user):
                     if name not in self.public or user == "All":
                         jobname = "Compute:  " + user + " " + name
@@ -1384,64 +1383,6 @@ except Exception as e:
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
                                     self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
-                                    self.jobs[jobname].add_done_callback(self.samplercallback)
-                    self.SamplerParameterUpdated = False
-        except Exception as e:
-            print("in compute " + str(e))
-            traceback.print_exc()
-        self.release()
-
-    def compute_new(self, sub_graphs):
-        # Need to reconnect if we are close to the tcp_keep_alive timout
-        # otherwise OS will dropout connection
-        self.check_ppserver_connection()
-
-        self.log.debug("In compute")
-        self.acquire("compute")
-        debug_logger("in compute")
-        try:
-            for user in self.userids:
-                for name in self.variablesToBeCalculated(user):
-                    if name not in self.public or user == "All":
-                        jobname = "Compute:  " + user + " " + name
-                        if jobname not in self.jobs:
-                            self.changeState(user, name, "computing")
-
-                            user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name],
-                                                                    self.get_globals(set([name]), user), self.locals,
-                                                                    user_func, self.project_id, self.shell_id)
-                            self.jobs[jobname].add_done_callback(self.callback)
-            debug_logger(["sub_graphs", sub_graphs])
-            for sub_graph_id, sub_graph in sub_graphs.items():
-                if self.sub_graph_job_count(sub_graph_id,
-                                            sub_graph) == 0:  # don't start a sampler until all other jobs have finished
-                    sampler_names = self.variablesToBeSampled()
-                    self.log.debug("sampler names: " + str(sampler_names))
-                    for user in self.userids:
-                        if user == "All" or sampler_names - self.public != set():
-                            if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-                                self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
-                                self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
-                                if self.is_sub_graph_complete(user, sub_graph):
-                                    sampler_names = sub_graph - self.deterministic
-                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
-                                            not self.SamplerParameterUpdated:
-                                        continue
-                                    for name in sampler_names:
-                                        self.changeState(user, name, "computing")
-                                        if name in self.globals[user]:
-                                            self.globals[user][
-                                                name] = None  # remove any previous samples that have been calculated
-                                    self.samplerexception[user] = {}
-
-                                    jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
-                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names,
-                                                                            sampler_code,
-                                                                            self.get_globals(sampler_names, user),
-                                                                            locals, self.project_id,
-                                                                            resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                     self.SamplerParameterUpdated = False
         except Exception as e:
