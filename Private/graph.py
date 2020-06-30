@@ -49,7 +49,7 @@ p_key = 'p'
 d_key = 'd'
 label_key = 'label'
 is_prob = 'is_prob'
-sub_graph = 'sub_graph'
+sub_graph_key = 'sub_graph'
 
 
 def debug_logger(msg):
@@ -841,7 +841,7 @@ class graph:
         if name not in self.i_graph.nodes:
             self.i_graph.add_node(name)
             self.i_graph.nodes[name][label_key] = name
-            self.i_graph.nodes[name][sub_graph] = [name]
+            self.i_graph.nodes[name][sub_graph_key] = [name]
         else:
             # identifying probabilistic and deterministic nodes
             if is_prob and name in self.i_graph.graph[d_key]:
@@ -849,7 +849,7 @@ class graph:
                 name = pd_key + name
                 self.i_graph.add_node(name)
                 self.i_graph.nodes[name][label_key] = name
-                self.i_graph.nodes[name][sub_graph] = [name]
+                self.i_graph.nodes[name][sub_graph_key] = [name]
             elif (not is_prob) and name in self.i_graph.graph[p_key]:
                 nx.relabel_nodes(self.i_graph, {name: pd_key + name}, copy=False)
                 self.i_graph.nodes[pd_key + name][label_key] = pd_key + name
@@ -857,7 +857,7 @@ class graph:
                 self.i_graph.graph[p_key].append(pd_key + name)
                 self.i_graph.add_node(name)
                 self.i_graph.nodes[name][label_key] = name
-                self.i_graph.nodes[name][sub_graph] = [name]
+                self.i_graph.nodes[name][sub_graph_key] = [name]
                 self.i_graph.add_edge(name, pd_key + name)
 
         # Add the linked nodes as well
@@ -865,7 +865,7 @@ class graph:
             if node not in self.i_graph.nodes:
                 self.i_graph.add_node(node)
                 self.i_graph.nodes[node][label_key] = node
-                self.i_graph.nodes[node][sub_graph] = [node]
+                self.i_graph.nodes[node][sub_graph_key] = [node]
 
         # Adding the edges
         if is_prob:
@@ -901,16 +901,25 @@ class graph:
                 e = edges_to_remove.pop()
                 node_0 = m_graph.nodes[e[0]][label_key]
                 node_1 = m_graph.nodes[e[1]][label_key]
-                node_label = node_0 + ', ' + node_1
+                node_0_graph = m_graph.nodes[e[0]][sub_graph_key]
+                node_1_graph = m_graph.nodes[e[1]][sub_graph_key]
+                sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
+                    sub_graph.extend(node_1_graph)
                 elif node_1.startswith(pd_key):
                     node_label = node_0
+                    sub_graph.extend(node_0_graph)
+                else:
+                    node_label = node_0 + ', ' + node_1
+                    sub_graph.extend(node_0_graph)
+                    sub_graph.extend(node_1_graph)
 
-                m_graph.nodes[e[0]][sub_graph].extend(m_graph.nodes[e[1]][sub_graph])
+
                 m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
                 m_graph.nodes[e[0]][label_key] = node_label
                 m_graph.nodes[e[0]][is_prob] = True
+                m_graph.nodes[e[0]][sub_graph_key] = sub_graph
 
                 edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
 
@@ -1399,8 +1408,8 @@ except Exception as e:
         try:
             for user in self.userids:
                 nodes_to_compute, m_graph = self.get_idg_computable_nodes(user)
-                for name, node in nodes_to_compute:
-                    if not node[is_prob]:
+                for name, node in nodes_to_compute.items():
+                    if is_prob not in node or not node[is_prob]:
                         job_name = "Compute:  " + user + " " + name
                         if job_name not in self.jobs:
                             self.changeState(user, name, "computing")
@@ -1411,9 +1420,9 @@ except Exception as e:
                                                                     user_func, self.project_id, self.shell_id)
                             self.jobs[job_name].add_done_callback(self.callback)
                     else:
-                        sub_graph = nx.ancestors(m_graph, name)
+                        sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
                         sub_graph_id = node[label_key]
-                        sampler_names = node[sub_graph]
+                        sampler_names = set(node[sub_graph_key])
                         for user in self.userids:
                             if user == "All" or sampler_names - self.public != set():
                                 if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
