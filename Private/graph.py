@@ -44,12 +44,12 @@ PrivacyCriterion = 10.0   # percent
 display_precision = 3
 
 # inferential dependency graph keys
-PD_KEY = 'p_'
-P_KEY = 'p'
-D_KEY = 'd'
-LABEL_KEY = 'label'
-IS_PROB = 'is_prob'
-SUB_GRAPH = 'sub_graph'
+pd_key = 'p_'
+p_key = 'p'
+d_key = 'd'
+label_key = 'label'
+is_prob = 'is_prob'
+sub_graph = 'sub_graph'
 
 
 def debug_logger(msg):
@@ -824,8 +824,8 @@ class graph:
         Creates empty arrays (graph attributes) to hold the deterministic nodes and the probabilistic nodes
         """
         self.i_graph = nx.DiGraph()
-        self.i_graph.graph[D_KEY] = []
-        self.i_graph.graph[P_KEY] = []
+        self.i_graph.graph[d_key] = []
+        self.i_graph.graph[p_key] = []
 
     def add_to_inf_graph(self, name, linked_nodes, h_node, is_prob):
         """
@@ -840,40 +840,40 @@ class graph:
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
         if name not in self.i_graph.nodes:
             self.i_graph.add_node(name)
-            self.i_graph.nodes[name][LABEL_KEY] = name
-            self.i_graph.nodes[name][SUB_GRAPH] = [name]
+            self.i_graph.nodes[name][label_key] = name
+            self.i_graph.nodes[name][sub_graph] = [name]
         else:
             # identifying probabilistic and deterministic nodes
-            if is_prob and name in self.i_graph.graph[D_KEY]:
+            if is_prob and name in self.i_graph.graph[d_key]:
                 linked_nodes.append(name)
-                name = PD_KEY + name
+                name = pd_key + name
                 self.i_graph.add_node(name)
-                self.i_graph.nodes[name][LABEL_KEY] = name
-                self.i_graph.nodes[name][SUB_GRAPH] = [name]
-            elif (not is_prob) and name in self.i_graph.graph[P_KEY]:
-                nx.relabel_nodes(self.i_graph, {name: PD_KEY + name}, copy=False)
-                self.i_graph.nodes[PD_KEY + name][LABEL_KEY] = PD_KEY + name
-                self.i_graph.graph[P_KEY].remove(name)
-                self.i_graph.graph[P_KEY].append(PD_KEY + name)
+                self.i_graph.nodes[name][label_key] = name
+                self.i_graph.nodes[name][sub_graph] = [name]
+            elif (not is_prob) and name in self.i_graph.graph[p_key]:
+                nx.relabel_nodes(self.i_graph, {name: pd_key + name}, copy=False)
+                self.i_graph.nodes[pd_key + name][label_key] = pd_key + name
+                self.i_graph.graph[p_key].remove(name)
+                self.i_graph.graph[p_key].append(pd_key + name)
                 self.i_graph.add_node(name)
-                self.i_graph.nodes[name][LABEL_KEY] = name
-                self.i_graph.nodes[name][SUB_GRAPH] = [name]
-                self.i_graph.add_edge(name, PD_KEY + name)
+                self.i_graph.nodes[name][label_key] = name
+                self.i_graph.nodes[name][sub_graph] = [name]
+                self.i_graph.add_edge(name, pd_key + name)
 
         # Add the linked nodes as well
         for node in linked_nodes:
             if node not in self.i_graph.nodes:
                 self.i_graph.add_node(node)
-                self.i_graph.nodes[node][LABEL_KEY] = node
-                self.i_graph.nodes[node][SUB_GRAPH] = [node]
+                self.i_graph.nodes[node][label_key] = node
+                self.i_graph.nodes[node][sub_graph] = [node]
 
         # Adding the edges
         if is_prob:
-            self.i_graph.graph[P_KEY].append(name)
+            self.i_graph.graph[p_key].append(name)
             edges = [(a, name) for a in set(linked_nodes)]
             self.i_graph.add_edges_from(edges)
         else:
-            self.i_graph.graph[D_KEY].append(name)
+            self.i_graph.graph[d_key].append(name)
             edges = [(a, name) for a in set(linked_nodes) - {h_node}]
             self.i_graph.add_edges_from(edges)
 
@@ -893,24 +893,24 @@ class graph:
         """
         # Generating modified graph
         m_graph = copy.deepcopy(self.i_graph)
-        p_nodes = self.i_graph.graph[P_KEY]
+        p_nodes = self.i_graph.graph[p_key]
         if len(p_nodes) > 1:
             edge_permutations = set(permutations(p_nodes, 2))
             edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
             while edges_to_remove:
                 e = edges_to_remove.pop()
-                node_0 = m_graph.nodes[e[0]][LABEL_KEY]
-                node_1 = m_graph.nodes[e[1]][LABEL_KEY]
+                node_0 = m_graph.nodes[e[0]][label_key]
+                node_1 = m_graph.nodes[e[1]][label_key]
                 node_label = node_0 + ', ' + node_1
-                if node_0.startswith(PD_KEY):
+                if node_0.startswith(pd_key):
                     node_label = node_1
-                elif node_1.startswith(PD_KEY):
+                elif node_1.startswith(pd_key):
                     node_label = node_0
 
-                m_graph.nodes[e[0]][SUB_GRAPH].extend(m_graph.nodes[e[1]][SUB_GRAPH])
+                m_graph.nodes[e[0]][sub_graph].extend(m_graph.nodes[e[1]][sub_graph])
                 m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
-                m_graph.nodes[e[0]][LABEL_KEY] = node_label
-                m_graph.nodes[e[0]][IS_PROB] = True
+                m_graph.nodes[e[0]][label_key] = node_label
+                m_graph.nodes[e[0]][is_prob] = True
 
                 edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
 
@@ -922,7 +922,7 @@ class graph:
 
         :return: List
         """
-        computable_nodes = []
+        computable_nodes = {}
         m_graph = self.modified_inferential_graph()
         for node in m_graph.nodes:
             user_modified = user
@@ -931,7 +931,7 @@ class graph:
             can_compute = True
             if node not in self.stale[user_modified]:
                 can_compute = False
-            elif node not in m_graph.graph[P_KEY] + m_graph.graph[D_KEY]:
+            elif node not in m_graph.graph[p_key] + m_graph.graph[d_key]:
                 can_compute = False
             else:
                 for u, v in m_graph.in_edges(node):
@@ -939,9 +939,9 @@ class graph:
                         can_compute = False
                         break
             if can_compute:
-                computable_nodes.append(m_graph.nodes[node])
+                computable_nodes[node] = m_graph.nodes[node]
 
-        return computable_nodes
+        return computable_nodes, m_graph
 
 
     def draw_inferential_graph(self):
@@ -952,7 +952,7 @@ class graph:
         """
         m_graph = self.modified_inferential_graph()
         pos = nx.spring_layout(m_graph)
-        nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, LABEL_KEY))
+        nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, label_key))
         plt.title("dig")
         buf = io.BytesIO()
         plt.savefig(buf, format="png")
@@ -1387,6 +1387,62 @@ except Exception as e:
                     self.SamplerParameterUpdated = False
         except Exception as e:
             print("in compute " + str(e))
+            traceback.print_exc()
+        self.release()
+
+    def compute_v2(self, sub_graphs):
+        # Need to reconnect if we are close to the tcp_keep_alive timout
+        # otherwise OS will dropout connection
+        self.check_ppserver_connection()
+
+        self.acquire("compute")
+        try:
+            for user in self.userids:
+                nodes_to_compute, m_graph = self.get_idg_computable_nodes(user)
+                for name, node in nodes_to_compute:
+                    if not node[is_prob]:
+                        job_name = "Compute:  " + user + " " + name
+                        if job_name not in self.jobs:
+                            self.changeState(user, name, "computing")
+
+                            user_func = [self.evalcode[func_name] for func_name in self.functions]
+                            self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
+                                                                    self.get_globals(set([name]), user), self.locals,
+                                                                    user_func, self.project_id, self.shell_id)
+                            self.jobs[job_name].add_done_callback(self.callback)
+                    else:
+                        sub_graph = nx.ancestors(m_graph, name)
+                        sub_graph_id = node[label_key]
+                        sampler_names = node[sub_graph]
+                        for user in self.userids:
+                            if user == "All" or sampler_names - self.public != set():
+                                if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+                                    self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
+                                    self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
+                                    sampler_names = sub_graph - self.deterministic
+                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
+                                            not self.SamplerParameterUpdated:
+                                        continue
+                                    for name in sampler_names:
+                                        self.changeState(user, name, "computing")
+                                        if name in self.globals[user]:
+                                            self.globals[user][
+                                                name] = None  # remove any previous samples that have been calculated
+                                    self.samplerexception[user] = {}
+
+                                    job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
+                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+                                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user,
+                                                                             sampler_names,
+                                                                             sampler_code,
+                                                                             self.get_globals(sampler_names,
+                                                                                              user),
+                                                                             locals, self.project_id,
+                                                                             resources={'process': 1})
+                                    self.jobs[job_name].add_done_callback(self.samplercallback)
+                        self.SamplerParameterUpdated = False
+
+        except Exception as e:
             traceback.print_exc()
         self.release()
 
