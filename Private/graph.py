@@ -849,6 +849,7 @@ class graph:
                 name = PD_KEY + name
                 self.i_graph.add_node(name)
                 self.i_graph.nodes[name][LABEL_KEY] = name
+                self.i_graph.nodes[name][SUB_GRAPH] = [name]
             elif (not is_prob) and name in self.i_graph.graph[P_KEY]:
                 nx.relabel_nodes(self.i_graph, {name: PD_KEY + name}, copy=False)
                 self.i_graph.nodes[PD_KEY + name][LABEL_KEY] = PD_KEY + name
@@ -856,6 +857,7 @@ class graph:
                 self.i_graph.graph[P_KEY].append(PD_KEY + name)
                 self.i_graph.add_node(name)
                 self.i_graph.nodes[name][LABEL_KEY] = name
+                self.i_graph.nodes[name][SUB_GRAPH] = [name]
                 self.i_graph.add_edge(name, PD_KEY + name)
 
         # Add the linked nodes as well
@@ -863,6 +865,7 @@ class graph:
             if node not in self.i_graph.nodes:
                 self.i_graph.add_node(node)
                 self.i_graph.nodes[node][LABEL_KEY] = node
+                self.i_graph.nodes[node][SUB_GRAPH] = [node]
 
         # Adding the edges
         if is_prob:
@@ -889,7 +892,7 @@ class graph:
         :return: networkX graph
         """
         # Generating modified graph
-        m_graph = self.i_graph
+        m_graph = copy.deepcopy(self.i_graph)
         p_nodes = self.i_graph.graph[P_KEY]
         if len(p_nodes) > 1:
             edge_permutations = set(permutations(p_nodes, 2))
@@ -904,13 +907,41 @@ class graph:
                 elif node_1.startswith(PD_KEY):
                     node_label = node_0
 
+                m_graph.nodes[e[0]][SUB_GRAPH].extend(m_graph.nodes[e[1]][SUB_GRAPH])
                 m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
                 m_graph.nodes[e[0]][LABEL_KEY] = node_label
                 m_graph.nodes[e[0]][IS_PROB] = True
-                self.i_graph.nodes[e[0]][SUB_GRAPH].extend(self.i_graph.nodes[e[1]][SUB_GRAPH])
+
                 edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
 
         return m_graph
+
+    def get_idg_computable_nodes(self, user):
+        """
+        Return the list of nodes that can be computed based on the inferential dependency graph
+
+        :return: List
+        """
+        computable_nodes = []
+        m_graph = self.modified_inferential_graph()
+        for node in m_graph.nodes:
+            user_modified = user
+            if node in self.public:
+                user_modified = 'All'
+            can_compute = True
+            if node not in self.stale[user_modified]:
+                can_compute = False
+            elif node not in m_graph.graph[P_KEY] + m_graph.graph[D_KEY]:
+                can_compute = False
+            else:
+                for u, v in m_graph.in_edges(node):
+                    if u not in self.builtins and u not in self.uptodate[user_modified]:
+                        can_compute = False
+                        break
+            if can_compute:
+                computable_nodes.append(m_graph.nodes[node])
+
+        return computable_nodes
 
 
     def draw_inferential_graph(self):
@@ -1317,6 +1348,7 @@ except Exception as e:
         debug_logger("in compute")
         try:
             for user in self.userids:
+                print(self.get_idg_computable_nodes(user))
                 for name in self.variablesToBeCalculated(user):
                     if name not in self.public or user == "All":
                         jobname = "Compute:  " + user + " " + name
@@ -1352,6 +1384,64 @@ except Exception as e:
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
                                     self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
+                                    self.jobs[jobname].add_done_callback(self.samplercallback)
+                    self.SamplerParameterUpdated = False
+        except Exception as e:
+            print("in compute " + str(e))
+            traceback.print_exc()
+        self.release()
+
+    def compute_new(self, sub_graphs):
+        # Need to reconnect if we are close to the tcp_keep_alive timout
+        # otherwise OS will dropout connection
+        self.check_ppserver_connection()
+
+        self.log.debug("In compute")
+        self.acquire("compute")
+        debug_logger("in compute")
+        try:
+            for user in self.userids:
+                for name in self.variablesToBeCalculated(user):
+                    if name not in self.public or user == "All":
+                        jobname = "Compute:  " + user + " " + name
+                        if jobname not in self.jobs:
+                            self.changeState(user, name, "computing")
+
+                            user_func = [self.evalcode[func_name] for func_name in self.functions]
+                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name],
+                                                                    self.get_globals(set([name]), user), self.locals,
+                                                                    user_func, self.project_id, self.shell_id)
+                            self.jobs[jobname].add_done_callback(self.callback)
+            debug_logger(["sub_graphs", sub_graphs])
+            for sub_graph_id, sub_graph in sub_graphs.items():
+                if self.sub_graph_job_count(sub_graph_id,
+                                            sub_graph) == 0:  # don't start a sampler until all other jobs have finished
+                    sampler_names = self.variablesToBeSampled()
+                    self.log.debug("sampler names: " + str(sampler_names))
+                    for user in self.userids:
+                        if user == "All" or sampler_names - self.public != set():
+                            if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+                                self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
+                                self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
+                                if self.is_sub_graph_complete(user, sub_graph):
+                                    sampler_names = sub_graph - self.deterministic
+                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
+                                            not self.SamplerParameterUpdated:
+                                        continue
+                                    for name in sampler_names:
+                                        self.changeState(user, name, "computing")
+                                        if name in self.globals[user]:
+                                            self.globals[user][
+                                                name] = None  # remove any previous samples that have been calculated
+                                    self.samplerexception[user] = {}
+
+                                    jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
+                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names,
+                                                                            sampler_code,
+                                                                            self.get_globals(sampler_names, user),
+                                                                            locals, self.project_id,
+                                                                            resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                     self.SamplerParameterUpdated = False
         except Exception as e:
