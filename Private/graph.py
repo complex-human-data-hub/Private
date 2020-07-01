@@ -1040,23 +1040,66 @@ class graph:
         recursive_helper(node)
         return result
 
-    def generate_graph(self):
-        """
-        Generates a directed graph from the available variables
+    # def generate_graph(self):
+    #     """
+    #     Generates a directed graph from the available variables
+    #
+    #     :return: Returns a networkX graph
+    #     """
+    #     g = nx.DiGraph()
+    #     visited, stack = set(), list(self.probabilistic | self.deterministic)
+    #     while stack:
+    #         vertex = stack.pop()
+    #         g.add_node(vertex)
+    #         if vertex not in visited:
+    #             visited.add(vertex)
+    #             for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
+    #                 g.add_edge(vertex, k)
+    #                 stack.append(k)
+    #     return g
 
-        :return: Returns a networkX graph
-        """
-        g = nx.DiGraph()
-        visited, stack = set(), list(self.probabilistic | self.deterministic)
-        while stack:
-            vertex = stack.pop()
-            g.add_node(vertex)
-            if vertex not in visited:
-                visited.add(vertex)
-                for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
-                    g.add_edge(vertex, k)
-                    stack.append(k)
-        return g
+    # def get_all_sub_graphs(self, nodes_subset=None):
+    #     """
+    #     Identified disconnected probabilistic sub graphs.
+    #
+    #     :return: Dictionary of sub graphs sub_graph_id: list of node names
+    #     """
+    #     var_graph = self.generate_graph()
+    #     nodes = nodes_subset if nodes_subset else var_graph.nodes
+    #     sub_graph_id = 0
+    #     node_state = {}
+    #     sub_graphs = {}
+    #     not_visited, visited = 0, 1
+    #
+    #     for node in nodes:
+    #         node_state[node] = not_visited
+    #
+    #     def get_connected(n, graph_id):
+    #         if node_state[n] == not_visited:
+    #             sub_graphs[graph_id].add(n)
+    #             node_state[n] = visited
+    #             descendants = nx.algorithms.descendants(var_graph, n)
+    #             ancestors = nx.algorithms.ancestors(var_graph, n)
+    #
+    #             for c in set(descendants) | set(ancestors):
+    #                 if c not in self.builtins:
+    #                     sub_graphs[graph_id].add(c)
+    #                 if c in self.probabilistic:
+    #                     if c not in node_state:
+    #                         node_state[c] = not_visited
+    #                     get_connected(c, graph_id)
+    #
+    #     for node in nodes:
+    #         if node_state[node] != visited and node in (self.probabilistic - self.deterministic):
+    #             sub_graphs[sub_graph_id] = set()
+    #             get_connected(node, sub_graph_id)
+    #             sub_graph_id += 1
+    #
+    #     return_sub_graphs = {}
+    #     for key, value in sub_graphs.items():
+    #         return_sub_graphs[self.get_graph_id(value)] = value
+    #
+    #     return return_sub_graphs
 
     def get_all_sub_graphs(self, nodes_subset=None):
         """
@@ -1064,40 +1107,12 @@ class graph:
 
         :return: Dictionary of sub graphs sub_graph_id: list of node names
         """
-        var_graph = self.generate_graph()
-        nodes = nodes_subset if nodes_subset else var_graph.nodes
-        sub_graph_id = 0
-        node_state = {}
-        sub_graphs = {}
-        not_visited, visited = 0, 1
-
-        for node in nodes:
-            node_state[node] = not_visited
-
-        def get_connected(n, graph_id):
-            if node_state[n] == not_visited:
-                sub_graphs[graph_id].add(n)
-                node_state[n] = visited
-                descendants = nx.algorithms.descendants(var_graph, n)
-                ancestors = nx.algorithms.ancestors(var_graph, n)
-
-                for c in set(descendants) | set(ancestors):
-                    if c not in self.builtins:
-                        sub_graphs[graph_id].add(c)
-                    if c in self.probabilistic:
-                        if c not in node_state:
-                            node_state[c] = not_visited
-                        get_connected(c, graph_id)
-
-        for node in nodes:
-            if node_state[node] != visited and node in (self.probabilistic - self.deterministic):
-                sub_graphs[sub_graph_id] = set()
-                get_connected(node, sub_graph_id)
-                sub_graph_id += 1
-
+        m_graph = self.modified_inferential_graph()
         return_sub_graphs = {}
-        for key, value in sub_graphs.items():
-            return_sub_graphs[self.get_graph_id(value)] = value
+        for name, node in m_graph.nodes(data=True):
+            if is_prob in node and node[is_prob]:
+                sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
+                return_sub_graphs[node[label_key]] = sub_graph
 
         return return_sub_graphs
 
@@ -1340,7 +1355,7 @@ except Exception as e:
                 names.add(name)
         return(names)
 
-    def compute(self, sub_graphs):
+    def compute_old(self, sub_graphs):
         # Need to reconnect if we are close to the tcp_keep_alive timout
         # otherwise OS will dropout connection
         self.check_ppserver_connection()
@@ -1392,7 +1407,7 @@ except Exception as e:
             traceback.print_exc()
         self.release()
 
-    def compute_v2(self, sub_graphs):
+    def compute(self, sub_graphs):
         # Need to reconnect if we are close to the tcp_keep_alive timout
         # otherwise OS will dropout connection
         self.check_ppserver_connection()
@@ -1434,12 +1449,10 @@ except Exception as e:
 
                                     job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user,
-                                                                             sampler_names,
+                                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
                                                                              sampler_code,
-                                                                             self.get_globals(sampler_names,
-                                                                                              user),
-                                                                             locals, self.project_id,
+                                                                             self.get_globals(sampler_names, user),
+                                                                             locals, self.project_id, sub_graph,
                                                                              resources={'process': 1})
                                     self.jobs[job_name].add_done_callback(self.samplercallback)
                         self.SamplerParameterUpdated = False
