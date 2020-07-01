@@ -1171,22 +1171,15 @@ class graph:
         """
         # return len(self.jobs)
         job_count = 0
-        for job_names in self.jobs.keys():
-            if job_names.endswith(str(sub_graph_id)):
+        for job_name in self.jobs.keys():
+            if job_name.endswith(str(sub_graph_id)):
                 job_count += 1
-            elif job_names.startswith("Compute:"):
-                job_count += 1
+            elif job_name.startswith("Compute:") or job_name.startswith('Manifold:'):
+                node = job_name.split(" ")[-1]
+                if node in sub_graph:
+                    job_count += 1
         return job_count
-        # job_count = 0
-        # for job_names in self.jobs.keys():
-        #    if job_names.endswith(str(sub_graph_id)):
-        #        job_count += 1
-        #    else:
-        #        for node in sub_graph:
-        #            if job_names.endswith(node):
-        #                job_count += 1
-        #
-        # return job_count
+
 
     def constructPyMC3code(self, user=None, sub_graph=set()):
         #try:
@@ -1391,7 +1384,7 @@ except Exception as e:
 
                                     jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
                                     locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, resources={'process': 1})
+                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, sub_graph, resources={'process': 1})
                                     self.jobs[jobname].add_done_callback(self.samplercallback)
                     self.SamplerParameterUpdated = False
         except Exception as e:
@@ -1496,16 +1489,18 @@ except Exception as e:
         self.compute(self.get_sub_graphs(name))
         self.compute_privacy(self.get_sub_graphs(name))
 
-    def haveSamples(self, user):
-        # have to allow for possibility that some probabilistic variables are not retained and therefore won't have samples
+    def have_samples(self, user, sub_graph):
+        # have to allow for possibility that some probabilistic variables are not retained and
+        # therefore won't have samples
         # so see if any of the probabilistic variables have samples
-        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in self.probabilistic)
+        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
+                   (self.probabilistic & set(sub_graph)))
 
     def samplercallback(self, returnvalue):
         returnvalue = returnvalue.result()
         self.acquire("samplercallback")
 
-        myname, user, names, value, exception_variable, stats = Private.s3_helper.read_results_s3(
+        myname, user, names, value, exception_variable, stats, sub_graph = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
@@ -1542,7 +1537,7 @@ except Exception as e:
 
                 self.log.debug("samplercallback: name in names ...done ")
 
-                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.haveSamples(u)]
+                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.have_samples(u, sub_graph)]
 
                 if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
@@ -1570,7 +1565,7 @@ except Exception as e:
 
                 else:  # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
-                    if self.haveSamples("All"):
+                    if self.have_samples("All", sub_graph):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in names:
                             if self.privacySamplerResults.get(name, None) != "private" and not (
@@ -1749,7 +1744,7 @@ def get_size(obj, seen=None):
     return size
 
 
-def samplerjob(jobname, user, names, code, globals, locals, proj_id):
+def samplerjob(jobname, user, names, code, globals, locals, proj_id, sub_graph):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_s3_vars(globals)
@@ -1775,11 +1770,11 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id):
                         stats[stat_name] = pm.stats.loo(value, model)
                 except Exception as e:
                     stats[stat_name] = "Exception: " + str(e)
-        data = (jobname, user, names, value, exception_variable, stats)
+        data = (jobname, user, names, value, exception_variable, stats, sub_graph)
         return data
     except Exception as e:
         # This doesn't seem to be the right size, should be 6 items
-        return (jobname, user, names, e, "No Exception Variable", None)
+        return (jobname, user, names, e, "No Exception Variable", None, sub_graph)
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
