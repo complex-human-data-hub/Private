@@ -141,8 +141,8 @@ class graph:
         self.last_server_connect = 0
         self.server = None
         self.check_ppserver_connection()
-        self.i_graph = None
-        self.init_inferential_graph()
+        self.raw_graph = None
+        self.init_raw_graph()
 
         #if not ppservers:
         #    # Running locally, let ncpus default to the number of system processors
@@ -818,14 +818,14 @@ class graph:
         else:
             return any(self.isAncestor(name1, parent) for parent in parents)
 
-    def init_inferential_graph(self):
+    def init_raw_graph(self):
         """
         This method initializes the inferential graph.
         Creates empty arrays (graph attributes) to hold the deterministic nodes and the probabilistic nodes
         """
-        self.i_graph = nx.DiGraph()
-        self.i_graph.graph[d_key] = []
-        self.i_graph.graph[p_key] = []
+        self.raw_graph = nx.DiGraph()
+        self.raw_graph.graph[d_key] = []
+        self.raw_graph.graph[p_key] = []
 
     def add_to_inf_graph(self, name, linked_nodes, h_node, is_prob):
         """
@@ -838,44 +838,44 @@ class graph:
         """
 
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
-        if name not in self.i_graph.nodes:
-            self.i_graph.add_node(name)
-            self.i_graph.nodes[name][label_key] = name
-            self.i_graph.nodes[name][sub_graph_key] = [name]
+        if name not in self.raw_graph.nodes:
+            self.raw_graph.add_node(name)
+            self.raw_graph.nodes[name][label_key] = name
+            self.raw_graph.nodes[name][sub_graph_key] = [name]
         else:
             # identifying probabilistic and deterministic nodes
-            if is_prob and name in self.i_graph.graph[d_key]:
+            if is_prob and name in self.raw_graph.graph[d_key]:
                 linked_nodes.append(name)
                 name = pd_key + name
-                self.i_graph.add_node(name)
-                self.i_graph.nodes[name][label_key] = name
-                self.i_graph.nodes[name][sub_graph_key] = [name]
-            elif (not is_prob) and name in self.i_graph.graph[p_key]:
-                nx.relabel_nodes(self.i_graph, {name: pd_key + name}, copy=False)
-                self.i_graph.nodes[pd_key + name][label_key] = pd_key + name
-                self.i_graph.graph[p_key].remove(name)
-                self.i_graph.graph[p_key].append(pd_key + name)
-                self.i_graph.add_node(name)
-                self.i_graph.nodes[name][label_key] = name
-                self.i_graph.nodes[name][sub_graph_key] = [name]
-                self.i_graph.add_edge(name, pd_key + name)
+                self.raw_graph.add_node(name)
+                self.raw_graph.nodes[name][label_key] = name
+                self.raw_graph.nodes[name][sub_graph_key] = [name]
+            elif (not is_prob) and name in self.raw_graph.graph[p_key]:
+                nx.relabel_nodes(self.raw_graph, {name: pd_key + name}, copy=False)
+                self.raw_graph.nodes[pd_key + name][label_key] = pd_key + name
+                self.raw_graph.graph[p_key].remove(name)
+                self.raw_graph.graph[p_key].append(pd_key + name)
+                self.raw_graph.add_node(name)
+                self.raw_graph.nodes[name][label_key] = name
+                self.raw_graph.nodes[name][sub_graph_key] = [name]
+                self.raw_graph.add_edge(name, pd_key + name)
 
         # Add the linked nodes as well
         for node in linked_nodes:
-            if node not in self.i_graph.nodes:
-                self.i_graph.add_node(node)
-                self.i_graph.nodes[node][label_key] = node
-                self.i_graph.nodes[node][sub_graph_key] = [node]
+            if node not in self.raw_graph.nodes:
+                self.raw_graph.add_node(node)
+                self.raw_graph.nodes[node][label_key] = node
+                self.raw_graph.nodes[node][sub_graph_key] = [node]
 
         # Adding the edges
         if is_prob:
-            self.i_graph.graph[p_key].append(name)
+            self.raw_graph.graph[p_key].append(name)
             edges = [(a, name) for a in set(linked_nodes)]
-            self.i_graph.add_edges_from(edges)
+            self.raw_graph.add_edges_from(edges)
         else:
-            self.i_graph.graph[d_key].append(name)
+            self.raw_graph.graph[d_key].append(name)
             edges = [(a, name) for a in set(linked_nodes) - {h_node}]
-            self.i_graph.add_edges_from(edges)
+            self.raw_graph.add_edges_from(edges)
 
     def del_from_inf_graph(self, name):
         """
@@ -891,18 +891,18 @@ class graph:
 
         :return: networkX graph
         """
-        # Generating modified graph
-        m_graph = copy.deepcopy(self.i_graph)
-        p_nodes = self.i_graph.graph[p_key]
+        # Generating modified inferential graph
+        i_graph = copy.deepcopy(self.raw_graph)
+        p_nodes = self.raw_graph.graph[p_key]
         if len(p_nodes) > 1:
             edge_permutations = set(permutations(p_nodes, 2))
-            edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
+            edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
             while edges_to_remove:
                 e = edges_to_remove.pop()
-                node_0 = m_graph.nodes[e[0]][label_key]
-                node_1 = m_graph.nodes[e[1]][label_key]
-                node_0_graph = m_graph.nodes[e[0]][sub_graph_key]
-                node_1_graph = m_graph.nodes[e[1]][sub_graph_key]
+                node_0 = i_graph.nodes[e[0]][label_key]
+                node_1 = i_graph.nodes[e[1]][label_key]
+                node_0_graph = i_graph.nodes[e[0]][sub_graph_key]
+                node_1_graph = i_graph.nodes[e[1]][sub_graph_key]
                 sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
@@ -916,14 +916,55 @@ class graph:
                     sub_graph.extend(node_1_graph)
 
 
-                m_graph = nx.contracted_edge(m_graph, e, self_loops=False)
-                m_graph.nodes[e[0]][label_key] = node_label
-                m_graph.nodes[e[0]][is_prob] = True
-                m_graph.nodes[e[0]][sub_graph_key] = sub_graph
+                i_graph = nx.contracted_edge(i_graph, e, self_loops=False)
+                i_graph.nodes[e[0]][label_key] = node_label
+                i_graph.nodes[e[0]][is_prob] = True
+                i_graph.nodes[e[0]][sub_graph_key] = sub_graph
 
-                edges_to_remove = edge_permutations.intersection(set(m_graph.edges))
+                edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
 
-        return m_graph
+        return i_graph
+
+    def modified_privacy_graph(self):
+        """
+        Original i_graph keeps the nodes in more ground level with more information.
+        We are getting a privacy by modifying it.
+
+        :return: networkX graph
+        """
+        # Generating modified privacy graph
+        p_graph = copy.deepcopy(self.raw_graph)
+        p_nodes = self.raw_graph.graph[p_key]
+        if len(p_nodes) > 1:
+            edge_permutations = set(permutations(p_nodes, 2))
+            edges_to_remove = edge_permutations.intersection(set(p_graph.edges))
+            while edges_to_remove:
+                e = edges_to_remove.pop()
+                node_0 = p_graph.nodes[e[0]][label_key]
+                node_1 = p_graph.nodes[e[1]][label_key]
+                node_0_graph = p_graph.nodes[e[0]][sub_graph_key]
+                node_1_graph = p_graph.nodes[e[1]][sub_graph_key]
+                sub_graph = []
+                if node_0.startswith(pd_key):
+                    node_label = node_1
+                    sub_graph.extend(node_1_graph)
+                elif node_1.startswith(pd_key):
+                    node_label = node_0
+                    sub_graph.extend(node_0_graph)
+                else:
+                    node_label = node_0 + ', ' + node_1
+                    sub_graph.extend(node_0_graph)
+                    sub_graph.extend(node_1_graph)
+
+
+                p_graph = nx.contracted_edge(p_graph, e, self_loops=False)
+                p_graph.nodes[e[0]][label_key] = node_label
+                p_graph.nodes[e[0]][is_prob] = True
+                p_graph.nodes[e[0]][sub_graph_key] = sub_graph
+
+                edges_to_remove = edge_permutations.intersection(set(p_graph.edges))
+
+        return p_graph
 
     def get_idg_computable_nodes(self, user):
         """
@@ -932,25 +973,25 @@ class graph:
         :return: List
         """
         computable_nodes = {}
-        m_graph = self.modified_inferential_graph()
-        for node in m_graph.nodes:
+        i_graph = self.modified_inferential_graph()
+        for node in i_graph.nodes:
             user_modified = user
             if node in self.public:
                 user_modified = 'All'
             can_compute = True
             if node not in self.stale[user_modified]:
                 can_compute = False
-            elif node not in m_graph.graph[p_key] + m_graph.graph[d_key]:
+            elif node not in i_graph.graph[p_key] + i_graph.graph[d_key]:
                 can_compute = False
             else:
-                for u, v in m_graph.in_edges(node):
-                    if u not in self.builtins and u not in self.uptodate[user_modified]:
+                for u, v in i_graph.in_edges(node):
+                    if (u not in self.builtins) and (u not in self.uptodate[user_modified]):
                         can_compute = False
                         break
             if can_compute:
-                computable_nodes[node] = m_graph.nodes[node]
+                computable_nodes[node] = i_graph.nodes[node]
 
-        return computable_nodes, m_graph
+        return computable_nodes, i_graph
 
 
     def draw_inferential_graph(self):
@@ -959,9 +1000,9 @@ class graph:
 
         :return: graph as a base 64 string
         """
-        m_graph = self.modified_inferential_graph()
-        pos = nx.spring_layout(m_graph)
-        nx.draw(m_graph, pos, labels=nx.get_node_attributes(m_graph, label_key))
+        i_graph = self.modified_inferential_graph()
+        pos = nx.spring_layout(i_graph)
+        nx.draw(i_graph, pos, labels=nx.get_node_attributes(i_graph, label_key))
         plt.title("dig")
         buf = io.BytesIO()
         plt.savefig(buf, format="png")
