@@ -146,15 +146,6 @@ class graph:
         self.raw_graph = None
         self.init_raw_graph()
 
-        #if not ppservers:
-        #    # Running locally, let ncpus default to the number of system processors
-        #    self.server = pp.Server(ppservers=ppservers, restart=True, socket_timeout = local_socket_timeout)
-        #else:
-        #    # Set ncpus to 0 so that we only process on remote machines
-        #    self.server = pp.Server(ncpus=0, ppservers=ppservers, restart=True, socket_timeout = remote_socket_timeout)
-
-        #print "Starting pp with", self.server.get_ncpus(), "workers"
-        #self.nxgraph = nx.DiGraph()
         self.SamplerParameterUpdated = False
 
         setBuiltinPrivacy(self) # set privacy of builtins
@@ -565,27 +556,6 @@ class graph:
         self.compute_privacy(self.get_sub_graphs(name)) # every delete could change the privacy assignments
         return res
 
-#  def has_descendants(self, name):
-#      # Checks if a node given by 'name' has any descendants
-#      for var in self.dependson.keys():
-#          if name in self.dependson[var]:
-#              return True
-#      return False
-
-#  def check_cycles(self, name, dependson):
-#      # Checks to see if a new 'define' command will create a cycle in the graph
-#      existing_vars = self.dependson.keys()
-#      if name in dependson:
-#          return True
-#      elif name not in existing_vars:
-#          return False
-#      else:
-#          deps = [dep for dep in dependson if dep in existing_vars]
-#          if (len(deps) == 0):
-#              return False
-#          else:
-#              # Incomplete
-#              return True
 
     def getValue(self, name, longFormat = False):
         res = ""
