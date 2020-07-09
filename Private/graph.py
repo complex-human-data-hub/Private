@@ -956,6 +956,103 @@ class graph:
 
         return computable_nodes, i_graph
 
+    def start_computation(self, user, node):
+        """
+        Start computation based on the user and node
+
+        :param user: String
+        :param node: String, variable name
+        :return:
+        """
+        self.check_ppserver_connection()
+        self.acquire("compute")
+        nodes_to_compute, m_graph = self.get_computable(user, node)
+        try:
+            for name, node in nodes_to_compute.items():
+                if is_prob not in node or not node[is_prob]:
+                    job_name = "Compute:  " + user + " " + name
+                    if job_name not in self.jobs:
+                        self.changeState(user, name, "computing")
+
+                        user_func = [self.evalcode[func_name] for func_name in self.functions]
+                        self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
+                                                                 self.get_globals(set(name), user), self.locals,
+                                                                 user_func, self.project_id, self.shell_id)
+                        self.jobs[job_name].add_done_callback(self.callback)
+                else:
+                    sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(
+                        self.builtins)
+                    sub_graph_id = node[attr_label]
+                    sampler_names = sub_graph - self.deterministic
+                    for sampler_name in sampler_names:
+                        self.changeState(user, sampler_name, "computing")
+                        if sampler_name in self.globals[user]:
+                            self.globals[user][sampler_name] = None
+                    job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
+                    jop_locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
+                                                             sampler_code,
+                                                             self.get_globals(sampler_names, user),
+                                                             jop_locals, self.project_id, sub_graph,
+                                                             resources={'process': 1})
+                    self.jobs[job_name].add_done_callback(self.samplercallback)
+        except Exception as e:
+            traceback.print_exc()
+        self.release()
+
+    def get_computable(self, user, node):
+        """
+        Return the list of nodes that should computed due to state change in a given node
+
+        :return: List
+        """
+        computable_nodes = {}
+        i_graph = self.modified_inferential_graph()
+
+        # get node details
+        is_uptodate = node in self.uptodate[user]
+        is_state = node not in self.stale[user]
+        is_top_level = node in i_graph.nodes
+
+        # get the node name from the graph (as it might be in a probabilistic group node)
+        graph_name = None
+        if is_top_level:
+            graph_name = node
+        else:
+            for n, ip in i_graph.nodes(data=is_prob):
+                if ip and node in i_graph.nodes[n][sub_graph_key]:
+                    graph_name = n
+
+        # if the given node is not uptodate then it is from define
+        if not is_uptodate:
+            if self.is_node_computable(user, graph_name) and is_state:
+                computable_nodes[graph_name] = i_graph.nodes[graph_name]
+        # else it should be coming from a callback
+        else:
+            # We will check all the nodes dependent on this node
+            for current_node, child_node in i_graph.out_edges(graph_name):
+                if self.is_node_computable(user, child_node):
+                    computable_nodes[child_node] = i_graph.nodes[child_node]
+        return computable_nodes, i_graph
+
+    def is_node_computable(self, user, node):
+        """
+        Given the node check if the node is computable based on the inferential graph
+        :param user: String
+        :param node: String, node name (as in graph)
+        :return: Boolean
+        """
+        i_graph = self.modified_inferential_graph()
+        is_computable = True
+        if node not in i_graph.graph[p_key] + i_graph.graph[d_key]:
+            is_computable = False
+        else:
+            for u, v in i_graph.in_edges(node):
+                if (u not in self.builtins) and (u not in self.uptodate[user]):
+                    is_computable = False
+                    break
+        return is_computable
+
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
