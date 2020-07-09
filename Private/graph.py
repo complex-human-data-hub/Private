@@ -886,7 +886,7 @@ class graph:
 
     def modified_inferential_graph(self):
         """
-        Original i_graph keeps the nodes in more ground level with more information.
+        Original raw_graph keeps the nodes in more ground level with more information.
         We are getting a abstract representation by modifying it.
 
         :return: networkX graph
@@ -927,7 +927,7 @@ class graph:
 
     def modified_privacy_graph(self):
         """
-        Original i_graph keeps the nodes in more ground level with more information.
+        Original raw_graph keeps the nodes in more ground level with more information.
         We are getting a privacy by modifying it.
 
         :return: networkX graph
