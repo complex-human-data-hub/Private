@@ -6,7 +6,7 @@ import hashlib
 import multiprocessing
 import reprlib
 import sys
-from itertools import permutations
+from itertools import permutations, product
 
 import numpy
 import numpy.random
@@ -935,34 +935,24 @@ class graph:
         # Generating modified privacy graph
         p_graph = copy.deepcopy(self.raw_graph)
         p_nodes = self.raw_graph.graph[p_key]
-        if len(p_nodes) > 1:
-            edge_permutations = set(permutations(p_nodes, 2))
+        pd_nodes = []
+        for p_node in p_nodes:
+            if p_node.startswith(pd_key):
+                pd_nodes.append(p_node)
+        if len(pd_nodes) > 0:
+            edge_permutations = set(product((set(p_nodes) - set(pd_nodes)), pd_nodes))
+            # These are the edges between pd_nodes and p_nodes
             edges_to_remove = edge_permutations.intersection(set(p_graph.edges))
-            while edges_to_remove:
-                e = edges_to_remove.pop()
-                node_0 = p_graph.nodes[e[0]][label_key]
-                node_1 = p_graph.nodes[e[1]][label_key]
-                node_0_graph = p_graph.nodes[e[0]][sub_graph_key]
-                node_1_graph = p_graph.nodes[e[1]][sub_graph_key]
-                sub_graph = []
-                if node_0.startswith(pd_key):
-                    node_label = node_1
-                    sub_graph.extend(node_1_graph)
-                elif node_1.startswith(pd_key):
-                    node_label = node_0
-                    sub_graph.extend(node_0_graph)
-                else:
-                    node_label = node_0 + ', ' + node_1
-                    sub_graph.extend(node_0_graph)
-                    sub_graph.extend(node_1_graph)
-
-
-                p_graph = nx.contracted_edge(p_graph, e, self_loops=False)
-                p_graph.nodes[e[0]][label_key] = node_label
-                p_graph.nodes[e[0]][is_prob] = True
-                p_graph.nodes[e[0]][sub_graph_key] = sub_graph
-
-                edges_to_remove = edge_permutations.intersection(set(p_graph.edges))
+            # We add the dependencies of each pd_nodes to adjacent p_nodes
+            for e in edges_to_remove:
+                # get in edges to the pd_node
+                pd_in_edges = set(p_graph.in_edges(e[1]))
+                pd_in_edges = pd_in_edges.difference(edges_to_remove)
+                for pd_in_edge in pd_in_edges:
+                    p_graph.add_edge(pd_in_edge[0], e[0])
+            # Finally remove the pd_nodes
+            for pd_node in pd_nodes:
+                p_graph.remove_node(pd_node)
 
         return p_graph
 
@@ -1008,6 +998,24 @@ class graph:
         plt.savefig(buf, format="png")
         result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
         plt.savefig('inferential_graph.png')
+        plt.clf()
+        plt.close()
+        return result
+
+    def draw_privacy_graph(self):
+        """
+        Draws the modified privacy graph
+
+        :return: graph as a base 64 string
+        """
+        p_graph = self.modified_privacy_graph()
+        pos = nx.spring_layout(p_graph)
+        nx.draw(p_graph, pos, labels=nx.get_node_attributes(p_graph, label_key))
+        plt.title("dig")
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
+        plt.savefig('privacy_graph.png')
         plt.clf()
         plt.close()
         return result

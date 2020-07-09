@@ -272,6 +272,9 @@ class InputVisitor(PTNodeVisitor):
     def visit_draw_inferential_graph(self, node, children):
         return result("draw_inferential_graph", self.depGraph.draw_inferential_graph())
 
+    def visit_draw_privacy_graph(self, node, children):
+        return result("draw_privacy_graph", self.depGraph.draw_privacy_graph())
+
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
