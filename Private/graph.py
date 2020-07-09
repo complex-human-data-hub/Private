@@ -14,6 +14,7 @@ from collections import OrderedDict, deque
 import logging
 import matplotlib.pyplot as plt
 import networkx as nx
+import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins, setGlobals2
 #from Private.s3_reference import S3Reference
@@ -47,7 +48,8 @@ display_precision = 3
 pd_key = 'p_'
 p_key = 'p'
 d_key = 'd'
-label_key = 'label'
+attr_label = 'label'
+attr_color = 'color'
 is_prob = 'is_prob'
 sub_graph_key = 'sub_graph'
 
@@ -840,7 +842,7 @@ class graph:
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
         if name not in self.raw_graph.nodes:
             self.raw_graph.add_node(name)
-            self.raw_graph.nodes[name][label_key] = name
+            self.raw_graph.nodes[name][attr_label] = name
             self.raw_graph.nodes[name][sub_graph_key] = [name]
         else:
             # identifying probabilistic and deterministic nodes
@@ -848,15 +850,15 @@ class graph:
                 linked_nodes.append(name)
                 name = pd_key + name
                 self.raw_graph.add_node(name)
-                self.raw_graph.nodes[name][label_key] = name
+                self.raw_graph.nodes[name][attr_label] = name
                 self.raw_graph.nodes[name][sub_graph_key] = [name]
             elif (not is_prob) and name in self.raw_graph.graph[p_key]:
                 nx.relabel_nodes(self.raw_graph, {name: pd_key + name}, copy=False)
-                self.raw_graph.nodes[pd_key + name][label_key] = pd_key + name
+                self.raw_graph.nodes[pd_key + name][attr_label] = pd_key + name
                 self.raw_graph.graph[p_key].remove(name)
                 self.raw_graph.graph[p_key].append(pd_key + name)
                 self.raw_graph.add_node(name)
-                self.raw_graph.nodes[name][label_key] = name
+                self.raw_graph.nodes[name][attr_label] = name
                 self.raw_graph.nodes[name][sub_graph_key] = [name]
                 self.raw_graph.add_edge(name, pd_key + name)
 
@@ -864,7 +866,7 @@ class graph:
         for node in linked_nodes:
             if node not in self.raw_graph.nodes:
                 self.raw_graph.add_node(node)
-                self.raw_graph.nodes[node][label_key] = node
+                self.raw_graph.nodes[node][attr_label] = node
                 self.raw_graph.nodes[node][sub_graph_key] = [node]
 
         # Adding the edges
@@ -899,8 +901,8 @@ class graph:
             edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
             while edges_to_remove:
                 e = edges_to_remove.pop()
-                node_0 = i_graph.nodes[e[0]][label_key]
-                node_1 = i_graph.nodes[e[1]][label_key]
+                node_0 = i_graph.nodes[e[0]][attr_label]
+                node_1 = i_graph.nodes[e[1]][attr_label]
                 node_0_graph = i_graph.nodes[e[0]][sub_graph_key]
                 node_1_graph = i_graph.nodes[e[1]][sub_graph_key]
                 sub_graph = []
@@ -917,7 +919,8 @@ class graph:
 
 
                 i_graph = nx.contracted_edge(i_graph, e, self_loops=False)
-                i_graph.nodes[e[0]][label_key] = node_label
+                i_graph.nodes[e[0]][attr_label] = node_label
+                i_graph.nodes[e[0]][attr_color] = 'red'
                 i_graph.nodes[e[0]][is_prob] = True
                 i_graph.nodes[e[0]][sub_graph_key] = sub_graph
 
@@ -984,40 +987,28 @@ class graph:
         return computable_nodes, i_graph
 
 
-    def draw_inferential_graph(self):
+    def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
         Draws the modified inferential graph
 
         :return: graph as a base 64 string
         """
         i_graph = self.modified_inferential_graph()
-        pos = nx.spring_layout(i_graph)
-        nx.draw(i_graph, pos, labels=nx.get_node_attributes(i_graph, label_key))
-        plt.title("dig")
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png")
-        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
-        plt.savefig('inferential_graph.png')
-        plt.clf()
-        plt.close()
+        nx.drawing.nx_pydot.write_dot(i_graph, graph_name)
+        gv.render('dot', 'png', graph_name)
+        result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
 
-    def draw_privacy_graph(self):
+    def draw_privacy_graph(self, graph_name='privacy_graph'):
         """
         Draws the modified privacy graph
 
         :return: graph as a base 64 string
         """
         p_graph = self.modified_privacy_graph()
-        pos = nx.spring_layout(p_graph)
-        nx.draw(p_graph, pos, labels=nx.get_node_attributes(p_graph, label_key))
-        plt.title("dig")
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png")
-        result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
-        plt.savefig('privacy_graph.png')
-        plt.clf()
-        plt.close()
+        nx.drawing.nx_pydot.write_dot(p_graph, graph_name)
+        gv.render('dot', 'png', graph_name)
+        result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
 
     def draw_generative_graph(self):
@@ -1161,7 +1152,7 @@ class graph:
         for name, node in m_graph.nodes(data=True):
             if is_prob in node and node[is_prob]:
                 sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
-                return_sub_graphs[node[label_key]] = sub_graph
+                return_sub_graphs[node[attr_label]] = sub_graph
 
         return return_sub_graphs
 
@@ -1478,7 +1469,7 @@ except Exception as e:
                             self.jobs[job_name].add_done_callback(self.callback)
                     else:
                         sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
-                        sub_graph_id = node[label_key]
+                        sub_graph_id = node[attr_label]
                         sampler_names = set(node[sub_graph_key])
                         for user in self.userids:
                             if user == "All" or sampler_names - self.public != set():
