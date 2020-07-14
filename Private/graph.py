@@ -53,6 +53,7 @@ attr_color = 'color'
 attr_is_prob = 'is_prob'
 attr_contains = 'sub_graph'
 attr_id = 'id'
+attr_last_ts = 'last_ts'
 
 # other constants
 user_all = 'All'
@@ -834,9 +835,7 @@ class graph:
                 self.raw_graph_add_node(name, is_prob)
             elif (not is_prob) and name in self.raw_graph.graph[p_key]:
                 nx.relabel_nodes(self.raw_graph, {name: pd_key + name}, copy=False)
-                self.raw_graph.nodes[pd_key + name][attr_label] = pd_key + name
-                self.raw_graph.nodes[pd_key + name][attr_id] = pd_key + name
-                self.raw_graph.nodes[pd_key + name][attr_contains] = [pd_key + name]
+                self.raw_graph_add_node(pd_key + name, True)
                 self.raw_graph.graph[p_key].remove(name)
                 self.raw_graph.graph[p_key].append(pd_key + name)
                 self.raw_graph_add_node(name, is_prob)
@@ -868,11 +867,13 @@ class graph:
         :param name: String, variable name
         :param is_prob: Boolean, is probabilistic
         """
-        self.raw_graph.add_node(name)
+        if name not in self.raw_graph.nodes:
+            self.raw_graph.add_node(name)
         self.raw_graph.nodes[name][attr_label] = name
         self.raw_graph.nodes[name][attr_contains] = [name]
         self.raw_graph.nodes[name][attr_is_prob] = is_prob
         self.raw_graph.nodes[name][attr_id] = name
+        self.raw_graph.nodes[name][attr_last_ts] = 0
 
 
     def del_from_inf_graph(self, name):
@@ -975,7 +976,6 @@ class graph:
             if node[attr_is_prob]:
                 job_name = "Sampler:  " + user + ", " + str(node[attr_label])
                 job_locals, sampler_code = self.constructPyMC3code(node, user)
-                print(sampler_code)
                 self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, node, sampler_code, job_globals,
                                                          job_locals, resources={'process': 1})
                 self.jobs[job_name].add_done_callback(self.samplercallback)
