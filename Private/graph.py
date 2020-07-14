@@ -50,8 +50,12 @@ p_key = 'p'
 d_key = 'd'
 attr_label = 'label'
 attr_color = 'color'
-is_prob = 'is_prob'
-sub_graph_key = 'sub_graph'
+attr_is_prob = 'is_prob'
+attr_contains = 'sub_graph'
+attr_id = 'id'
+
+# other constants
+user_all = 'All'
 
 
 def debug_logger(msg):
@@ -144,6 +148,8 @@ class graph:
         self.server = None
         self.check_ppserver_connection()
         self.raw_graph = None
+        self.i_graph = None
+        self.p_graph = None
         self.init_raw_graph()
 
         self.SamplerParameterUpdated = False
@@ -498,7 +504,11 @@ class graph:
             self.add_to_inf_graph(name, dependson, hier, prob)
         self.release()
         self.compute_privacy(self.get_sub_graphs(name)) # need computePrivacy before compute so we don't compute public variables for each participant
-        self.compute(self.get_sub_graphs(name))
+        if name not in self.public:
+            for user in self.userids:
+                self.start_computation(user, self.get_node(name, prob))
+        else:
+            self.start_computation(user_all, self.get_node(name, prob))
         self.compute_privacy(self.get_sub_graphs(name)) # every definition could change the privacy assignments
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
@@ -520,7 +530,11 @@ class graph:
             self.changeState(user, name, "stale")
         self.release()
         self.compute_privacy(self.get_sub_graphs(name))  # need computePrivacy before compute so we don't compute public variables for each participant
-        self.compute(self.get_sub_graphs(name))
+        if name not in self.public:
+            for user in self.userids:
+                self.start_computation(user, self.i_graph.nodes[name])
+        else:
+            self.start_computation(user_all, self.i_graph.nodes[name])
         self.compute_privacy(self.get_sub_graphs(name))
 
     def delete(self, name):
@@ -811,33 +825,27 @@ class graph:
 
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
         if name not in self.raw_graph.nodes:
-            self.raw_graph.add_node(name)
-            self.raw_graph.nodes[name][attr_label] = name
-            self.raw_graph.nodes[name][sub_graph_key] = [name]
+            self.raw_graph_add_node(name, is_prob)
         else:
             # identifying probabilistic and deterministic nodes
             if is_prob and name in self.raw_graph.graph[d_key]:
                 linked_nodes.append(name)
                 name = pd_key + name
-                self.raw_graph.add_node(name)
-                self.raw_graph.nodes[name][attr_label] = name
-                self.raw_graph.nodes[name][sub_graph_key] = [name]
+                self.raw_graph_add_node(name, is_prob)
             elif (not is_prob) and name in self.raw_graph.graph[p_key]:
                 nx.relabel_nodes(self.raw_graph, {name: pd_key + name}, copy=False)
                 self.raw_graph.nodes[pd_key + name][attr_label] = pd_key + name
+                self.raw_graph.nodes[pd_key + name][attr_id] = pd_key + name
+                self.raw_graph.nodes[pd_key + name][attr_contains] = [pd_key + name]
                 self.raw_graph.graph[p_key].remove(name)
                 self.raw_graph.graph[p_key].append(pd_key + name)
-                self.raw_graph.add_node(name)
-                self.raw_graph.nodes[name][attr_label] = name
-                self.raw_graph.nodes[name][sub_graph_key] = [name]
+                self.raw_graph_add_node(name, is_prob)
                 self.raw_graph.add_edge(name, pd_key + name)
 
         # Add the linked nodes as well
         for node in linked_nodes:
             if node not in self.raw_graph.nodes:
-                self.raw_graph.add_node(node)
-                self.raw_graph.nodes[node][attr_label] = node
-                self.raw_graph.nodes[node][sub_graph_key] = [node]
+                self.raw_graph_add_node(node, False)
 
         # Adding the edges
         if is_prob:
@@ -848,6 +856,24 @@ class graph:
             self.raw_graph.graph[d_key].append(name)
             edges = [(a, name) for a in set(linked_nodes) - {h_node}]
             self.raw_graph.add_edges_from(edges)
+
+        # update i_graph and p_graph
+        self.i_graph = self.modified_inferential_graph()
+        self.p_graph = self.modified_privacy_graph()
+
+    def raw_graph_add_node(self, name, is_prob):
+        """
+        Adds a node to the raw graph and defined all its properties
+
+        :param name: String, variable name
+        :param is_prob: Boolean, is probabilistic
+        """
+        self.raw_graph.add_node(name)
+        self.raw_graph.nodes[name][attr_label] = name
+        self.raw_graph.nodes[name][attr_contains] = [name]
+        self.raw_graph.nodes[name][attr_is_prob] = is_prob
+        self.raw_graph.nodes[name][attr_id] = name
+
 
     def del_from_inf_graph(self, name):
         """
@@ -873,26 +899,26 @@ class graph:
                 e = edges_to_remove.pop()
                 node_0 = i_graph.nodes[e[0]][attr_label]
                 node_1 = i_graph.nodes[e[1]][attr_label]
-                node_0_graph = i_graph.nodes[e[0]][sub_graph_key]
-                node_1_graph = i_graph.nodes[e[1]][sub_graph_key]
+                node_0_graph = i_graph.nodes[e[0]][attr_contains]
+                node_1_graph = i_graph.nodes[e[1]][attr_contains]
                 sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
-                    sub_graph.extend(node_1_graph)
+                    # sub_graph.extend(node_1_graph)
                 elif node_1.startswith(pd_key):
                     node_label = node_0
-                    sub_graph.extend(node_0_graph)
+                    # sub_graph.extend(node_0_graph)
                 else:
                     node_label = node_0 + ', ' + node_1
-                    sub_graph.extend(node_0_graph)
-                    sub_graph.extend(node_1_graph)
+                sub_graph.extend(node_0_graph)
+                sub_graph.extend(node_1_graph)
 
 
                 i_graph = nx.contracted_edge(i_graph, e, self_loops=False)
                 i_graph.nodes[e[0]][attr_label] = node_label
                 i_graph.nodes[e[0]][attr_color] = 'red'
-                i_graph.nodes[e[0]][is_prob] = True
-                i_graph.nodes[e[0]][sub_graph_key] = sub_graph
+                i_graph.nodes[e[0]][attr_is_prob] = True
+                i_graph.nodes[e[0]][attr_contains] = sub_graph
 
                 edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
 
@@ -929,130 +955,70 @@ class graph:
 
         return p_graph
 
-    def get_idg_computable_nodes(self, user):
-        """
-        Return the list of nodes that can be computed based on the inferential dependency graph
-
-        :return: List
-        """
-        computable_nodes = {}
-        i_graph = self.modified_inferential_graph()
-        for node in i_graph.nodes:
-            user_modified = user
-            if node in self.public:
-                user_modified = 'All'
-            can_compute = True
-            if node not in self.stale[user_modified]:
-                can_compute = False
-            elif node not in i_graph.graph[p_key] + i_graph.graph[d_key]:
-                can_compute = False
-            else:
-                for u, v in i_graph.in_edges(node):
-                    if (u not in self.builtins) and (u not in self.uptodate[user_modified]):
-                        can_compute = False
-                        break
-            if can_compute:
-                computable_nodes[node] = i_graph.nodes[node]
-
-        return computable_nodes, i_graph
-
     def start_computation(self, user, node):
         """
-        Start computation based on the user and node
+        Start computation for the given node for the given user
 
         :param user: String
-        :param node: String, variable name
+        :param node: Dict {'id': a, 'contains': [c, d], 'is_prob':False ...}
         :return:
         """
-        self.check_ppserver_connection()
         self.acquire("compute")
-        nodes_to_compute, m_graph = self.get_computable(user, node)
-        try:
-            for name, node in nodes_to_compute.items():
-                if is_prob not in node or not node[is_prob]:
-                    job_name = "Compute:  " + user + " " + name
-                    if job_name not in self.jobs:
-                        self.changeState(user, name, "computing")
-
-                        user_func = [self.evalcode[func_name] for func_name in self.functions]
-                        self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
-                                                                 self.get_globals(set(name), user), self.locals,
-                                                                 user_func, self.project_id, self.shell_id)
-                        self.jobs[job_name].add_done_callback(self.callback)
-                else:
-                    sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(
-                        self.builtins)
-                    sub_graph_id = node[attr_label]
-                    sampler_names = sub_graph - self.deterministic
-                    for sampler_name in sampler_names:
-                        self.changeState(user, sampler_name, "computing")
-                        if sampler_name in self.globals[user]:
-                            self.globals[user][sampler_name] = None
-                    job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
-                    jop_locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
-                                                             sampler_code,
-                                                             self.get_globals(sampler_names, user),
-                                                             jop_locals, self.project_id, sub_graph,
-                                                             resources={'process': 1})
-                    self.jobs[job_name].add_done_callback(self.samplercallback)
-        except Exception as e:
-            traceback.print_exc()
+        n_id = node[attr_id]
+        if not self.is_node_computable(user, n_id):
+            self.release()
+            return
+        else:
+            job_globals = self.get_globals(node[attr_contains], user)
+            for name in node[attr_contains]:
+                self.changeState(user, name, "computing")
+            if node[attr_is_prob]:
+                job_name = "Sampler:  " + user + ", " + str(node[attr_label])
+                job_locals, sampler_code = self.constructPyMC3code(node, user)
+                print(sampler_code)
+                self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, node, sampler_code, job_globals,
+                                                         job_locals, resources={'process': 1})
+                self.jobs[job_name].add_done_callback(self.samplercallback)
+            else:
+                job_name = "Compute:  " + user + " " + n_id
+                user_func = [self.evalcode[func_name] for func_name in self.functions]
+                self.jobs[job_name] = self.server.submit(job, job_name, n_id, user, self.evalcode[n_id], job_globals,
+                                                         self.locals, user_func, self.project_id, self.shell_id)
+                self.jobs[job_name].add_done_callback(self.callback)
         self.release()
 
-    def get_computable(self, user, node):
-        """
-        Return the list of nodes that should computed due to state change in a given node
 
-        :return: List
-        """
-        computable_nodes = {}
-        i_graph = self.modified_inferential_graph()
-
-        # get node details
-        is_uptodate = node in self.uptodate[user]
-        is_state = node not in self.stale[user]
-        is_top_level = node in i_graph.nodes
-
-        # get the node name from the graph (as it might be in a probabilistic group node)
-        graph_name = None
-        if is_top_level:
-            graph_name = node
-        else:
-            for n, ip in i_graph.nodes(data=is_prob):
-                if ip and node in i_graph.nodes[n][sub_graph_key]:
-                    graph_name = n
-
-        # if the given node is not uptodate then it is from define
-        if not is_uptodate:
-            if self.is_node_computable(user, graph_name) and is_state:
-                computable_nodes[graph_name] = i_graph.nodes[graph_name]
-        # else it should be coming from a callback
-        else:
-            # We will check all the nodes dependent on this node
-            for current_node, child_node in i_graph.out_edges(graph_name):
-                if self.is_node_computable(user, child_node):
-                    computable_nodes[child_node] = i_graph.nodes[child_node]
-        return computable_nodes, i_graph
-
-    def is_node_computable(self, user, node):
+    def is_node_computable(self, user, n_id):
         """
         Given the node check if the node is computable based on the inferential graph
         :param user: String
-        :param node: String, node name (as in graph)
+        :param n_id: String, node name (as in graph)
         :return: Boolean
         """
-        i_graph = self.modified_inferential_graph()
         is_computable = True
-        if node not in i_graph.graph[p_key] + i_graph.graph[d_key]:
-            is_computable = False
-        else:
-            for u, v in i_graph.in_edges(node):
-                if (u not in self.builtins) and (u not in self.uptodate[user]):
-                    is_computable = False
-                    break
+        for u in self.i_graph.predecessors(n_id):
+            if (u not in self.builtins) and (u not in self.uptodate[user]):
+                is_computable = False
+                break
         return is_computable
 
+
+    def get_node(self, var_name, prob):
+        """
+        Return the node id related to the variable name in the inferential graph
+        :param var_name: String, variable name
+        :param prob: Boolean, is probabilistic
+        :return: (node id, node data)
+        """
+        # if deterministic, node id is same as the variable name
+        if not prob:
+            return self.i_graph.nodes[var_name]
+        for n, ip in self.i_graph.nodes(data=attr_is_prob):
+            if ip and (var_name in self.i_graph.nodes[n][attr_contains] or
+                       pd_key + var_name in self.i_graph.nodes[n][attr_contains]):
+                return self.i_graph.nodes[n]
+
+        return None
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
@@ -1060,8 +1026,7 @@ class graph:
 
         :return: graph as a base 64 string
         """
-        i_graph = self.modified_inferential_graph()
-        nx.drawing.nx_pydot.write_dot(i_graph, graph_name)
+        nx.drawing.nx_pydot.write_dot(self.i_graph, graph_name)
         gv.render('dot', 'png', graph_name)
         result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
@@ -1217,8 +1182,8 @@ class graph:
         m_graph = self.modified_inferential_graph()
         return_sub_graphs = {}
         for name, node in m_graph.nodes(data=True):
-            if is_prob in node and node[is_prob]:
-                sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
+            if attr_is_prob in node and node[attr_is_prob]:
+                sub_graph = nx.ancestors(m_graph, name).union(set(node[attr_contains])).difference(self.builtins)
                 return_sub_graphs[node[attr_label]] = sub_graph
 
         return return_sub_graphs
@@ -1303,9 +1268,10 @@ class graph:
         return job_count
 
 
-    def constructPyMC3code(self, user=None, sub_graph=set()):
+    def constructPyMC3code(self, node, user=None):
         #try:
             locals = {}
+            sub_graph = node[attr_contains] + list(self.i_graph.predecessors(node[attr_id]))
             loggingcode = """
 try:
     logging = __import__("logging")
@@ -1462,111 +1428,111 @@ except Exception as e:
                 names.add(name)
         return(names)
 
-    def compute_old(self, sub_graphs):
-        # Need to reconnect if we are close to the tcp_keep_alive timout
-        # otherwise OS will dropout connection
-        self.check_ppserver_connection()
-
-        self.log.debug("In compute") 
-        self.acquire("compute")
-        debug_logger("in compute")
-        try:
-            for user in self.userids:
-                for name in self.variablesToBeCalculated(user):
-                    if name not in self.public or user == "All":
-                        jobname = "Compute:  " + user + " " + name
-                        if jobname not in self.jobs:
-                            self.changeState(user, name, "computing")
-                            self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-                            debug_logger("Calculate: " + user + " " + name + " " + self.code[name])
-                            
-                            user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
-                            self.jobs[jobname].add_done_callback(self.callback)
-            debug_logger(["sub_graphs", sub_graphs])
-            for sub_graph_id, sub_graph in sub_graphs.items():
-                if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
-                    sampler_names = self.variablesToBeSampled()
-                    self.log.debug("sampler names: " + str(sampler_names))
-                    for user in self.userids:
-                        if user == "All" or sampler_names - self.public != set():
-                            if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-                                self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
-                                self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
-                                if self.is_sub_graph_complete(user, sub_graph):
-                                    sampler_names = sub_graph - self.deterministic
-                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
-                                            not self.SamplerParameterUpdated:
-                                        continue
-                                    for name in sampler_names:
-                                        self.changeState(user, name, "computing")
-                                        if name in self.globals[user]:
-                                            self.globals[user][name] = None  # remove any previous samples that have been calculated
-                                    self.samplerexception[user] = {}
-
-                                    jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
-                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, sub_graph, resources={'process': 1})
-                                    self.jobs[jobname].add_done_callback(self.samplercallback)
-                    self.SamplerParameterUpdated = False
-        except Exception as e:
-            print("in compute " + str(e))
-            traceback.print_exc()
-        self.release()
-
-    def compute(self, sub_graphs):
-        # Need to reconnect if we are close to the tcp_keep_alive timout
-        # otherwise OS will dropout connection
-        self.check_ppserver_connection()
-
-        self.acquire("compute")
-        try:
-            for user in self.userids:
-                nodes_to_compute, m_graph = self.get_idg_computable_nodes(user)
-                for name, node in nodes_to_compute.items():
-                    if is_prob not in node or not node[is_prob]:
-                        job_name = "Compute:  " + user + " " + name
-                        if job_name not in self.jobs:
-                            self.changeState(user, name, "computing")
-
-                            user_func = [self.evalcode[func_name] for func_name in self.functions]
-                            self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
-                                                                    self.get_globals(set([name]), user), self.locals,
-                                                                    user_func, self.project_id, self.shell_id)
-                            self.jobs[job_name].add_done_callback(self.callback)
-                    else:
-                        sub_graph = nx.ancestors(m_graph, name).union(set(node[sub_graph_key])).difference(self.builtins)
-                        sub_graph_id = node[attr_label]
-                        sampler_names = set(node[sub_graph_key])
-                        for user in self.userids:
-                            if user == "All" or sampler_names - self.public != set():
-                                if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-                                    self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
-                                    self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
-                                    sampler_names = sub_graph - self.deterministic
-                                    if (sampler_names & self.uptodate[user] == sampler_names) and \
-                                            not self.SamplerParameterUpdated:
-                                        continue
-                                    for name in sampler_names:
-                                        self.changeState(user, name, "computing")
-                                        if name in self.globals[user]:
-                                            self.globals[user][
-                                                name] = None  # remove any previous samples that have been calculated
-                                    self.samplerexception[user] = {}
-
-                                    job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
-                                    locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-                                    self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
-                                                                             sampler_code,
-                                                                             self.get_globals(sampler_names, user),
-                                                                             locals, self.project_id, sub_graph,
-                                                                             resources={'process': 1})
-                                    self.jobs[job_name].add_done_callback(self.samplercallback)
-                        self.SamplerParameterUpdated = False
-
-        except Exception as e:
-            traceback.print_exc()
-        self.release()
+    # def compute_old(self, sub_graphs):
+    #     # Need to reconnect if we are close to the tcp_keep_alive timout
+    #     # otherwise OS will dropout connection
+    #     self.check_ppserver_connection()
+    #
+    #     self.log.debug("In compute")
+    #     self.acquire("compute")
+    #     debug_logger("in compute")
+    #     try:
+    #         for user in self.userids:
+    #             for name in self.variablesToBeCalculated(user):
+    #                 if name not in self.public or user == "All":
+    #                     jobname = "Compute:  " + user + " " + name
+    #                     if jobname not in self.jobs:
+    #                         self.changeState(user, name, "computing")
+    #                         self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
+    #                         debug_logger("Calculate: " + user + " " + name + " " + self.code[name])
+    #
+    #                         user_func = [self.evalcode[func_name] for func_name in self.functions]
+    #                         self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
+    #                         self.jobs[jobname].add_done_callback(self.callback)
+    #         debug_logger(["sub_graphs", sub_graphs])
+    #         for sub_graph_id, sub_graph in sub_graphs.items():
+    #             if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
+    #                 sampler_names = self.variablesToBeSampled()
+    #                 self.log.debug("sampler names: " + str(sampler_names))
+    #                 for user in self.userids:
+    #                     if user == "All" or sampler_names - self.public != set():
+    #                         if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+    #                             self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
+    #                             self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
+    #                             if self.is_sub_graph_complete(user, sub_graph):
+    #                                 sampler_names = sub_graph - self.deterministic
+    #                                 if (sampler_names & self.uptodate[user] == sampler_names) and \
+    #                                         not self.SamplerParameterUpdated:
+    #                                     continue
+    #                                 for name in sampler_names:
+    #                                     self.changeState(user, name, "computing")
+    #                                     if name in self.globals[user]:
+    #                                         self.globals[user][name] = None  # remove any previous samples that have been calculated
+    #                                 self.samplerexception[user] = {}
+    #
+    #                                 jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
+    #                                 locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+    #                                 self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, sub_graph, resources={'process': 1})
+    #                                 self.jobs[jobname].add_done_callback(self.samplercallback)
+    #                 self.SamplerParameterUpdated = False
+    #     except Exception as e:
+    #         print("in compute " + str(e))
+    #         traceback.print_exc()
+    #     self.release()
+    #
+    # def compute(self, sub_graphs):
+    #     # Need to reconnect if we are close to the tcp_keep_alive timout
+    #     # otherwise OS will dropout connection
+    #     self.check_ppserver_connection()
+    #
+    #     self.acquire("compute")
+    #     try:
+    #         for user in self.userids:
+    #             nodes_to_compute, m_graph = self.get_idg_computable_nodes(user)
+    #             for name, node in nodes_to_compute.items():
+    #                 if attr_is_prob not in node or not node[attr_is_prob]:
+    #                     job_name = "Compute:  " + user + " " + name
+    #                     if job_name not in self.jobs:
+    #                         self.changeState(user, name, "computing")
+    #
+    #                         user_func = [self.evalcode[func_name] for func_name in self.functions]
+    #                         self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
+    #                                                                 self.get_globals(set([name]), user), self.locals,
+    #                                                                 user_func, self.project_id, self.shell_id)
+    #                         self.jobs[job_name].add_done_callback(self.callback)
+    #                 else:
+    #                     sub_graph = nx.ancestors(m_graph, name).union(set(node[attr_contains])).difference(self.builtins)
+    #                     sub_graph_id = node[attr_label]
+    #                     sampler_names = set(node[attr_contains])
+    #                     for user in self.userids:
+    #                         if user == "All" or sampler_names - self.public != set():
+    #                             if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
+    #                                 self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
+    #                                 self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
+    #                                 sampler_names = sub_graph - self.deterministic
+    #                                 if (sampler_names & self.uptodate[user] == sampler_names) and \
+    #                                         not self.SamplerParameterUpdated:
+    #                                     continue
+    #                                 for name in sampler_names:
+    #                                     self.changeState(user, name, "computing")
+    #                                     if name in self.globals[user]:
+    #                                         self.globals[user][
+    #                                             name] = None  # remove any previous samples that have been calculated
+    #                                 self.samplerexception[user] = {}
+    #
+    #                                 job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
+    #                                 locals, sampler_code = self.constructPyMC3code(user, sub_graph)
+    #                                 self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
+    #                                                                          sampler_code,
+    #                                                                          self.get_globals(sampler_names, user),
+    #                                                                          locals, self.project_id, sub_graph,
+    #                                                                          resources={'process': 1})
+    #                                 self.jobs[job_name].add_done_callback(self.samplercallback)
+    #                     self.SamplerParameterUpdated = False
+    #
+    #     except Exception as e:
+    #         traceback.print_exc()
+    #     self.release()
 
     def callback(self, returnvalue):
         returnvalue = returnvalue.result()
@@ -1606,7 +1572,8 @@ except Exception as e:
 
         self.release()
         self.compute_privacy(self.get_sub_graphs(name))
-        self.compute(self.get_sub_graphs(name))
+        for u in self.i_graph.successors(name):
+            self.start_computation(user, self.i_graph.nodes[u])
         self.compute_privacy(self.get_sub_graphs(name))
 
     def have_samples(self, user, sub_graph):
@@ -1619,9 +1586,9 @@ except Exception as e:
     def samplercallback(self, returnvalue):
         returnvalue = returnvalue.result()
         self.acquire("samplercallback")
-
-        myname, user, names, value, exception_variable, stats, sub_graph = Private.s3_helper.read_results_s3(
+        myname, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
+        names = node[attr_contains]
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1685,7 +1652,7 @@ except Exception as e:
 
                 else:  # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
-                    if self.have_samples("All", sub_graph):
+                    if self.have_samples("All", names):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in names:
                             if self.privacySamplerResults.get(name, None) != "private" and not (
@@ -1718,7 +1685,8 @@ except Exception as e:
 
         self.release()
         self.compute_privacy(self.get_all_sub_graphs(names))
-        self.compute(self.get_all_sub_graphs(names))
+        for u in self.i_graph.successors(node[attr_id]):
+            self.start_computation(user, self.i_graph.nodes[u])
         self.compute_privacy(self.get_all_sub_graphs(names))
 
     def manifoldprivacycallback(self, returnvalue):
@@ -1864,7 +1832,7 @@ def get_size(obj, seen=None):
     return size
 
 
-def samplerjob(jobname, user, names, code, globals, locals, proj_id, sub_graph):
+def samplerjob(jobname, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_s3_vars(globals)
@@ -1890,11 +1858,10 @@ def samplerjob(jobname, user, names, code, globals, locals, proj_id, sub_graph):
                         stats[stat_name] = pm.stats.loo(value, model)
                 except Exception as e:
                     stats[stat_name] = "Exception: " + str(e)
-        data = (jobname, user, names, value, exception_variable, stats, sub_graph)
+        data = (jobname, user, node, value, exception_variable, stats)
         return data
     except Exception as e:
-        # This doesn't seem to be the right size, should be 6 items
-        return (jobname, user, names, e, "No Exception Variable", None, sub_graph)
+        return (jobname, user, node, e, "No Exception Variable", None)
 
 def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
