@@ -6,6 +6,7 @@ import hashlib
 import multiprocessing
 import reprlib
 import sys
+import time
 from itertools import permutations, product
 
 import numpy
@@ -57,6 +58,13 @@ attr_last_ts = 'last_ts'
 
 # other constants
 user_all = 'All'
+
+# time stamp constants
+compute_key = 'compute_job'
+sampler_key = 'sampler_job'
+manifold_key = 'manifold_privacy_job'
+completed_key = 'last_completed'
+started_key = 'last_started'
 
 
 def debug_logger(msg):
@@ -122,9 +130,9 @@ class graph:
         self.private = set()
         self.public = set()
         self.unknown_privacy = set()
-        self.privacySamplerResults = {} # this holds results from privacy samplers so we know the difference between when
+        self.privacy_sampler_results = {} # this holds results from privacy samplers so we know the difference between when
                                         # the privacy samplers haven't been run since last compute and when they have been run
-        self.numberOfManifoldPrivacyProcessesComplete = {}
+        self.mp_job_complete_count = {}
 
         # code associated with variables
 
@@ -152,6 +160,9 @@ class graph:
         self.i_graph = None
         self.p_graph = None
         self.init_raw_graph()
+
+        # Keep the time stamps [job_type][user][id][last_completed/last_started]
+        self.ts = {}
 
         self.SamplerParameterUpdated = False
 
@@ -380,8 +391,8 @@ class graph:
             if name in self.unknown_privacy:
                 #self.log.debug( "looking at privacySamplerResults: " + name)
                 #self.log.debug( "unknown: " + str(self.unknown_privacy))
-                if name in self.privacySamplerResults.keys():
-                    self.setPrivacy(name, self.privacySamplerResults[name])
+                if name in self.privacy_sampler_results.keys():
+                    self.setPrivacy(name, self.privacy_sampler_results[name])
 
 
     def changeState(self, user, name, newstate):
@@ -471,6 +482,7 @@ class graph:
                     return True
 
     def define(self, name, code, evalcode=None, dependson=None, prob = False, hier = None, pyMC3code = None):
+        print("at define name:", name)
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
@@ -964,6 +976,7 @@ class graph:
         :param node: Dict {'id': a, 'contains': [c, d], 'is_prob':False ...}
         :return:
         """
+        node = copy.deepcopy(node)
         self.acquire("compute")
         n_id = node[attr_id]
         if not self.is_node_computable(user, n_id):
@@ -973,19 +986,35 @@ class graph:
             job_globals = self.get_globals(node[attr_contains], user)
             for name in node[attr_contains]:
                 self.changeState(user, name, "computing")
+            node[attr_last_ts] = int(time.time() * 1000)
             if node[attr_is_prob]:
                 job_name = "Sampler:  " + user + ", " + str(node[attr_label])
                 job_locals, sampler_code = self.constructPyMC3code(node, user)
-                self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, node, sampler_code, job_globals,
+                self.reg_timestamp(sampler_key, user, n_id, started_key, node[attr_last_ts])
+                self.privacy_sampler_results[node[attr_last_ts]] = {}
+                self.mp_job_complete_count[node[attr_last_ts]] = {}
+                self.jobs[job_name] = self.server.submit(sampler_job, job_name, user, node, sampler_code, job_globals,
                                                          job_locals, resources={'process': 1})
-                self.jobs[job_name].add_done_callback(self.samplercallback)
+                self.jobs[job_name].add_done_callback(self.sampler_callback)
+                print('started job ', job_name)
             else:
                 job_name = "Compute:  " + user + " " + n_id
                 user_func = [self.evalcode[func_name] for func_name in self.functions]
-                self.jobs[job_name] = self.server.submit(job, job_name, n_id, user, self.evalcode[n_id], job_globals,
+                self.reg_timestamp(compute_key, user, n_id, started_key, node[attr_last_ts])
+                self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.evalcode[n_id], job_globals,
                                                          self.locals, user_func, self.project_id, self.shell_id)
                 self.jobs[job_name].add_done_callback(self.callback)
+                print('started job ', job_name)
         self.release()
+
+    def reg_timestamp(self, job_key, user, n_id, ts_key, ts):
+        if job_key not in self.ts:
+            self.ts[job_key] = {}
+        if user not in self.ts[job_key]:
+            self.ts[job_key][user] = {}
+        if n_id not in self.ts[job_key][user]:
+            self.ts[job_key][user][n_id] = {}
+        self.ts[job_key][user][n_id][ts_key] = ts
 
 
     def is_node_computable(self, user, n_id):
@@ -1017,8 +1046,6 @@ class graph:
             if ip and (var_name in self.i_graph.nodes[n][attr_contains] or
                        pd_key + var_name in self.i_graph.nodes[n][attr_contains]):
                 return self.i_graph.nodes[n]
-
-        return None
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
@@ -1111,67 +1138,6 @@ class graph:
 
         recursive_helper(node)
         return result
-
-    # def generate_graph(self):
-    #     """
-    #     Generates a directed graph from the available variables
-    #
-    #     :return: Returns a networkX graph
-    #     """
-    #     g = nx.DiGraph()
-    #     visited, stack = set(), list(self.probabilistic | self.deterministic)
-    #     while stack:
-    #         vertex = stack.pop()
-    #         g.add_node(vertex)
-    #         if vertex not in visited:
-    #             visited.add(vertex)
-    #             for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
-    #                 g.add_edge(vertex, k)
-    #                 stack.append(k)
-    #     return g
-
-    # def get_all_sub_graphs(self, nodes_subset=None):
-    #     """
-    #     Identified disconnected probabilistic sub graphs.
-    #
-    #     :return: Dictionary of sub graphs sub_graph_id: list of node names
-    #     """
-    #     var_graph = self.generate_graph()
-    #     nodes = nodes_subset if nodes_subset else var_graph.nodes
-    #     sub_graph_id = 0
-    #     node_state = {}
-    #     sub_graphs = {}
-    #     not_visited, visited = 0, 1
-    #
-    #     for node in nodes:
-    #         node_state[node] = not_visited
-    #
-    #     def get_connected(n, graph_id):
-    #         if node_state[n] == not_visited:
-    #             sub_graphs[graph_id].add(n)
-    #             node_state[n] = visited
-    #             descendants = nx.algorithms.descendants(var_graph, n)
-    #             ancestors = nx.algorithms.ancestors(var_graph, n)
-    #
-    #             for c in set(descendants) | set(ancestors):
-    #                 if c not in self.builtins:
-    #                     sub_graphs[graph_id].add(c)
-    #                 if c in self.probabilistic:
-    #                     if c not in node_state:
-    #                         node_state[c] = not_visited
-    #                     get_connected(c, graph_id)
-    #
-    #     for node in nodes:
-    #         if node_state[node] != visited and node in (self.probabilistic - self.deterministic):
-    #             sub_graphs[sub_graph_id] = set()
-    #             get_connected(node, sub_graph_id)
-    #             sub_graph_id += 1
-    #
-    #     return_sub_graphs = {}
-    #     for key, value in sub_graphs.items():
-    #         return_sub_graphs[self.get_graph_id(value)] = value
-    #
-    #     return return_sub_graphs
 
     def get_all_sub_graphs(self, nodes_subset=None):
         """
@@ -1428,127 +1394,24 @@ except Exception as e:
                 names.add(name)
         return(names)
 
-    # def compute_old(self, sub_graphs):
-    #     # Need to reconnect if we are close to the tcp_keep_alive timout
-    #     # otherwise OS will dropout connection
-    #     self.check_ppserver_connection()
-    #
-    #     self.log.debug("In compute")
-    #     self.acquire("compute")
-    #     debug_logger("in compute")
-    #     try:
-    #         for user in self.userids:
-    #             for name in self.variablesToBeCalculated(user):
-    #                 if name not in self.public or user == "All":
-    #                     jobname = "Compute:  " + user + " " + name
-    #                     if jobname not in self.jobs:
-    #                         self.changeState(user, name, "computing")
-    #                         self.log.debug("Calculate: " + user + " " + name + " " + self.code[name])
-    #                         debug_logger("Calculate: " + user + " " + name + " " + self.code[name])
-    #
-    #                         user_func = [self.evalcode[func_name] for func_name in self.functions]
-    #                         self.jobs[jobname] = self.server.submit(job, jobname, name, user, self.evalcode[name], self.get_globals(set([name]), user), self.locals, user_func, self.project_id, self.shell_id)
-    #                         self.jobs[jobname].add_done_callback(self.callback)
-    #         debug_logger(["sub_graphs", sub_graphs])
-    #         for sub_graph_id, sub_graph in sub_graphs.items():
-    #             if self.sub_graph_job_count(sub_graph_id, sub_graph) == 0: # don't start a sampler until all other jobs have finished
-    #                 sampler_names = self.variablesToBeSampled()
-    #                 self.log.debug("sampler names: " + str(sampler_names))
-    #                 for user in self.userids:
-    #                     if user == "All" or sampler_names - self.public != set():
-    #                         if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-    #                             self.privacySamplerResults = {} # remove all privacy sampler results as they are now stale
-    #                             self.numberOfManifoldPrivacyProcessesComplete = {} # remove all counts too
-    #                             if self.is_sub_graph_complete(user, sub_graph):
-    #                                 sampler_names = sub_graph - self.deterministic
-    #                                 if (sampler_names & self.uptodate[user] == sampler_names) and \
-    #                                         not self.SamplerParameterUpdated:
-    #                                     continue
-    #                                 for name in sampler_names:
-    #                                     self.changeState(user, name, "computing")
-    #                                     if name in self.globals[user]:
-    #                                         self.globals[user][name] = None  # remove any previous samples that have been calculated
-    #                                 self.samplerexception[user] = {}
-    #
-    #                                 jobname = "Sampler:  " + user + ", " + str(sub_graph_id)
-    #                                 locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-    #                                 self.jobs[jobname] = self.server.submit(samplerjob, jobname, user, sampler_names, sampler_code, self.get_globals(sampler_names, user), locals, self.project_id, sub_graph, resources={'process': 1})
-    #                                 self.jobs[jobname].add_done_callback(self.samplercallback)
-    #                 self.SamplerParameterUpdated = False
-    #     except Exception as e:
-    #         print("in compute " + str(e))
-    #         traceback.print_exc()
-    #     self.release()
-    #
-    # def compute(self, sub_graphs):
-    #     # Need to reconnect if we are close to the tcp_keep_alive timout
-    #     # otherwise OS will dropout connection
-    #     self.check_ppserver_connection()
-    #
-    #     self.acquire("compute")
-    #     try:
-    #         for user in self.userids:
-    #             nodes_to_compute, m_graph = self.get_idg_computable_nodes(user)
-    #             for name, node in nodes_to_compute.items():
-    #                 if attr_is_prob not in node or not node[attr_is_prob]:
-    #                     job_name = "Compute:  " + user + " " + name
-    #                     if job_name not in self.jobs:
-    #                         self.changeState(user, name, "computing")
-    #
-    #                         user_func = [self.evalcode[func_name] for func_name in self.functions]
-    #                         self.jobs[job_name] = self.server.submit(job, job_name, name, user, self.evalcode[name],
-    #                                                                 self.get_globals(set([name]), user), self.locals,
-    #                                                                 user_func, self.project_id, self.shell_id)
-    #                         self.jobs[job_name].add_done_callback(self.callback)
-    #                 else:
-    #                     sub_graph = nx.ancestors(m_graph, name).union(set(node[attr_contains])).difference(self.builtins)
-    #                     sub_graph_id = node[attr_label]
-    #                     sampler_names = set(node[attr_contains])
-    #                     for user in self.userids:
-    #                         if user == "All" or sampler_names - self.public != set():
-    #                             if self.SamplerParameterUpdated or (sampler_names & self.stale[user] != set([])):
-    #                                 self.privacySamplerResults = {}  # remove all privacy sampler results as they are now stale
-    #                                 self.numberOfManifoldPrivacyProcessesComplete = {}  # remove all counts too
-    #                                 sampler_names = sub_graph - self.deterministic
-    #                                 if (sampler_names & self.uptodate[user] == sampler_names) and \
-    #                                         not self.SamplerParameterUpdated:
-    #                                     continue
-    #                                 for name in sampler_names:
-    #                                     self.changeState(user, name, "computing")
-    #                                     if name in self.globals[user]:
-    #                                         self.globals[user][
-    #                                             name] = None  # remove any previous samples that have been calculated
-    #                                 self.samplerexception[user] = {}
-    #
-    #                                 job_name = "Sampler:  " + user + ", " + str(sub_graph_id)
-    #                                 locals, sampler_code = self.constructPyMC3code(user, sub_graph)
-    #                                 self.jobs[job_name] = self.server.submit(samplerjob, job_name, user, sampler_names,
-    #                                                                          sampler_code,
-    #                                                                          self.get_globals(sampler_names, user),
-    #                                                                          locals, self.project_id, sub_graph,
-    #                                                                          resources={'process': 1})
-    #                                 self.jobs[job_name].add_done_callback(self.samplercallback)
-    #                     self.SamplerParameterUpdated = False
-    #
-    #     except Exception as e:
-    #         traceback.print_exc()
-    #     self.release()
-
-    def callback(self, returnvalue):
-        returnvalue = returnvalue.result()
+    def callback(self, return_value):
+        return_value = return_value.result()
         self.acquire("callback")
         debug_logger("In callback")
-        jobname, name, user, value = returnvalue
+        job_name, node, user, value = return_value
+        name = node[attr_id]
+        print('at callback ', name)
         try:
             if isinstance(value, Exception):
                 if user == "All":
                     debug_logger(["callback Exception", user, name, value])
                     self.globals[user][name] = str(value)
                     self.changeState(user, name, "exception")
-            else:
+            elif self.ts[compute_key][user][name][started_key] == node[attr_last_ts]:
                 original_value = self.globals[user].get(name, '')
                 self.globals[user][name] = value
                 self.changeState(user, name, "uptodate")
+                self.ts[compute_key][user][name][completed_key] = node[attr_last_ts]
                 if user == "All":
                     if name in config_builtins:
                         builtins.get(name)(value)
@@ -1562,10 +1425,10 @@ except Exception as e:
                         value.seek(0)
                         with open(name+'.png', 'wb') as f:
                             shutil.copyfileobj(value, f)
-            if jobname in self.jobs:
-                del self.jobs[jobname]
+            if job_name in self.jobs:
+                del self.jobs[job_name]
             else:
-                self.log.debug("Trying to delete job %s that is not in self.jobs" % jobname)
+                self.log.debug("Trying to delete job %s that is not in self.jobs" % job_name)
                 self.log.debug(self.jobs)
         except Exception as e:
             self.log.debug(str(e))
@@ -1583,12 +1446,14 @@ except Exception as e:
         return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
                    (self.probabilistic & set(sub_graph)))
 
-    def samplercallback(self, returnvalue):
+    def sampler_callback(self, returnvalue):
         returnvalue = returnvalue.result()
         self.acquire("samplercallback")
         myname, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
             returnvalue) if Private.config.s3_integration else returnvalue
         names = node[attr_contains]
+        n_id = node[attr_id]
+        print('at sampler callback ', names)
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1605,7 +1470,7 @@ except Exception as e:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        else:  # successful sampler return
+        elif self.ts[sampler_key][user][n_id][started_key] == node[attr_last_ts]:  # successful sampler return
             try:
                 self.log.debug("samplercallback: name in names ")
                 for name in names:
@@ -1623,8 +1488,10 @@ except Exception as e:
                     self.changeState(user, name, "uptodate")
 
                 self.log.debug("samplercallback: name in names ...done ")
+                self.ts[sampler_key][user][n_id][completed_key] = node[attr_last_ts]
 
-                whichsamplersarecomplete = [u for u in self.userids if u != "All" and self.have_samples(u, sub_graph)]
+                whichsamplersarecomplete = [u for u in self.userids if u != "All" and
+                                            self.ts[sampler_key][u][n_id][completed_key] == node[attr_last_ts]]
 
                 if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
@@ -1636,38 +1503,43 @@ except Exception as e:
                     for u in whichsamplersarecomplete:
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in names:
-                            if self.privacySamplerResults.get(name, None) != "private" and not (
+                            if self.privacy_sampler_results.get(name, None) != "private" and not (
                                     isinstance(self.globals[user].get(name), str) and self.globals[user].get(
                                     name) == "Not retained."):
                                 if name in self.globals[u].keys() and name in self.globals["All"].keys():
                                     if self.globals[u][name].shape != self.globals["All"][
                                      name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacySamplerResults[name] = "private"
+                                        self.privacy_sampler_results[name] = "private"
                                     else:
                                         jobname = "Manifold: " + u + " " + name
-                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, u,
+                                        self.reg_timestamp(manifold_key, u, name, started_key, node[attr_last_ts])
+                                        self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, u,
                                                                                 self.globals[u][name],
                                                                                 self.globals["All"][name])
-                                        self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
+                                        self.jobs[jobname].add_done_callback(self.mp_callback)
+                                        print('started job ', jobname)
+
 
                 else:  # else compare All to this users samples using manifold privacy calculation
                     self.log.debug("samplercallback: whichsamplersarecomplete - Users ")
                     if self.have_samples("All", names):
                         # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
                         for name in names:
-                            if self.privacySamplerResults.get(name, None) != "private" and not (
+                            if self.privacy_sampler_results.get(name, None) != "private" and not (
                                     isinstance(self.globals[user].get(name), str) and self.globals[user].get(
                                     name) == "Not retained."):
                                 if name in self.globals[user].keys() and name in self.globals["All"].keys():
                                     if self.globals[user][name].shape != self.globals["All"][
                                      name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacySamplerResults[name] = "private"
+                                        self.privacy_sampler_results[name] = "private"
                                     else:
                                         jobname = "Manifold: " + user + " " + name
-                                        self.jobs[jobname] = self.server.submit(manifoldprivacyjob, jobname, name, user,
+                                        self.reg_timestamp(manifold_key, user, name, started_key, node[attr_last_ts])
+                                        self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
                                                                                 self.globals[user][name],
                                                                                 self.globals["All"][name])
-                                        self.jobs[jobname].add_done_callback(self.manifoldprivacycallback)
+                                        self.jobs[jobname].add_done_callback(self.mp_callback)
+                                        print('started job ', jobname)
                                 else:
                                     # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
                                     pass
@@ -1689,49 +1561,37 @@ except Exception as e:
             self.start_computation(user, self.i_graph.nodes[u])
         self.compute_privacy(self.get_all_sub_graphs(names))
 
-    def manifoldprivacycallback(self, returnvalue):
+    def mp_callback(self, returnvalue):
         returnvalue = returnvalue.result()
         sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
         step_size = max(int(sample_size / Private.config.max_sample_size), 1)
         self.acquire("manifoldprivacycallback")
-        jobname, name, user, d = returnvalue
-        try:
-            self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-            self.numberOfManifoldPrivacyProcessesComplete[name] = self.numberOfManifoldPrivacyProcessesComplete.get(name, 0) + 1
-            if self.privacySamplerResults.get(name, None) != "private":
-                if d > PrivacyCriterion:
-                    self.privacySamplerResults[name] = "private"
-                    #for j in list(self.jobs.keys()):
-                    #    if not j.startswith("Manifold:"):
-                    #        continue
-                    #    elif j.endswith(name):
-                    #        debug_logger(f"Cancelling: {j}")
-                    #        self.jobs[j].cancel()
-                    #        del self.jobs[j]
-                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ## 
-                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
-                else: 
-                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
-                    self.privacySamplerResults[name] = "unknown_privacy"
-        
-            # if we have all manifold processes back and there are variables that have not been set to private they are public
-            #for variable in self.numberOfManifoldPrivacyProcessesComplete.keys():
-            #    if self.numberOfManifoldPrivacyProcessesComplete[variable] == len(self.userids) -1: # -1 because we don't have results for All
-            #        if self.privacySamplerResults[variable] != "private":
-            #            self.privacySamplerResults[variable] = "public"
-            #            if len(self.globals['All'][variable]) > Private.config.max_sample_size:
-            #                self.globals['All'][variable] = self.globals['All'][variable][::step_size][
-            #                                                :Private.config.max_sample_size]
+        jobname, node, name, user, d = returnvalue
+        print('at mp callback ', name)
+        if self.ts[manifold_key][user][node[attr_id]][started_key] == node[attr_last_ts]:
+            try:
+                self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                self.mp_job_complete_count[name] = self.mp_job_complete_count.get(name, 0) + 1
+                if self.privacy_sampler_results.get(name, None) != "private":
+                    if d > PrivacyCriterion:
+                        self.privacy_sampler_results[name] = "private"
 
-            if self.numberOfManifoldPrivacyProcessesComplete[name] == len(self.userids) -1: # -1 because we don't have results for All
-                if self.privacySamplerResults[name] != "private":
-                    self.privacySamplerResults[name] = "public"
-                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
-                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
+                        self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ##
+                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
+                    else:
+                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
+                        self.privacy_sampler_results[name] = "unknown_privacy"
 
-        except Exception as e:
-            self.log.debug("manifold privacy " + str(e))
-            print("manifold privacy " + str(e))
+                if self.mp_job_complete_count[name] == len(self.userids) -1: # -1 because we don't have results for All
+                    if self.privacy_sampler_results[name] != "private":
+                        self.privacy_sampler_results[name] = "public"
+                        self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
+                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
+                self.ts[manifold_key][user][name][completed_key] = node[attr_last_ts]
+
+            except Exception as e:
+                self.log.debug("manifold privacy " + str(e))
+                print("manifold privacy " + str(e))
         
         try:
             del self.jobs[jobname]
@@ -1741,10 +1601,10 @@ except Exception as e:
         self.compute_privacy(self.get_sub_graphs(name))
 
     def showSamplerResults(self):
-        res = str(len(self.privacySamplerResults)) + " results\n"
-        for k,v in self.privacySamplerResults.items():
-            if k in self.numberOfManifoldPrivacyProcessesComplete:
-                res += k + ": " + v + " " + str(self.numberOfManifoldPrivacyProcessesComplete[k]) + "\n"
+        res = str(len(self.privacy_sampler_results)) + " results\n"
+        for k,v in self.privacy_sampler_results.items():
+            if k in self.mp_job_complete_count:
+                res += k + ": " + v + " " + str(self.mp_job_complete_count[k]) + "\n"
             else:
                 res += k + ": " + v + "\n"
         return res
@@ -1784,8 +1644,9 @@ except Exception as e:
         return final_set
 
 
-def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id):
-    redis_key = redis_helper.get_redis_key(user, name, proj_id, shell_id)
+def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
+    name = node[attr_id]
+    redis_key = redis_helper.get_redis_key(user, name, project_id, shell_id)
     name_long = int("".join(map(str, [ord(c) for c in name])))
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
@@ -1796,7 +1657,7 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id
             exec (func, s3_var_globals)
         except Exception as e:
             e = Exception("Error in User Function: " + func[4:10] + "...")
-            return ((jobname, name, user, e))
+            return ((job_name, name, user, e))
     try:
         if code.startswith("def"):
             value = "User Function"
@@ -1806,9 +1667,9 @@ def job(jobname, name, user, code, globals, locals, user_func, proj_id, shell_id
         #if True:
             value = RedisReference(redis_key, value)
 
-        return (jobname, name, user, value)
+        return (job_name, node, user, value)
     except Exception as e:
-        return((jobname, name, user, e))
+        return((job_name, node, user, e))
 
 
 def get_size(obj, seen=None):
@@ -1832,13 +1693,10 @@ def get_size(obj, seen=None):
     return size
 
 
-def samplerjob(jobname, user, node, code, globals, locals):
+def sampler_job(job_name, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_s3_vars(globals)
-        fridayS3vars = "".join( [ '1' if v else '0' for v in s3vars.get("Friday", []) ] )
-        fridayGlobals = "".join( [ '1' if v else '0' for v in globals.get("Friday", []) ] )
-        debug_logger([f"Friday from s3_vars: {user}", fridayS3vars, fridayGlobals])
         exec (code, s3vars, locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
@@ -1858,18 +1716,19 @@ def samplerjob(jobname, user, node, code, globals, locals):
                         stats[stat_name] = pm.stats.loo(value, model)
                 except Exception as e:
                     stats[stat_name] = "Exception: " + str(e)
-        data = (jobname, user, node, value, exception_variable, stats)
+        data = (job_name, user, node, value, exception_variable, stats)
         return data
     except Exception as e:
-        return (jobname, user, node, e, "No Exception Variable", None)
+        return (job_name, user, node, e, "No Exception Variable", None)
 
-def manifoldprivacyjob(jobname, name, user, firstarray, secondarray):
+
+def mp_job(jobname, node, name, user, firstarray, secondarray):
     from Private.manifoldprivacy import distManifold
     debug_logger("manifoldprivacyjob : {} [{}] Shape sminus: {} \nSall {}".format(name, user, firstarray.shape, secondarray.shape) )
     debug_logger("manifoldprivacyjob : {} [{}] Sum sminus: {} \nSall {}".format(name, user, firstarray.sum(), secondarray.sum()) )
 
     d = distManifold(firstarray, secondarray) * 100.
-    return jobname, name, user, d
+    return jobname, node, name, user, d
 
 
 def getJobId(jobname, user, names, code, globals, locals):
