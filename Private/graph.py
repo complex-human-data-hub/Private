@@ -42,7 +42,7 @@ _log = logging.getLogger("Private")
 numpy.set_printoptions(precision=3)
 numpy.set_printoptions(threshold=2000)
 
-PrivacyCriterion = 10.0   # percent
+PrivacyCriterion = 15.0   # percent
 display_precision = 3
 
 # inferential dependency graph keys
@@ -283,6 +283,12 @@ class graph:
 
     def showPrivacy(self):
         res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
+        return res
+
+    def showSamplerResults(self):
+        res = str(len(self.privacy_sampler_results)) + " results\n"
+        for k in self.privacy_sampler_results.keys() & self.probabilistic:
+            res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(len(self.privacy_sampler_results[k])) + "\n"
         return res
 
     def checkPrivacyUp(self, name):
