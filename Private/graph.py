@@ -170,9 +170,9 @@ class graph:
         setBuiltinPrivacy(self) # set privacy of builtins
 
         if user_ids:
-            self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"])
+            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"])
             if self.load_demo_events:
-                self.define("DemoEvents", "", eval_code="getDemoEvents(project_id, user_id)", depends_on=["getDemoEvents"])
+                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)", dependson=["getDemoEvents"])
 
     def check_dask_connection(self):
 
@@ -250,30 +250,6 @@ class graph:
             f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
         return result
 
-    def checkprivacyup(self, name):
-        if name in self.public:
-            return True
-        elif name in self.private:
-            return False
-        else:
-            parents = self.getParents(name)
-            if parents == set():
-                return True
-            else:
-                return all(self.checkprivacyup(parent) for parent in parents)
-
-    def checkprivacydown(self, name):
-        if name in self.public:
-            return True
-        elif name in self.private:
-            return False
-        else:
-            children = self.getChildren(name)
-            if children == set():
-                return True
-            else:
-                return all(self.checkprivacydown(child) for child in children)
-
     def eval_command_line_expression(self, code, user="All"):
         self.acquire("eval_command_line_expression")
         result = ""
@@ -337,13 +313,13 @@ class graph:
         # set all variables except builtins to unknown_privacy
         self.set_all_unknown(node)
 
-        self.computeGraphPrivacy()
+        self.compute_graph_privacy()
         self.computeProbabilisticPrivacy(node)
-        self.computeGraphPrivacy()
+        self.compute_graph_privacy()
         if lock:
             self.release()
 
-    def computeGraphPrivacy(self):
+    def compute_graph_privacy(self):
 
         something_changed = True
 
@@ -482,33 +458,33 @@ class graph:
                 if self.check_cyclic_dependencies(name, dependent_dependents):
                     return True
 
-    def define(self, name, code, eval_code=None, depends_on=None, prob=False, hier=None, pymc3_code=None):
+    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
-        if not depends_on:
-            depends_on = []
+        if not dependson:
+            dependson = []
         else:
-            if self.check_cyclic_dependencies(name, set(depends_on)):
+            if self.check_cyclic_dependencies(name, set(dependson)):
                 self.release()
                 raise Exception("Exception: Cyclic Dependency Found, " + name)
 
         if prob:
             self.probabilistic.add(name)
             self.probcode[name] = code
-            self.pyMC3code[name] = pymc3_code
-            if depends_on:
-                self.probdependson[name] = set(depends_on)
+            self.pyMC3code[name] = pyMC3code
+            if dependson:
+                self.probdependson[name] = set(dependson)
             if hier:
                 self.hierarchical[name] = hier
         else:
             self.deterministic.add(name)
             self.code[name] = code
-            self.evalcode[name] = eval_code
-            self.dependson[name] = set(depends_on)
+            self.evalcode[name] = evalcode
+            self.dependson[name] = set(dependson)
         if name not in {'Events', 'DemoEvents'}:
-            self.add_to_inf_graph(name, depends_on, hier, prob)
+            self.add_to_inf_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
         for n in node[attr_contains]:
             for user in self.userids:
@@ -526,21 +502,21 @@ class graph:
 
         self.compute_privacy(node) # every definition could change the privacy assignments
 
-    def define_function(self, name, code, eval_code, depends_on, defines, arguments):
+    def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
-        if not depends_on:
-            depends_on = set()
+        if not dependson:
+            dependson = set()
         else:
-            if self.check_cyclic_dependencies(name, depends_on):
+            if self.check_cyclic_dependencies(name, dependson):
                 self.release()
                 raise Exception("Exception: Cyclic Dependency Found, " + name)
         self.deterministic.add(name)
         self.functions.add(name)
         self.code[name] = "User Function"
-        self.evalcode[name] = eval_code
-        self.dependson[name] = depends_on.difference(defines).difference(arguments)
+        self.evalcode[name] = evalcode
+        self.dependson[name] = dependson.difference(defines).difference(arguments)
         for user in self.userids:
             self.changeState(user, name, "stale")
         self.release()
@@ -809,14 +785,427 @@ class graph:
     def deterministicChildren(self, name):
         return self.dependson.get(name, set([]))
 
-    def isAncestor(self, name1, name2):
-        parents = self.getParents(name2)
-        if parents == set():
-            return False
-        elif name1 in parents:
-            return True
+    def topological_sort(self):
+        order, enter, state = deque(), self.probabilistic | self.deterministic, {}
+        enter = OrderedSet( sorted(list(enter)) )
+        GRAY, BLACK = 0, 1
+
+        def dfs(node):
+            state[node] = GRAY
+            for k in sorted( list( self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
+                sk = state.get(k, None)
+                try:
+                    if sk == GRAY: raise ValueError("cycle")
+                except Exception as e:
+                    _log.debug("topological_sort GREY")
+                    _log.debug(self.dependson.get(node ))
+                    _log.debug(self.probdependson.get(node))
+                    raise ValueError("cycle 2")
+                if sk == BLACK: continue
+                enter.discard(k)
+                dfs(k)
+            order.appendleft(node)
+            state[node] = BLACK
+
+        while enter: dfs(enter.pop())
+        result =  [name for name in order if name in self.probabilistic - self.deterministic]
+        result.reverse()
+        return result
+
+    def topological_sort_bak(self):
+        result = []
+        seen = set()
+        prob_only = self.probabilistic - self.deterministic
+        node = list(prob_only)[0]
+
+        def recursive_helper(node):
+            for neighbor in self.dependson.get(node, []):
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    recursive_helper(neighbor)
+            result.insert(0, node)
+
+        recursive_helper(node)
+        return result
+
+    def constructPyMC3code(self, node, user=None):
+        #try:
+            locals = {}
+            sub_graph = node[attr_contains] + list(self.i_graph.predecessors(node[attr_id]))
+            loggingcode = """
+try:
+    logging = __import__("logging")
+    logging.basicConfig(level=logging.DEBUG)
+    _log = logging.getLogger("Private")
+    #logging.disable(100)
+    _log.debug("Running PyMC3 Code")
+    json = __import__("json")
+    def debug_logger(msg):
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write(msg + "\\n")
+
+    debug_logger("Running PyMC3 Code")
+"""
+
+            code = loggingcode
+
+            # extract index variables
+
+            for indexvariable in list(set(self.hierarchical.values()) & set(sub_graph)):
+                code += "    global __%s_Dict \n" % indexvariable
+                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
+                code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
+                #code += "    debug_logger(['%s', __%s_Dict])" % (indexvariable, indexvariable)
+                if user:
+                    locals[indexvariable] = self.globals[user][indexvariable]
+
+            code += """
+    exception_variable = "No Exception Variable"
+    pymc3 = __import__("pymc3")
+    dot = __import__("theano").tensor.tensordot
+    softmax = __import__("theano").tensor.nnet.nnet.softmax
+    traceback = __import__("traceback")
+
+    numpy = __import__("numpy") 
+    numpy.random.seed(987654321)
+    basic_model = pymc3.Model()
+
+    
+    with basic_model:
+
+"""
+
+            probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
+            if sub_graph:
+                probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
+
+            for name in probabilistic_only_names:
+                #code += '        debug_logger(["probabilistic_only_names", "%s"])' % (name) 
+                code += '        exception_variable = "%s"\n' % name
+                if name in self.hierarchical:
+                    shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
+                    code += "        " + self.pyMC3code[name] % shapecode + "\n"
+                else:
+                    code += "        " + self.pyMC3code[name] % ""+ "\n"
+
+            observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
+            for name in observed_names:
+                #code += '        debug_logger(["observed_names_names", "%s"])' % (name) 
+                code += '        exception_variable = "%s"\n' % name
+                obsname = "__private_%s_observed" % name
+                code += "        " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
+                if user:
+                    if name in self.globals[user]:
+                        locals[obsname] = self.globals[user][name]
+                    else: 
+                        locals[obsname] = self.globals["All"][name]
+                else:
+                    locals = None
+
+            code += """
+        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
+        _log.debug("Finished PyMC3 Code")
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished PyMC3 Code\\n")
+
+except Exception as e:
+    try:
+        # remove stuff after the : as that sometimes reveals private information
+        _log.debug("PyMC3 Code Exception: " + str(e))
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error " + str(e) + "\\n")
+        #ind = min( e.args[0].find(":"), e.args[0].find("\\n"))
+        #ind = e.args[0].find(":")
+        #if ind != -1:
+        #    estring = e.args[0][0:ind]
+        #else:
+        #    estring = e.args[0]
+        #newErrorString = estring   # do we need to do this?
+
+        estring = e.args[0]
+        newErrorString = estring[estring.rfind("\\n")+1:]
+        # Need to create a new Exception here 
+        # some exceptions were cpickle when pp passed the result back to the master
+        return_exception = Exception(newErrorString)
+        __private_result__ = (return_exception, exception_variable, None)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write(traceback.format_exc() + "\\n")
+            fp.write("Finished processing Error \\n")
+    except Exception as e2:
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Error2 " + str(e2) + "\\n")
+            fp.write(traceback.format_exc() + "\\n")
+        __private_result__ = (e2, exception_variable, None)
+        with open("/tmp/private-worker.log", "a") as fp:
+            fp.write("Finished processing Error2 \\n")
+
+        
+
+""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
+
+            return locals, code
+
+    def have_samples(self, user, sub_graph):
+        # have to allow for possibility that some probabilistic variables are not retained and
+        # therefore won't have samples
+        # so see if any of the probabilistic variables have samples
+        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
+                   (self.probabilistic & set(sub_graph)))
+
+    def callback(self, return_value):
+        return_value = return_value.result()
+        self.acquire("callback")
+        debug_logger("In callback")
+        job_name, node, user, value = return_value
+        name = node[attr_id]
+        node_ts = node[attr_last_ts]
+        try:
+            if isinstance(value, Exception):
+                if user == "All":
+                    debug_logger(["callback Exception", user, name, value])
+                    self.globals[user][name] = str(value)
+                    self.changeState(user, name, "exception")
+            elif self.ts[compute_key][user][name][started_key] == node_ts:
+                original_value = self.globals[user].get(name, '')
+                self.globals[user][name] = value
+                self.changeState(user, name, "uptodate")
+                self.reg_ts(compute_key, user, name, completed_key, node_ts)
+                if user == "All":
+                    if name in config_builtins:
+                        builtins.get(name)(value)
+                    if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
+                        if name == "NumberOfSamples":
+                            if value > 4000:
+                                self.comment[name] = "# Maximum Number of Samples is 4000"
+                                self.globals[user][name] = original_value
+                        self.SamplerParameterUpdated = True
+                    if type(value) == io.BytesIO:   # write image to file
+                        value.seek(0)
+                        with open(name+'.png', 'wb') as f:
+                            shutil.copyfileobj(value, f)
+            if job_name in self.jobs:
+                del self.jobs[job_name]
+            else:
+                self.log.debug("Trying to delete job %s that is not in self.jobs" % job_name)
+                self.log.debug(self.jobs)
+        except Exception as e:
+            self.log.debug(str(e))
+
+        self.release()
+        self.compute_privacy(node)
+        for u in self.i_graph.successors(name):
+            successor = self.i_graph.nodes[u]
+            successor[attr_last_ts] = node_ts
+            self.start_computation(user, successor)
+        self.compute_privacy(node)
+
+    def sampler_callback(self, return_value):
+        return_value = return_value.result()
+        self.acquire("sampler_callback")
+        myname, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
+            return_value) if Private.config.s3_integration else return_value
+        names = node[attr_contains]
+        n_id = node[attr_id]
+        node_ts = node[attr_last_ts]
+        print('at sampler callback ', names, user, node_ts)
+        if isinstance(value, Exception):
+            self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
+            for name in names:
+                # ** Might need to remove the Exception message here
+                self.globals[user][name] = str(value)
+                debug_logger(["samplercallback Exception", user, name, value])
+                self.changeState(user, name, "exception")
+            if exception_variable != "No Exception Variable":
+                m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
+                if m:
+                    value = str(int(m.group(1)) - 1) + " arguments required."
+                self.samplerexception[user][exception_variable] = str(value)
+            else:
+                for name in names:
+                    self.samplerexception[user][name] = str(value)
+            self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
+        elif self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
+            try:
+                self.log.debug("samplercallback: name in names ")
+                for name in names:
+                    if name in value.varnames:
+                        name_long = int("".join(map(str, [ord(c) for c in name])))
+                        # 4294967291 seems to be the largest prime under 2**32 (int limit)
+                        seed = name_long % 4294967291
+                        debug_logger("name_seed {}: {} ({})".format(name, seed, name_long))
+                        numpy.random.seed(seed)
+                        self.globals[user][name] = numpy.random.permutation(
+                            value[name])  # permute to break the joint information across variables
+                    else:  # manifold privacy is applied to individual variables
+                        self.globals[user][
+                            name] = "Not retained."  # so there could be more information in the joint information
+                    self.changeState(user, name, "uptodate")
+
+                self.log.debug("samplercallback: name in names ...done ")
+                self.reg_ts(sampler_key, user, n_id, completed_key, node_ts)
+
+                complete_users = [u for u in self.userids if u != "All" and set(names).issubset(self.uptodate[u])]
+
+                if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
+                    if stats:
+                        for stat_key in stats["rhat"]:
+                            self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
+                            self.globals[user]['ess'][stat_key] = numpy.array(stats["ess"][stat_key]).tolist()
+                            self.globals[user]['waic'][stat_key] = stats["waic"]
+                            self.globals[user]['loo'][stat_key] = stats["loo"]
+                    for u in complete_users:
+                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
+                        for name in names:
+                            if self.get_privacy_sampler_result(name) != 'private' and not (
+                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
+                                    name) == "Not retained."):
+                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
+                                    if self.globals[u][name].shape != self.globals["All"][
+                                     name].shape:  # if shape is affected by dropping a user then this variable is private
+                                        self.privacy_sampler_results[name][u] = 'private'
+                                    else:
+                                        success = self.reg_ts(manifold_key, u, name, started_key, node_ts)
+                                        if success:
+                                            jobname = "Manifold: " + u + " " + name
+                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, u,
+                                                                                    self.globals[u][name],
+                                                                                    self.globals["All"][name])
+                                            self.jobs[jobname].add_done_callback(self.mp_callback)
+                                            print('started job ', jobname, node_ts)
+
+
+                else:  # else compare All to this users samples using manifold privacy calculation
+                    self.log.debug("samplercallback: complete_users - Users ")
+                    if self.have_samples("All", names):
+                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
+                        for name in names:
+                            if self.get_privacy_sampler_result(name) != 'private' and not (
+                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
+                                    name) == "Not retained."):
+                                if name in self.globals[user].keys() and name in self.globals["All"].keys():
+                                    if self.globals[user][name].shape != self.globals["All"][
+                                     name].shape:  # if shape is affected by dropping a user then this variable is private
+                                        self.privacy_sampler_results[name][user] = 'private'
+                                    else:
+                                        success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
+                                        if success:
+                                            jobname = "Manifold: " + user + " " + name
+                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
+                                                                                    self.globals[user][name],
+                                                                                    self.globals["All"][name])
+                                            self.jobs[jobname].add_done_callback(self.mp_callback)
+                                            print('started job ', jobname, node_ts)
+                                else:
+                                    # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
+                                    pass
+            except Exception as e:
+                self.log.debug("in samplercallback when assigning values " + str(e))
+
+        self.log.debug("sampler_callback: delete jobs ")
+
+        try:
+            del self.jobs[myname]
+        except Exception as e:
+            self.log.debug("trying to del job " + str(e))
+
+        self.log.debug("sampler_callback: delete jobs ...done")
+
+        self.release()
+        self.compute_privacy(node)
+        for u in self.i_graph.successors(node[attr_id]):
+            self.start_computation(user, self.i_graph.nodes[u])
+        self.compute_privacy(node)
+
+    def mp_callback(self, return_value):
+        return_value = return_value.result()
+        sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
+        step_size = max(int(sample_size / Private.config.max_sample_size), 1)
+        self.acquire("mp_callback")
+        jobname, node, name, user, d = return_value
+        node_ts = node[attr_last_ts]
+        print('at mp callback ', name, user, node_ts)
+        if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
+            try:
+                self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                if self.get_privacy_sampler_result(name) != 'private':
+                    print("d:", d)
+                    if d > PrivacyCriterion:
+                        print(name, " marked as private")
+                        self.privacy_sampler_results[name][user] = "private"
+
+                        self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ##
+                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
+                    else:
+                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
+                        self.privacy_sampler_results[name][user] = "public"
+
+                    print(self.privacy_sampler_results[name])
+
+                if self.get_privacy_sampler_result(name) == 'public':
+                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
+                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
+                self.reg_ts(manifold_key, user, name, completed_key, node_ts)
+
+            except Exception as e:
+                self.log.debug("manifold privacy " + str(e))
+                print("manifold privacy " + str(e))
+        
+        try:
+            del self.jobs[jobname]
+        except Exception as e:
+            self.log.debug("trying to del job " + str(e))
+        self.release()
+        self.compute_privacy(node)
+
+    def get_privacy_sampler_result(self, name):
+        public_count = 0
+        for user in self.privacy_sampler_results[name]:
+            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'private':
+                return 'private'
+            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
+                public_count += 1
+        if public_count == len(self.userids) -1:
+            return 'public'
         else:
-            return any(self.isAncestor(name1, parent) for parent in parents)
+            return 'unknown_privacy'
+
+    def get_globals(self, names, user):
+        user_globals = self.globals[user]
+        job_globals = {'user_id': user, 'project_id': self.project_id}
+        deps = set()
+        for name in names:
+            if name in self.dependson:
+                deps = deps.union(self.dependson[name])
+            if name in self.probdependson:
+                deps = deps.union(self.probdependson[name])
+        deps = self.get_all_required_dependents(deps)
+        for key in user_globals.keys():
+            if key in deps:
+                if type(user_globals[key]) == RedisReference:
+                    job_globals[key] = copy.copy(user_globals[key])
+                else:
+                    job_globals[key] = user_globals[key]
+        return job_globals
+
+    def get_all_required_dependents(self, names):
+        to_visit = names
+        final_set = set()
+        while to_visit != set():
+            new_additions = set()
+            for vname in to_visit:
+                final_set.add(vname)
+                if vname in self.dependson and vname in self.functions:
+                    new_additions = new_additions.union(self.dependson[vname])
+                if vname in self.probdependson:
+                    new_additions = new_additions.union(self.probdependson[vname])
+            to_visit = to_visit.union(new_additions)
+            to_visit = to_visit.difference(final_set)
+
+        return final_set
+
+    # New graph methods
 
     def init_raw_graph(self):
         """
@@ -1033,7 +1422,6 @@ class graph:
         else:
             return False
 
-
     def is_node_computable(self, user, n_id):
         """
         Given the node check if the node is computable based on the inferential graph
@@ -1047,7 +1435,6 @@ class graph:
                 is_computable = False
                 break
         return is_computable
-
 
     def get_node(self, var_name, prob):
         """
@@ -1112,468 +1499,6 @@ class graph:
         plt.close()
         return result
 
-    def topological_sort(self):
-        order, enter, state = deque(), self.probabilistic | self.deterministic, {}
-        enter = OrderedSet( sorted(list(enter)) )
-        GRAY, BLACK = 0, 1
-
-        def dfs(node):
-            state[node] = GRAY
-            for k in sorted( list( self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
-                sk = state.get(k, None)
-                try:
-                    if sk == GRAY: raise ValueError("cycle")
-                except Exception as e:
-                    _log.debug("topological_sort GREY")
-                    _log.debug(self.dependson.get(node ))
-                    _log.debug(self.probdependson.get(node))
-                    raise ValueError("cycle 2")
-                if sk == BLACK: continue
-                enter.discard(k)
-                dfs(k)
-            order.appendleft(node)
-            state[node] = BLACK
-
-        while enter: dfs(enter.pop())
-        result =  [name for name in order if name in self.probabilistic - self.deterministic]
-        result.reverse()
-        return result
-
-    def topological_sort_bak(self):
-        result = []
-        seen = set()
-        prob_only = self.probabilistic - self.deterministic
-        node = list(prob_only)[0]
-
-        def recursive_helper(node):
-            for neighbor in self.dependson.get(node, []):
-                if neighbor not in seen:
-                    seen.add(neighbor)
-                    recursive_helper(neighbor)
-            result.insert(0, node)
-
-        recursive_helper(node)
-        return result
-
-    def constructPyMC3code(self, node, user=None):
-        #try:
-            locals = {}
-            sub_graph = node[attr_contains] + list(self.i_graph.predecessors(node[attr_id]))
-            loggingcode = """
-try:
-    logging = __import__("logging")
-    logging.basicConfig(level=logging.DEBUG)
-    _log = logging.getLogger("Private")
-    #logging.disable(100)
-    _log.debug("Running PyMC3 Code")
-    json = __import__("json")
-    def debug_logger(msg):
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, default=str)
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write(msg + "\\n")
-
-    debug_logger("Running PyMC3 Code")
-"""
-
-            code = loggingcode
-
-            # extract index variables
-
-            for indexvariable in list(set(self.hierarchical.values()) & set(sub_graph)):
-                code += "    global __%s_Dict \n" % indexvariable
-                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
-                code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
-                #code += "    debug_logger(['%s', __%s_Dict])" % (indexvariable, indexvariable)
-                if user:
-                    locals[indexvariable] = self.globals[user][indexvariable]
-
-            code += """
-    exception_variable = "No Exception Variable"
-    pymc3 = __import__("pymc3")
-    dot = __import__("theano").tensor.tensordot
-    softmax = __import__("theano").tensor.nnet.nnet.softmax
-    traceback = __import__("traceback")
-
-    numpy = __import__("numpy") 
-    numpy.random.seed(987654321)
-    basic_model = pymc3.Model()
-
-    
-    with basic_model:
-
-"""
-            # Examples
-            # mu = alpha + beta[0]*X1 + beta[1]*X2
-            # sigma = pm.HalfNormal('sigma', sd=1)
-            # Y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
-
-            probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
-            if sub_graph:
-                probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
-
-            for name in probabilistic_only_names:
-                #code += '        debug_logger(["probabilistic_only_names", "%s"])' % (name) 
-                code += '        exception_variable = "%s"\n' % name
-                if name in self.hierarchical:
-                    shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
-                    code += "        " + self.pyMC3code[name] % shapecode + "\n"
-                else:
-                    code += "        " + self.pyMC3code[name] % ""+ "\n"
-
-            observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
-            for name in observed_names:
-                #code += '        debug_logger(["observed_names_names", "%s"])' % (name) 
-                code += '        exception_variable = "%s"\n' % name
-                obsname = "__private_%s_observed" % name
-                code += "        " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
-                if user:
-                    if name in self.globals[user]:
-                        locals[obsname] = self.globals[user][name]
-                    else: 
-                        locals[obsname] = self.globals["All"][name]
-                else:
-                    locals = None
-
-            code += """
-        __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
-        _log.debug("Finished PyMC3 Code")
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write("Finished PyMC3 Code\\n")
-
-except Exception as e:
-    try:
-        # remove stuff after the : as that sometimes reveals private information
-        _log.debug("PyMC3 Code Exception: " + str(e))
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write("Error " + str(e) + "\\n")
-        #ind = min( e.args[0].find(":"), e.args[0].find("\\n"))
-        #ind = e.args[0].find(":")
-        #if ind != -1:
-        #    estring = e.args[0][0:ind]
-        #else:
-        #    estring = e.args[0]
-        #newErrorString = estring   # do we need to do this?
-
-        estring = e.args[0]
-        newErrorString = estring[estring.rfind("\\n")+1:]
-        # Need to create a new Exception here 
-        # some exceptions were cpickle when pp passed the result back to the master
-        return_exception = Exception(newErrorString)
-        __private_result__ = (return_exception, exception_variable, None)
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write(traceback.format_exc() + "\\n")
-            fp.write("Finished processing Error \\n")
-    except Exception as e2:
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write("Error2 " + str(e2) + "\\n")
-            fp.write(traceback.format_exc() + "\\n")
-        __private_result__ = (e2, exception_variable, None)
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write("Finished processing Error2 \\n")
-
-        
-
-""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
-
-            return locals, code
-
-        #except Exception as e:
-        #    self.log.debug("In constructMCcode user = " + str(user) + " " + str(e.args))
-        #    if user:
-        #      self.log.debug("In constructMCcode user = " + str(user) + " " + str(self.globals[user]))
-
-
-    def canRunSampler(self, user, verbose=False):
-        if len(self.probabilistic) == 0:
-            return False
-        result = True
-        if verbose:
-            output = ""
-        for name in self.probabilistic:
-            if name in self.uptodate[user]:
-                if verbose: output += name + " is up to date\n"
-            else:
-                if verbose: output += name + " checkdown " + str(self.checkdown(user, name)) + "\n"
-                result = result and self.checkdown(user, name)
-                if verbose: output += name + " checkup " + str(self.checkup(user, name)) + "\n"
-                result = result and self.checkup(user, name)
-        if verbose:
-            return output
-        else:
-            return result
-
-    def variablesToBeSampled(self):
-
-        names = self.probabilistic - self.deterministic
-        return names
-
-    def variablesToBeCalculated(self, user):
-        names = set([])
-        for name in self.deterministic & self.stale[user]:
-            if self.dependson.get(name, set([])) - self.uptodate[user] - self.builtins == set([]):
-                names.add(name)
-        return(names)
-
-    def callback(self, return_value):
-        return_value = return_value.result()
-        self.acquire("callback")
-        debug_logger("In callback")
-        job_name, node, user, value = return_value
-        name = node[attr_id]
-        node_ts = node[attr_last_ts]
-        try:
-            if isinstance(value, Exception):
-                if user == "All":
-                    debug_logger(["callback Exception", user, name, value])
-                    self.globals[user][name] = str(value)
-                    self.changeState(user, name, "exception")
-            elif self.ts[compute_key][user][name][started_key] == node_ts:
-                original_value = self.globals[user].get(name, '')
-                self.globals[user][name] = value
-                self.changeState(user, name, "uptodate")
-                self.reg_ts(compute_key, user, name, completed_key, node_ts)
-                if user == "All":
-                    if name in config_builtins:
-                        builtins.get(name)(value)
-                    if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
-                        if name == "NumberOfSamples":
-                            if value > 4000:
-                                self.comment[name] = "# Maximum Number of Samples is 4000"
-                                self.globals[user][name] = original_value
-                        self.SamplerParameterUpdated = True
-                    if type(value) == io.BytesIO:   # write image to file
-                        value.seek(0)
-                        with open(name+'.png', 'wb') as f:
-                            shutil.copyfileobj(value, f)
-            if job_name in self.jobs:
-                del self.jobs[job_name]
-            else:
-                self.log.debug("Trying to delete job %s that is not in self.jobs" % job_name)
-                self.log.debug(self.jobs)
-        except Exception as e:
-            self.log.debug(str(e))
-
-        self.release()
-        self.compute_privacy(node)
-        for u in self.i_graph.successors(name):
-            successor = self.i_graph.nodes[u]
-            successor[attr_last_ts] = node_ts
-            self.start_computation(user, successor)
-        self.compute_privacy(node)
-
-    def have_samples(self, user, sub_graph):
-        # have to allow for possibility that some probabilistic variables are not retained and
-        # therefore won't have samples
-        # so see if any of the probabilistic variables have samples
-        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
-                   (self.probabilistic & set(sub_graph)))
-
-    def sampler_callback(self, returnvalue):
-        returnvalue = returnvalue.result()
-        self.acquire("samplercallback")
-        myname, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
-            returnvalue) if Private.config.s3_integration else returnvalue
-        names = node[attr_contains]
-        n_id = node[attr_id]
-        node_ts = node[attr_last_ts]
-        print('at sampler callback ', names, user, node_ts)
-        if isinstance(value, Exception):
-            self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
-            for name in names:
-                # ** Might need to remove the Exception message here
-                self.globals[user][name] = str(value)
-                debug_logger(["samplercallback Exception", user, name, value])
-                self.changeState(user, name, "exception")
-            if exception_variable != "No Exception Variable":
-                m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
-                if m:
-                    value = str(int(m.group(1)) - 1) + " arguments required."
-                self.samplerexception[user][exception_variable] = str(value)
-            else:
-                for name in names:
-                    self.samplerexception[user][name] = str(value)
-            self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        elif self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
-            try:
-                self.log.debug("samplercallback: name in names ")
-                for name in names:
-                    if name in value.varnames:
-                        name_long = int("".join(map(str, [ord(c) for c in name])))
-                        # 4294967291 seems to be the largest prime under 2**32 (int limit)
-                        seed = name_long % 4294967291
-                        debug_logger("name_seed {}: {} ({})".format(name, seed, name_long))
-                        numpy.random.seed(seed)
-                        self.globals[user][name] = numpy.random.permutation(
-                            value[name])  # permute to break the joint information across variables
-                    else:  # manifold privacy is applied to individual variables
-                        self.globals[user][
-                            name] = "Not retained."  # so there could be more information in the joint information
-                    self.changeState(user, name, "uptodate")
-
-                self.log.debug("samplercallback: name in names ...done ")
-                self.reg_ts(sampler_key, user, n_id, completed_key, node_ts)
-
-                complete_users = [u for u in self.userids if u != "All" and set(names).issubset(self.uptodate[u])]
-
-                if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
-                    if stats:
-                        for stat_key in stats["rhat"]:
-                            self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
-                            self.globals[user]['ess'][stat_key] = numpy.array(stats["ess"][stat_key]).tolist()
-                            self.globals[user]['waic'][stat_key] = stats["waic"]
-                            self.globals[user]['loo'][stat_key] = stats["loo"]
-                    for u in complete_users:
-                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in names:
-                            if self.get_privacy_sampler_result(name) != 'private' and not (
-                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
-                                    name) == "Not retained."):
-                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
-                                    if self.globals[u][name].shape != self.globals["All"][
-                                     name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacy_sampler_results[name][u] = 'private'
-                                    else:
-                                        success = self.reg_ts(manifold_key, u, name, started_key, node_ts)
-                                        if success:
-                                            jobname = "Manifold: " + u + " " + name
-                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, u,
-                                                                                    self.globals[u][name],
-                                                                                    self.globals["All"][name])
-                                            self.jobs[jobname].add_done_callback(self.mp_callback)
-                                            print('started job ', jobname, node_ts)
-
-
-                else:  # else compare All to this users samples using manifold privacy calculation
-                    self.log.debug("samplercallback: complete_users - Users ")
-                    if self.have_samples("All", names):
-                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in names:
-                            if self.get_privacy_sampler_result(name) != 'private' and not (
-                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
-                                    name) == "Not retained."):
-                                if name in self.globals[user].keys() and name in self.globals["All"].keys():
-                                    if self.globals[user][name].shape != self.globals["All"][
-                                     name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacy_sampler_results[name][user] = 'private'
-                                    else:
-                                        success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
-                                        if success:
-                                            jobname = "Manifold: " + user + " " + name
-                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
-                                                                                    self.globals[user][name],
-                                                                                    self.globals["All"][name])
-                                            self.jobs[jobname].add_done_callback(self.mp_callback)
-                                            print('started job ', jobname, node_ts)
-                                else:
-                                    # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
-                                    pass
-            except Exception as e:
-                self.log.debug("in samplercallback when assigning values " + str(e))
-
-        self.log.debug("samplercallback: delete jobs ")
-
-        try:
-            del self.jobs[myname]
-        except Exception as e:
-            self.log.debug("trying to del job " + str(e))
-
-        self.log.debug("samplercallback: delete jobs ...done")
-
-        self.release()
-        self.compute_privacy(node)
-        for u in self.i_graph.successors(node[attr_id]):
-            self.start_computation(user, self.i_graph.nodes[u])
-        self.compute_privacy(node)
-
-    def mp_callback(self, returnvalue):
-        returnvalue = returnvalue.result()
-        sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
-        step_size = max(int(sample_size / Private.config.max_sample_size), 1)
-        self.acquire("manifoldprivacycallback")
-        jobname, node, name, user, d = returnvalue
-        node_ts = node[attr_last_ts]
-        print('at mp callback ', name, user, node_ts)
-        if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
-            try:
-                self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
-                if self.get_privacy_sampler_result(name) != 'private':
-                    print("d:", d)
-                    if d > PrivacyCriterion:
-                        print(name, " marked as private")
-                        self.privacy_sampler_results[name][user] = "private"
-
-                        self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size] ##
-                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": PRIVATE")
-                    else:
-                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
-                        self.privacy_sampler_results[name][user] = "public"
-
-                    print(self.privacy_sampler_results[name])
-
-                if self.get_privacy_sampler_result(name) == 'public':
-                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
-                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
-                self.reg_ts(manifold_key, user, name, completed_key, node_ts)
-
-            except Exception as e:
-                self.log.debug("manifold privacy " + str(e))
-                print("manifold privacy " + str(e))
-        
-        try:
-            del self.jobs[jobname]
-        except Exception as e:
-            self.log.debug("trying to del job " + str(e))
-        self.release()
-        self.compute_privacy(node)
-
-    def get_privacy_sampler_result(self, name):
-        public_count = 0
-        for user in self.privacy_sampler_results[name]:
-            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'private':
-                return 'private'
-            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
-                public_count += 1
-        if public_count == len(self.userids) -1:
-            return 'public'
-        else:
-            return 'unknown_privacy'
-
-
-    def get_globals(self, names, user):
-        user_globals = self.globals[user]
-        job_globals = {'user_id': user, 'project_id': self.project_id}
-        deps = set()
-        for name in names:
-            if name in self.dependson:
-                deps = deps.union(self.dependson[name])
-            if name in self.probdependson:
-                deps = deps.union(self.probdependson[name])
-        deps = self.get_all_required_dependents(deps)
-        for key in user_globals.keys():
-            if key in deps:
-                if type(user_globals[key]) == RedisReference:
-                    job_globals[key] = copy.copy(user_globals[key])
-                else:
-                    job_globals[key] = user_globals[key]
-        return job_globals
-
-    def get_all_required_dependents(self, names):
-        to_visit = names
-        final_set = set()
-        while to_visit != set():
-            new_additions = set()
-            for vname in to_visit:
-                final_set.add(vname)
-                if vname in self.dependson and vname in self.functions:
-                    new_additions = new_additions.union(self.dependson[vname])
-                if vname in self.probdependson:
-                    new_additions = new_additions.union(self.probdependson[vname])
-            to_visit = to_visit.union(new_additions)
-            to_visit = to_visit.difference(final_set)
-
-        return final_set
-
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
     name = node[attr_id]
@@ -1601,27 +1526,6 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
         return (job_name, node, user, value)
     except Exception as e:
         return((job_name, node, user, e))
-
-
-def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
-    size = sys.getsizeof(obj)
-    if seen is None:
-        seen = set()
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    # Important mark as seen *before* entering recursion to gracefully handle
-    # self-referential objects
-    seen.add(obj_id)
-    if isinstance(obj, dict):
-        size += sum([get_size(v, seen) for v in obj.values()])
-        size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__dict__'):
-        size += get_size(obj.__dict__, seen)
-    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([get_size(i, seen) for i in obj])
-    return size
 
 
 def sampler_job(job_name, user, node, code, globals, locals):
@@ -1662,10 +1566,25 @@ def mp_job(jobname, node, name, user, firstarray, secondarray):
     return jobname, node, name, user, d
 
 
-def getJobId(jobname, user, names, code, globals, locals):
-    # todo generate a unique id for the job
-    folder_name = "results"
-    return folder_name + "/" + str(uuid.uuid4())
+def get_size(obj, seen=None):
+    """Recursively finds size of objects"""
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+    return size
 
 
 def retrieve_s3_vars(var_dict):
@@ -1677,5 +1596,3 @@ def retrieve_s3_vars(var_dict):
             ret_dict[key] = var_dict[key]
 
     return ret_dict
-
-
