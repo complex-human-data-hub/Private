@@ -287,7 +287,7 @@ class graph:
 
     def showSamplerResults(self):
         res = str(len(self.privacy_sampler_results)) + " results\n"
-        for k in self.privacy_sampler_results.keys() & self.probabilistic:
+        for k in self.privacy_sampler_results.keys():
             res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(len(self.privacy_sampler_results[k])) + "\n"
         return res
 
@@ -1312,14 +1312,14 @@ except Exception as e:
                 sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
-                    # sub_graph.extend(node_1_graph)
+                    sub_graph.extend(node_1_graph)
                 elif node_1.startswith(pd_key):
                     node_label = node_0
-                    # sub_graph.extend(node_0_graph)
+                    sub_graph.extend(node_0_graph)
                 else:
                     node_label = node_0 + ', ' + node_1
-                sub_graph.extend(node_0_graph)
-                sub_graph.extend(node_1_graph)
+                    sub_graph.extend(node_0_graph)
+                    sub_graph.extend(node_1_graph)
 
 
                 i_graph = nx.contracted_edge(i_graph, e, self_loops=False)
