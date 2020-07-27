@@ -786,6 +786,61 @@ class graph:
         result.reverse()
         return result
 
+    def have_samples(self, user, sub_graph):
+        # have to allow for possibility that some probabilistic variables are not retained and
+        # therefore won't have samples
+        # so see if any of the probabilistic variables have samples
+        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
+                   (self.probabilistic & set(sub_graph)))
+
+    def get_privacy_sampler_result(self, name):
+        public_count = 0
+        for user in self.privacy_sampler_results[name]:
+            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'private':
+                return 'private'
+            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
+                public_count += 1
+        if public_count == len(self.userids) - 1:
+            return 'public'
+        else:
+            return 'unknown_privacy'
+
+    def get_globals(self, names, user):
+        user_globals = self.globals[user]
+        job_globals = {'user_id': user, 'project_id': self.project_id}
+        deps = set()
+        for name in names:
+            if name in self.dependson:
+                deps = deps.union(self.dependson[name])
+            if name in self.probdependson:
+                deps = deps.union(self.probdependson[name])
+        deps = self.get_all_required_dependents(deps)
+        for key in user_globals.keys():
+            if key in deps:
+                if type(user_globals[key]) == RedisReference:
+                    job_globals[key] = copy.copy(user_globals[key])
+                else:
+                    job_globals[key] = user_globals[key]
+        return job_globals
+
+    def get_all_required_dependents(self, names):
+        to_visit = names
+        final_set = set()
+        while to_visit != set():
+            new_additions = set()
+            for vname in to_visit:
+                final_set.add(vname)
+                if vname in self.dependson and vname in self.functions:
+                    new_additions = new_additions.union(self.dependson[vname])
+                if vname in self.probdependson:
+                    new_additions = new_additions.union(self.probdependson[vname])
+            to_visit = to_visit.union(new_additions)
+            to_visit = to_visit.difference(final_set)
+
+        return final_set
+
+    # Core functions
+
     def construct_pymc3_code(self, node, user=None):
         #try:
             locals = {}
@@ -905,60 +960,6 @@ except Exception as e:
 
             return locals, code
 
-    def have_samples(self, user, sub_graph):
-        # have to allow for possibility that some probabilistic variables are not retained and
-        # therefore won't have samples
-        # so see if any of the probabilistic variables have samples
-        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
-                   (self.probabilistic & set(sub_graph)))
-
-    def get_privacy_sampler_result(self, name):
-        public_count = 0
-        for user in self.privacy_sampler_results[name]:
-            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'private':
-                return 'private'
-            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
-                public_count += 1
-        if public_count == len(self.userids) -1:
-            return 'public'
-        else:
-            return 'unknown_privacy'
-
-    def get_globals(self, names, user):
-        user_globals = self.globals[user]
-        job_globals = {'user_id': user, 'project_id': self.project_id}
-        deps = set()
-        for name in names:
-            if name in self.dependson:
-                deps = deps.union(self.dependson[name])
-            if name in self.probdependson:
-                deps = deps.union(self.probdependson[name])
-        deps = self.get_all_required_dependents(deps)
-        for key in user_globals.keys():
-            if key in deps:
-                if type(user_globals[key]) == RedisReference:
-                    job_globals[key] = copy.copy(user_globals[key])
-                else:
-                    job_globals[key] = user_globals[key]
-        return job_globals
-
-    def get_all_required_dependents(self, names):
-        to_visit = names
-        final_set = set()
-        while to_visit != set():
-            new_additions = set()
-            for vname in to_visit:
-                final_set.add(vname)
-                if vname in self.dependson and vname in self.functions:
-                    new_additions = new_additions.union(self.dependson[vname])
-                if vname in self.probdependson:
-                    new_additions = new_additions.union(self.probdependson[vname])
-            to_visit = to_visit.union(new_additions)
-            to_visit = to_visit.difference(final_set)
-
-        return final_set
-
-    # Core functions
     def start_computation(self, user, node, lock=True):
         """
         Start computation for the given node for the given user
