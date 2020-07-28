@@ -181,33 +181,33 @@ class Graph:
                             dependson=["getDemoEvents"])
 
     def __repr__(self):
-        codebits = []
-        codewidth = 50
-        valuewidth = 80
+        code_bits = []
+        code_width = 50
+        value_width = 80
         for name in self.code.keys():
-            codebits.append(name + " = " + str(self.code[name]))
+            code_bits.append(name + " = " + str(self.code[name]))
         for name in self.probcode.keys():
             if name in self.hierarchical:
-                codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
             else:
-                codebits.append(name + " ~ " + str(self.probcode[name]))
-        if len(codebits) > 0:
-            m = max(len(line) for line in codebits)
-            m = min(m, codewidth)
-            newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
-            valuebits = []
+                code_bits.append(name + " ~ " + str(self.probcode[name]))
+        if len(code_bits) > 0:
+            m = max(len(line) for line in code_bits)
+            m = min(m, code_width)
+            newcodebits = [line[0:code_width].ljust(m, " ") for line in code_bits]
+            value_bits = []
             for name in self.code.keys():
-                valuebits.append(self.getValue(name)[0:valuewidth])
+                value_bits.append(self.get_value(name)[0:value_width])
             for name in self.probcode.keys():
                 if name in self.samplerexception:
-                    valuebits.append(self.samplerexception[name])
+                    value_bits.append(self.samplerexception[name])
                 else:
-                    valuebits.append(self.getValue(name)[0:valuewidth])
-            commentbits = []
+                    value_bits.append(self.get_value(name)[0:value_width])
+            comment_bits = []
             for name in self.code.keys():
-                commentbits.append(self.comment.get(name, ""))
+                comment_bits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
-                commentbits.append(self.comment.get(name, ""))
+                comment_bits.append(self.comment.get(name, ""))
             unsatisfied_depends = []
             for name in self.code.keys():
                 unsatisfied_depends.append(
@@ -217,7 +217,7 @@ class Graph:
                     ", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
             return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
                              codebit, valuebit, commentbit, unsatisfied_depend in
-                             zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
+                             zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
         else:
             return ""
 
@@ -441,11 +441,11 @@ class Graph:
             return True
         else:
             for dependent in dependents:
-                dependent_dependents = self.getChildren(dependent)
+                dependent_dependents = self.get_children(dependent)
                 if self.check_cyclic_dependencies(name, dependent_dependents):
                     return True
 
-    def getValue(self, name, longFormat=False):
+    def get_value(self, name, long_format=False):
         res = ""
         formatter_string = "%%.%sf" % display_precision
         if name in self.deterministic | self.probabilistic:
@@ -459,18 +459,17 @@ class Graph:
                 res += "Private"
             elif name in self.unknown_privacy:
                 if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
-                    'All'].get(name) == "Not retained.":
+                 'All'].get(name) == "Not retained.":
                     res += "Not retained."
                 else:
                     res += "Privacy Unknown"
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:  # write image to file
-                    # res += reprlib.repr(self.globals["All"][name])
                     res += "[PNG Image]"
                 elif type(self.globals["All"][name]) == RedisReference:
                     res += self.globals["All"][name].display_value
                 elif type(self.globals["All"][name]) == numpy.ndarray:
-                    if longFormat:
+                    if long_format:
                         res += str(self.globals["All"][name])
                     else:
                         s = self.globals["All"][name].shape
@@ -479,7 +478,7 @@ class Graph:
                 elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
                     res += str((formatter_string % self.globals["All"][name]))
                 else:
-                    if longFormat:
+                    if long_format:
                         res += json.dumps(self.globals["All"][name], indent=4)
                     else:
                         res += reprlib.repr(self.globals["All"][name])
@@ -487,7 +486,7 @@ class Graph:
                 raise Exception("Exception: " + name + " is not stale, computing, exception or uptodate.")
         elif name in self.builtins:
             if name in self.public:
-                if longFormat:
+                if long_format:
                     res += str(self.globals["All"][name])
                 else:
                     res += reprlib.repr(self.globals["All"][name])
@@ -501,12 +500,12 @@ class Graph:
         valuewidth = 120
         valuebits = []
         for name in self.code.keys():
-            valuebits.append(name + " = " + self.getValue(name)[0:valuewidth])
+            valuebits.append(name + " = " + self.get_value(name)[0:valuewidth])
         for name in self.probcode.keys():
             if name in self.samplerexception:
                 valuebits.append(name + " ~ " + self.samplerexception[name])
             else:
-                valuebits.append(name + " ~ " + self.getValue(name)[0:valuewidth])
+                valuebits.append(name + " ~ " + self.get_value(name)[0:valuewidth])
         return "\n".join(valuebits)
 
     def show_code(self):
@@ -574,22 +573,8 @@ class Graph:
             res += "\n"
         return res[0:-1]
 
-    def probabilisticParents(self, name):
-        parents = set([])
-        for parent in self.probabilistic:
-            if parent in self.probdependson:
-                if name in self.probdependson[parent]:
-                    parents.add(parent)
-        return (parents)
-
-    def getChildren(self, name):
+    def get_children(self, name):
         return self.dependson.get(name, set([])) | self.probdependson.get(name, set([]))
-
-    def probabilisticChildren(self, name):
-        return self.probdependson.get(name, set([]))
-
-    def deterministicChildren(self, name):
-        return self.dependson.get(name, set([]))
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
@@ -795,13 +780,14 @@ try:
 
             # extract index variables
 
-            for indexvariable in list(set(self.hierarchical.values()) & set(sub_graph)):
-                code += "    global __%s_Dict \n" % indexvariable
-                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (indexvariable, indexvariable)
-                code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (indexvariable, indexvariable, indexvariable)
-                #code += "    debug_logger(['%s', __%s_Dict])" % (indexvariable, indexvariable)
+            for index_variable in list(set(self.hierarchical.values()) & set(sub_graph)):
+                code += "    global __%s_Dict \n" % index_variable
+                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (
+                 index_variable, index_variable)
+                code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (
+                 index_variable, index_variable, index_variable)
                 if user:
-                    locals[indexvariable] = self.globals[user][indexvariable]
+                    locals[index_variable] = self.globals[user][index_variable]
 
             code += """
     exception_variable = "No Exception Variable"
@@ -824,25 +810,23 @@ try:
                 probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
 
             for name in probabilistic_only_names:
-                #code += '        debug_logger(["probabilistic_only_names", "%s"])' % (name)
                 code += '        exception_variable = "%s"\n' % name
                 if name in self.hierarchical:
-                    shapecode = ", shape = len(__%s_Dict)" % self.hierarchical[name]
-                    code += "        " + self.pyMC3code[name] % shapecode + "\n"
+                    shape_code = ", shape = len(__%s_Dict)" % self.hierarchical[name]
+                    code += "        " + self.pyMC3code[name] % shape_code + "\n"
                 else:
                     code += "        " + self.pyMC3code[name] % ""+ "\n"
 
             observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
             for name in observed_names:
-                #code += '        debug_logger(["observed_names_names", "%s"])' % (name)
                 code += '        exception_variable = "%s"\n' % name
-                obsname = "__private_%s_observed" % name
-                code += "        " + self.pyMC3code[name] % (", observed=%s" % obsname) + "\n"
+                obs_name = "__private_%s_observed" % name
+                code += "        " + self.pyMC3code[name] % (", observed=%s" % obs_name) + "\n"
                 if user:
                     if name in self.globals[user]:
-                        locals[obsname] = self.globals[user][name]
+                        locals[obs_name] = self.globals[user][name]
                     else:
-                        locals[obsname] = self.globals["All"][name]
+                        locals[obs_name] = self.globals["All"][name]
                 else:
                     locals = None
 
@@ -895,6 +879,7 @@ except Exception as e:
 
         :param user: String
         :param node: Dict {'id': a, 'contains': [c, d], 'is_prob':False ...}
+        :param lock: Boolean, if this method need to run in a lock
         :return:
         """
         node = copy.deepcopy(node)
@@ -1005,7 +990,7 @@ except Exception as e:
     def sampler_callback(self, return_value):
         return_value = return_value.result()
         self.acquire("sampler_callback")
-        myname, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
+        job_name, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
             return_value) if Private.config.s3_integration else return_value
         names = node[attr_contains]
         n_id = node[attr_id]
@@ -1019,7 +1004,7 @@ except Exception as e:
                 debug_logger(["sampler_callback Exception", user, name, value])
             self.change_state(user, node, "exception")
             if exception_variable != "No Exception Variable":
-                m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
+                m = re.match(r"__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
                 if m:
                     value = str(int(m.group(1)) - 1) + " arguments required."
                 self.samplerexception[user][exception_variable] = str(value)
@@ -1070,7 +1055,7 @@ except Exception as e:
         self.log.debug("sampler_callback: delete jobs ")
 
         try:
-            del self.jobs[myname]
+            del self.jobs[job_name]
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
 

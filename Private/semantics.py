@@ -393,7 +393,7 @@ help: this message
             return
 
     def visit_value(self, node, children):
-        print(self.depGraph.getValue(node.value, longFormat=True))
+        print(self.depGraph.get_value(node.value, long_format=True))
 
     def visit_command_line_expression(self, node, children):
         return result("command_line_expression",
