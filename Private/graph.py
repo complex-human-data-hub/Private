@@ -802,7 +802,8 @@ try:
 
 """
 
-            probabilistic_only_names = self.topological_sort() # pyMC3 requires that these are ordered so that things that are dependent come later
+            # pyMC3 requires that these are ordered so that things that are dependent come later
+            probabilistic_only_names = self.topological_sort()
             if sub_graph:
                 probabilistic_only_names = [n for n in probabilistic_only_names if n in sub_graph]
 
@@ -839,13 +840,6 @@ except Exception as e:
         _log.debug("PyMC3 Code Exception: " + str(e))
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Error " + str(e) + "\\n")
-        #ind = min( e.args[0].find(":"), e.args[0].find("\\n"))
-        #ind = e.args[0].find(":")
-        #if ind != -1:
-        #    estring = e.args[0][0:ind]
-        #else:
-        #    estring = e.args[0]
-        #newErrorString = estring   # do we need to do this?
 
         estring = e.args[0]
         newErrorString = estring[estring.rfind("\\n")+1:]
