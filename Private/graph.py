@@ -1026,7 +1026,7 @@ except Exception as e:
         sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
         step_size = max(int(sample_size / Private.config.max_sample_size), 1)
         self.acquire("mp_callback")
-        jobname, node, name, user, d = return_value
+        job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
         print('at mp callback ', name, user, node_ts)
         if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
@@ -1055,7 +1055,7 @@ except Exception as e:
                 self.log.debug("manifold privacy " + str(e))
 
         try:
-            del self.jobs[jobname]
+            del self.jobs[job_name]
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
         self.release()
