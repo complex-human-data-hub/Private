@@ -1042,13 +1042,13 @@ except Exception as e:
                         self.log.debug("mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(
                             d < privacy_criterion) + ": PRIVATE")
                     else:
-                        self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(
+                        self.log.debug("mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(
                             d < privacy_criterion) + ": UNKNOWN_PRIVACY")
                         self.privacy_sampler_results[name][user] = "public"
 
                 if self.get_privacy_sampler_result(name) == 'public':
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
-                    self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
+                    self.log.debug("mp_callback: " + user + ": " + name + ": PUBLIC")
                 self.reg_ts(manifold_key, user, name, completed_key, node_ts)
 
             except Exception as e:
