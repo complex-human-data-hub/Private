@@ -742,12 +742,12 @@ data_builtins = {'Events', 'DemoEvents', 'Event', 'ExpEvents'}
 
 def setBuiltinPrivacy(graph):
     for name in builtins:
-        graph.setPrivacy(name, "public")
+        graph.set_privacy(name, "public")
     for name in prob_builtins:
-        graph.setPrivacy(name, "public")
+        graph.set_privacy(name, "public")
 
-    graph.setPrivacy("Events", "private")
-    graph.setPrivacy("getEvents", "private")
+    graph.set_privacy("Events", "private")
+    graph.set_privacy("getEvents", "private")
 
 
 def showNames(names, width=80):
