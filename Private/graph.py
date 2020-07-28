@@ -17,6 +17,9 @@ import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
     illegal_variable_names, setGlobals2
+from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, attr_id, \
+    attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, pt_public, \
+    pt_unknown, st_stale, st_uptodate, st_computing, st_exception
 
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -38,38 +41,6 @@ numpy.set_printoptions(threshold=2000)
 
 privacy_criterion = 15.0   # percent
 display_precision = 3
-
-# inferential dependency graph keys
-pd_key = 'p_'
-p_key = 'p'
-d_key = 'd'
-attr_label = 'label'
-attr_color = 'color'
-attr_is_prob = 'is_prob'
-attr_contains = 'sub_graph'
-attr_id = 'id'
-attr_last_ts = 'last_ts'
-
-# other constants
-user_all = 'All'
-
-# time stamp constants
-compute_key = 'compute_job'
-sampler_key = 'sampler_job'
-manifold_key = 'manifold_privacy_job'
-completed_key = 'last_completed'
-started_key = 'last_started'
-
-# privacy types
-pt_private = 'private'
-pt_public = 'public'
-pt_unknown = 'unknown_privacy'
-
-# state types
-st_stale = 'stale'
-st_uptodate = 'uptodate'
-st_computing = 'computing'
-st_exception = 'exception'
 
 
 def debug_logger(msg):
