@@ -310,14 +310,6 @@ class Graph:
         self.release()
         return result
 
-    def checkPickling(self):
-        for key, value in self.globals["All"].items():
-            try:
-                f = open(os.devnull, "w")
-                pickle.dump(value, f)
-            except:
-                print("Pickle error with: ", key)
-
     def showPrivacy(self):
         res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(
             self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
@@ -684,13 +676,6 @@ class Graph:
         result = [name for name in order if name in self.probabilistic - self.deterministic]
         result.reverse()
         return result
-
-    def have_samples(self, user, sub_graph):
-        # have to allow for possibility that some probabilistic variables are not retained and
-        # therefore won't have samples
-        # so see if any of the probabilistic variables have samples
-        return any(isinstance(self.globals[user].get(aname, None), numpy.ndarray) for aname in
-                   (self.probabilistic & set(sub_graph)))
 
     def get_privacy_sampler_result(self, name):
         public_count = 0
