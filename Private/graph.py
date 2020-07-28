@@ -435,7 +435,7 @@ class Graph:
             return True
         else:
             for dependent in dependents:
-                dependent_dependents = self.get_children(dependent)
+                dependent_dependents = self.dependson.get(dependent, set()) | self.probdependson.get(dependent, set())
                 if self.check_cyclic_dependencies(name, dependent_dependents):
                     return True
 
@@ -566,9 +566,6 @@ class Graph:
                     res += "    " + repr(list(self.probdependson[name]))
             res += "\n"
         return res[0:-1]
-
-    def get_children(self, name):
-        return self.dependson.get(name, set([])) | self.probdependson.get(name, set([]))
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
