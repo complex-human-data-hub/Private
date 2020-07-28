@@ -170,6 +170,47 @@ class Graph:
                 self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)",
                             dependson=["getDemoEvents"])
 
+    def __repr__(self):
+        codebits = []
+        codewidth = 50
+        valuewidth = 80
+        for name in self.code.keys():
+            codebits.append(name + " = " + str(self.code[name]))
+        for name in self.probcode.keys():
+            if name in self.hierarchical:
+                codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+            else:
+                codebits.append(name + " ~ " + str(self.probcode[name]))
+        if len(codebits) > 0:
+            m = max(len(line) for line in codebits)
+            m = min(m, codewidth)
+            newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
+            valuebits = []
+            for name in self.code.keys():
+                valuebits.append(self.getValue(name)[0:valuewidth])
+            for name in self.probcode.keys():
+                if name in self.samplerexception:
+                    valuebits.append(self.samplerexception[name])
+                else:
+                    valuebits.append(self.getValue(name)[0:valuewidth])
+            commentbits = []
+            for name in self.code.keys():
+                commentbits.append(self.comment.get(name, ""))
+            for name in self.probcode.keys():
+                commentbits.append(self.comment.get(name, ""))
+            unsatisfied_depends = []
+            for name in self.code.keys():
+                unsatisfied_depends.append(
+                    ", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+            for name in self.probcode.keys():
+                unsatisfied_depends.append(
+                    ", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
+                             codebit, valuebit, commentbit, unsatisfied_depend in
+                             zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
+        else:
+            return ""
+
     def check_dask_connection(self):
 
         if self.server is None:
@@ -514,47 +555,6 @@ class Graph:
         else:
             raise Exception("Exception: Unknown variable in getValue " + name)
         return res
-
-    def __repr__(self):
-        codebits = []
-        codewidth = 50
-        valuewidth = 80
-        for name in self.code.keys():
-            codebits.append(name + " = " + str(self.code[name]))
-        for name in self.probcode.keys():
-            if name in self.hierarchical:
-                codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
-            else:
-                codebits.append(name + " ~ " + str(self.probcode[name]))
-        if len(codebits) > 0:
-            m = max(len(line) for line in codebits)
-            m = min(m, codewidth)
-            newcodebits = [line[0:codewidth].ljust(m, " ") for line in codebits]
-            valuebits = []
-            for name in self.code.keys():
-                valuebits.append(self.getValue(name)[0:valuewidth])
-            for name in self.probcode.keys():
-                if name in self.samplerexception:
-                    valuebits.append(self.samplerexception[name])
-                else:
-                    valuebits.append(self.getValue(name)[0:valuewidth])
-            commentbits = []
-            for name in self.code.keys():
-                commentbits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
-                commentbits.append(self.comment.get(name, ""))
-            unsatisfied_depends = []
-            for name in self.code.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
-            for name in self.probcode.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
-            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
-                             codebit, valuebit, commentbit, unsatisfied_depend in
-                             zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
-        else:
-            return ""
 
     def show_values(self):
         valuewidth = 120
@@ -1007,6 +1007,27 @@ except Exception as e:
         if lock:
             self.release()
 
+    def start_mp_job(self, user, node):
+        names = node[attr_contains]
+        node_ts = node[attr_last_ts]
+        for name in names:
+            if self.get_privacy_sampler_result(name) != 'private' and not (
+                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained."):
+                # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
+                if name in self.globals[user].keys() and name in self.globals["All"].keys():
+                    # if shape is affected by dropping a user then this variable is private
+                    if self.globals[user][name].shape != self.globals["All"][name].shape:
+                        self.privacy_sampler_results[name][user] = 'private'
+                    else:
+                        success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
+                        if success:
+                            jobname = "Manifold: " + user + " " + name
+                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
+                                                                    self.globals[user][name],
+                                                                    self.globals["All"][name])
+                            self.jobs[jobname].add_done_callback(self.mp_callback)
+                            print('started job ', jobname, node_ts)
+
     def callback(self, return_value):
         return_value = return_value.result()
         self.acquire("callback")
@@ -1069,7 +1090,7 @@ except Exception as e:
             for name in names:
                 # ** Might need to remove the Exception message here
                 self.globals[user][name] = str(value)
-                debug_logger(["samplercallback Exception", user, name, value])
+                debug_logger(["sampler_callback Exception", user, name, value])
                 self.changeState(user, name, "exception")
             if exception_variable != "No Exception Variable":
                 m = re.match("__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
@@ -1082,7 +1103,7 @@ except Exception as e:
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         elif self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
             try:
-                self.log.debug("samplercallback: name in names ")
+                self.log.debug("sampler_callback: name in names ")
                 for name in names:
                     if name in value.varnames:
                         name_long = int("".join(map(str, [ord(c) for c in name])))
@@ -1097,12 +1118,13 @@ except Exception as e:
                             name] = "Not retained."  # so there could be more information in the joint information
                     self.changeState(user, name, "uptodate")
 
-                self.log.debug("samplercallback: name in names ...done ")
+                self.log.debug("sampler_callback: name in names ...done ")
                 self.reg_ts(sampler_key, user, n_id, completed_key, node_ts)
 
                 complete_users = [u for u in self.user_ids if u != "All" and set(names).issubset(self.uptodate[u])]
 
-                if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
+                # if this is All then initiate comparisons with all of the users that have already returned
+                if user == "All":
                     if stats:
                         for stat_key in stats["rhat"]:
                             self.globals[user]['rhat'][stat_key] = numpy.array(stats["rhat"][stat_key]).tolist()
@@ -1110,50 +1132,12 @@ except Exception as e:
                             self.globals[user]['waic'][stat_key] = stats["waic"]
                             self.globals[user]['loo'][stat_key] = stats["loo"]
                     for u in complete_users:
-                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in names:
-                            if self.get_privacy_sampler_result(name) != 'private' and not (
-                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
-                                name) == "Not retained."):
-                                if name in self.globals[u].keys() and name in self.globals["All"].keys():
-                                    if self.globals[u][name].shape != self.globals["All"][
-                                        name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacy_sampler_results[name][u] = 'private'
-                                    else:
-                                        success = self.reg_ts(manifold_key, u, name, started_key, node_ts)
-                                        if success:
-                                            jobname = "Manifold: " + u + " " + name
-                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, u,
-                                                                                    self.globals[u][name],
-                                                                                    self.globals["All"][name])
-                                            self.jobs[jobname].add_done_callback(self.mp_callback)
-                                            print('started job ', jobname, node_ts)
-
+                        self.start_mp_job(u, node)
 
                 else:  # else compare All to this users samples using manifold privacy calculation
-                    self.log.debug("samplercallback: complete_users - Users ")
-                    if self.have_samples("All", names):
-                        # go through variables if we already know they are private do nothing else initiate manifold privacy calculation
-                        for name in names:
-                            if self.get_privacy_sampler_result(name) != 'private' and not (
-                                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(
-                                name) == "Not retained."):
-                                if name in self.globals[user].keys() and name in self.globals["All"].keys():
-                                    if self.globals[user][name].shape != self.globals["All"][
-                                        name].shape:  # if shape is affected by dropping a user then this variable is private
-                                        self.privacy_sampler_results[name][user] = 'private'
-                                    else:
-                                        success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
-                                        if success:
-                                            jobname = "Manifold: " + user + " " + name
-                                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
-                                                                                    self.globals[user][name],
-                                                                                    self.globals["All"][name])
-                                            self.jobs[jobname].add_done_callback(self.mp_callback)
-                                            print('started job ', jobname, node_ts)
-                                else:
-                                    # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
-                                    pass
+                    self.log.debug("sampler_callback: complete_users - Users ")
+                    if set(names).issubset(self.uptodate[user_all]):
+                        self.start_mp_job(user, node)
             except Exception as e:
                 self.log.debug("in samplercallback when assigning values " + str(e))
 
@@ -1504,7 +1488,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
 
         return (job_name, node, user, value)
     except Exception as e:
-        return ((job_name, node, user, e))
+        return job_name, node, user, e
 
 
 def sampler_job(job_name, user, node, code, globals, locals):
@@ -1533,7 +1517,7 @@ def sampler_job(job_name, user, node, code, globals, locals):
         data = (job_name, user, node, value, exception_variable, stats)
         return data
     except Exception as e:
-        return (job_name, user, node, e, "No Exception Variable", None)
+        return job_name, user, node, e, "No Exception Variable", None
 
 
 def mp_job(job_name, node, name, user, first_array, second_array):
