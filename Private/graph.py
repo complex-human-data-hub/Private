@@ -332,26 +332,6 @@ class Graph:
                 len(self.privacy_sampler_results[k])) + "\n"
         return res
 
-    def checkPrivacyUp(self, name):
-        if name not in self.unknown_privacy:
-            return self.get_privacy(name) == "public"
-        else:
-            probParents = self.probabilisticParents(name)
-            if len(probParents) == 0:
-                return False
-            else:
-                return all(self.checkPrivacyUp(parent) for parent in probParents)
-
-    def checkPrivacyDown(self, name):
-        if name not in self.unknown_privacy:
-            return self.get_privacy(name) == "public"
-        else:
-            probChildren = self.probabilisticChildren(name)
-            if len(probChildren) == 0:
-                return False
-            else:
-                return all(self.checkPrivacyDown(child) for child in probChildren)
-
     def compute_privacy(self, node, lock=True):
 
         if lock:
@@ -359,60 +339,42 @@ class Graph:
 
         # set all variables except builtins to unknown_privacy
         self.set_all_unknown(node)
-
-        self.compute_graph_privacy()
-        self.computeProbabilisticPrivacy(node)
-        self.compute_graph_privacy()
+        node_contains = [n for n in node[attr_contains] if not n.startswith(pd_key)]
+        for name in node_contains:
+            self.compute_graph_privacy(name)
+        self.compute_probabilistic_privacy(node)
+        for name in node_contains:
+            self.compute_graph_privacy(name)
         if lock:
             self.release()
 
-    def compute_graph_privacy(self):
+    def compute_graph_privacy(self, name):
+        """
+        Starting from the name, traverse the privacy graph
 
-        something_changed = True
+        :param name: String, name of the node. Note that privacy graph has raw nodes.
+        """
+        predecessors = [p for p in self.p_graph.predecessors(name) if not p.startswith(pd_key)]
+        if all([self.get_privacy(parent) == pt_public for parent in predecessors]):
+            new_privacy = pt_public
+        elif any([self.get_privacy(parent) == pt_private for parent in predecessors]):
+            new_privacy = pt_private
+        else:
+            new_privacy = pt_unknown
+        self.set_privacy(name, new_privacy)
 
-        while something_changed:
+        successors = [s for s in self.p_graph.successors(name) if not s.startswith(pd_key)]
+        for child in successors:
+            self.compute_graph_privacy(child)
 
-            something_changed = False
 
-            # tmpUnknownPrivacy = self.unknown_privacy.copy()
-
-            for name in self.deterministic | self.probabilistic:
-                # self.log.debug("Considering " + name)
-
-                oldPrivacy = self.get_privacy(name)
-
-                # if determinisitic children are all public set to public
-
-                if name in self.deterministic:
-                    if all(child in self.public for child in self.deterministicChildren(name)):
-                        self.set_privacy(name, "public")
-
-                # if name has a private deterministic child set to private
-
-                if any(child in self.private for child in self.deterministicChildren(name)):
-                    self.set_privacy(name, "private")
-
-                # check probabilistic variables to see if they are public because the variables above and below them are public
-
-                if name in self.probabilistic - self.deterministic:
-                    if self.checkPrivacyUp(name) and self.checkPrivacyDown(name):
-                        self.set_privacy(name, "public")
-
-                # determine if privacy changed
-
-                if self.get_privacy(name) != oldPrivacy:
-                    something_changed = True
-                    # self.log.debug("Something changed")
-                else:
-                    # self.log.debug("Nothing changed")
-                    pass
-
-    def computeProbabilisticPrivacy(self, node):
-
-        # check the privacySamplerResults to see if we can fill in variables
-        # only do this if we don't know the privacy already as we don't want to overwrite the values calculated directly from the graph
-        node_ts = node[attr_last_ts]
-        for name in self.deterministic | self.probabilistic:
+    def compute_probabilistic_privacy(self, i_node):
+        """
+        Check the privacy sampler results to see if we can fill in variables
+        We don't want to overwrite the values calculated directly from the graph, so we do this if privacy unknown only
+        :param i_node: node from inferential graph
+        """
+        for name in i_node[attr_contains]:
             if name in self.unknown_privacy:
                 if name in self.privacy_sampler_results:
                     self.set_privacy(name, self.get_privacy_sampler_result(name))
