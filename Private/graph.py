@@ -846,7 +846,7 @@ except Exception as e:
             self.acquire("compute")
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]
-        if not self.is_node_computable(user, n_id):
+        if n_id.startswith(pd_key) or not self.is_node_computable(user, n_id):
             if lock:
                 self.release()
             return
@@ -863,7 +863,6 @@ except Exception as e:
                                                              job_globals,
                                                              job_locals, resources={'process': 1})
                     self.jobs[job_name].add_done_callback(self.sampler_callback)
-                    print('started job ', job_name, node_ts)
             else:
                 success = self.reg_ts(compute_key, user, n_id, started_key, node_ts)
                 if success:
@@ -873,7 +872,6 @@ except Exception as e:
                                                              job_globals,
                                                              self.locals, user_func, self.project_id, self.shell_id)
                     self.jobs[job_name].add_done_callback(self.callback)
-                    print('started job ', job_name, node_ts)
         if lock:
             self.release()
 
@@ -896,7 +894,6 @@ except Exception as e:
                                                                     self.globals[user][name],
                                                                     self.globals["All"][name])
                             self.jobs[jobname].add_done_callback(self.mp_callback)
-                            print('started job ', jobname, node_ts)
 
     def callback(self, return_value):
         return_value = return_value.result()
@@ -904,7 +901,6 @@ except Exception as e:
         debug_logger("In callback")
         job_name, node, user, value = return_value
         name = node[attr_id]
-        print("at callback", user, name)
         node_ts = node[attr_last_ts]
         try:
             if isinstance(value, Exception):
@@ -954,7 +950,6 @@ except Exception as e:
         names = node[attr_contains]
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]
-        print('at sampler callback ', names, user, node_ts)
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -1039,9 +1034,7 @@ except Exception as e:
                 self.log.debug(
                     "mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(d < privacy_criterion))
                 if self.get_privacy_sampler_result(name) != 'private':
-                    print("d:", d)
                     if d > privacy_criterion:
-                        print(name, " marked as private")
                         self.privacy_sampler_results[name][user] = "private"
 
                         self.globals['All'][name] = self.globals['All'][name][::step_size][
@@ -1053,8 +1046,6 @@ except Exception as e:
                             d < privacy_criterion) + ": UNKNOWN_PRIVACY")
                         self.privacy_sampler_results[name][user] = "public"
 
-                    print(self.privacy_sampler_results[name])
-
                 if self.get_privacy_sampler_result(name) == 'public':
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
                     self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": PUBLIC")
@@ -1062,7 +1053,6 @@ except Exception as e:
 
             except Exception as e:
                 self.log.debug("manifold privacy " + str(e))
-                print("manifold privacy " + str(e))
 
         try:
             del self.jobs[jobname]
