@@ -2,7 +2,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import copy
-import hashlib
 import multiprocessing
 import reprlib
 import sys
@@ -13,36 +12,32 @@ import numpy
 import numpy.random
 from collections import OrderedDict, deque
 import logging
-import matplotlib.pyplot as plt
 import networkx as nx
 import graphviz as gv
 import Private.s3_helper
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, illegal_variable_names, data_builtins, setGlobals2
-#from Private.s3_reference import S3Reference
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
+    illegal_variable_names, setGlobals2
+
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
 import shutil
 import io
 import re
-import traceback
-import pprint
 import dill as pickle
 import os
 import base64
-import uuid
 import pymc3 as pm
 from dask.distributed import Client
 from datetime import datetime
 from ordered_set import OrderedSet
-from .config import ppservers, logfile, remote_socket_timeout, local_socket_timeout, numpy_seed, tcp_keepalive_time
+from .config import ppservers
 import json
-#logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
 numpy.set_printoptions(threshold=2000)
 
-PrivacyCriterion = 10.0   # percent
+privacy_criterion = 15.0   # percent
 display_precision = 3
 
 # inferential dependency graph keys
@@ -72,10 +67,10 @@ def debug_logger(msg):
         if not isinstance(msg, str):
             msg = json.dumps(msg, indent=4, default=str)
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg))
 
 
-def ppset(s):
+def pp_set(s):
     """
     Pretty print a set.
     """
@@ -84,7 +79,7 @@ def ppset(s):
     return " ".join(s)
 
 
-class graph:
+class Graph:
 
     def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True, user_ids=None):
 
@@ -111,35 +106,35 @@ class graph:
         self.shell_id = shell_id
         self.load_demo_events = load_demo_events
         if user_ids:
-            if not 'All' in user_ids:
+            if 'All' not in user_ids:
                 user_ids = ['All'] + user_ids
-            self.userids = OrderedSet(user_ids)
+            self.user_ids = OrderedSet(user_ids)
             self.globals = setGlobals2(user_ids)
         else:
             self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
                                       load_demo_events=self.load_demo_events)
-            self.userids = setUserIds(events=events)
+            self.user_ids = setUserIds(events=events)
 
         self.locals = {}  # do we need this?
-        self.stale = dict([(u, set()) for u in self.userids])
-        self.computing = dict([(u, set()) for u in self.userids])
-        self.exception = dict([(u, set()) for u in self.userids])
-        self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.userids])
-        self.samplerexception = dict([(u, {}) for u in self.userids])
+        self.stale = dict([(u, set()) for u in self.user_ids])
+        self.computing = dict([(u, set()) for u in self.user_ids])
+        self.exception = dict([(u, set()) for u in self.user_ids])
+        self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.user_ids])
+        self.samplerexception = dict([(u, {}) for u in self.user_ids])
 
         # variables related to privacy
 
         self.private = set()
         self.public = set()
         self.unknown_privacy = set()
-        self.privacy_sampler_results = {}  # this holds results from privacy samplers so we know the difference between when
+        self.privacy_sampler_results = {}
         # the privacy samplers haven't been run since last compute and when they have been run
 
         # code associated with variables
 
         self.code = OrderedDict()  # private code for deterministic variables
         self.probcode = OrderedDict()  # private code of probabilistic variables
-        self.evalcode = OrderedDict()  # python code for determinitisitc variables
+        self.evalcode = OrderedDict()  # python code for deterministic variables
         self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
         self.hierarchical = {}  # what is the index variable of this hierarchical variable
 
@@ -151,7 +146,6 @@ class graph:
 
         self.lock = multiprocessing.Lock()
         self.whohaslock = None
-        self.prettyprinter = pprint.PrettyPrinter()
         self.jobs = {}
         self.log = logging.getLogger("Private")
         self.last_server_connect = 0
@@ -195,27 +189,27 @@ class graph:
 
     def show_sets(self):
         result = ""
-        result += "deterministic: " + ppset(self.deterministic) + "\n"
-        result += "probabilistic: " + ppset(self.probabilistic) + "\n"
-        result += "builtin: " + ppset(self.builtins) + "\n"
+        result += "deterministic: " + pp_set(self.deterministic) + "\n"
+        result += "probabilistic: " + pp_set(self.probabilistic) + "\n"
+        result += "builtin: " + pp_set(self.builtins) + "\n"
         result += "\n"
-        result += "uptodate: " + ppset(self.uptodate["All"]) + "\n"
-        result += "computing: " + ppset(self.computing["All"]) + "\n"
-        result += "exception: " + ppset(self.exception["All"]) + "\n"
-        result += "stale: " + ppset(self.stale["All"]) + "\n"
+        result += "uptodate: " + pp_set(self.uptodate["All"]) + "\n"
+        result += "computing: " + pp_set(self.computing["All"]) + "\n"
+        result += "exception: " + pp_set(self.exception["All"]) + "\n"
+        result += "stale: " + pp_set(self.stale["All"]) + "\n"
         result += "\n"
-        result += "private: " + ppset(self.private) + "\n"
-        result += "public: " + ppset(self.public) + "\n"
-        result += "unknown_privacy: " + ppset(self.unknown_privacy) + "\n"
+        result += "private: " + pp_set(self.private) + "\n"
+        result += "public: " + pp_set(self.public) + "\n"
+        result += "unknown_privacy: " + pp_set(self.unknown_privacy) + "\n"
         result += "\n"
-        result += "locals: " + ppset(self.locals.keys()) + "\n"
-        result += "globals: " + ppset(self.globals["All"].keys()) + "\n"
+        result += "locals: " + pp_set(self.locals.keys()) + "\n"
+        result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
         return result
 
     def showGlobals(self):
         result = ""
         result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
-        for user in self.userids:
+        for user in self.user_ids:
             result += user + ": " + str(self.globals[user].get("r", "Not here")) + "\n"
         return result
 
@@ -705,7 +699,7 @@ class graph:
                 return 'private'
             elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
                 public_count += 1
-        if public_count == len(self.userids) - 1:
+        if public_count == len(self.user_ids) - 1:
             return 'public'
         else:
             return 'unknown_privacy'
@@ -774,14 +768,14 @@ class graph:
             self.add_to_inf_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
         for n in node[attr_contains]:
-            for user in self.userids:
+            for user in self.user_ids:
                 self.changeState(user, n, "stale")
         # set the timestamp for node define
         node[attr_last_ts] = int(time.time() * 1000)
         # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute_privacy(node, lock=False)
         if name not in self.public:
-            for user in self.userids:
+            for user in self.user_ids:
                 self.start_computation(user, node, lock=False)
         else:
             self.start_computation(user_all, node, lock=False)
@@ -804,14 +798,14 @@ class graph:
         self.code[name] = "User Function"
         self.evalcode[name] = evalcode
         self.dependson[name] = dependson.difference(defines).difference(arguments)
-        for user in self.userids:
+        for user in self.user_ids:
             self.changeState(user, name, "stale")
         self.release()
         node = self.i_graph.nodes[name]
         self.compute_privacy(
             node)  # need computePrivacy before compute so we don't compute public variables for each participant
         if name not in self.public:
-            for user in self.userids:
+            for user in self.user_ids:
                 self.start_computation(user, node)
         else:
             self.start_computation(user_all, node)
@@ -821,7 +815,7 @@ class graph:
         self.acquire("delete " + name)
         if name in self.probabilistic | self.deterministic:
 
-            for user in self.userids:
+            for user in self.user_ids:
                 self.changeState(user, name, "stale")
                 self.globals[user].pop(name, None)
                 self.stale[user].discard(name)
@@ -1009,6 +1003,7 @@ except Exception as e:
                                                              job_globals,
                                                              self.locals, user_func, self.project_id, self.shell_id)
                     self.jobs[job_name].add_done_callback(self.callback)
+                    print('started job ', job_name, node_ts)
         if lock:
             self.release()
 
@@ -1018,6 +1013,7 @@ except Exception as e:
         debug_logger("In callback")
         job_name, node, user, value = return_value
         name = node[attr_id]
+        print("at callback", user, name)
         node_ts = node[attr_last_ts]
         try:
             if isinstance(value, Exception):
@@ -1104,7 +1100,7 @@ except Exception as e:
                 self.log.debug("samplercallback: name in names ...done ")
                 self.reg_ts(sampler_key, user, n_id, completed_key, node_ts)
 
-                complete_users = [u for u in self.userids if u != "All" and set(names).issubset(self.uptodate[u])]
+                complete_users = [u for u in self.user_ids if u != "All" and set(names).issubset(self.uptodate[u])]
 
                 if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
                     if stats:
@@ -1187,20 +1183,20 @@ except Exception as e:
         if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
                 self.log.debug(
-                    "manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < PrivacyCriterion))
+                    "manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(d < privacy_criterion))
                 if self.get_privacy_sampler_result(name) != 'private':
                     print("d:", d)
-                    if d > PrivacyCriterion:
+                    if d > privacy_criterion:
                         print(name, " marked as private")
                         self.privacy_sampler_results[name][user] = "private"
 
                         self.globals['All'][name] = self.globals['All'][name][::step_size][
                                                     :Private.config.max_sample_size]  ##
                         self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(
-                            d < PrivacyCriterion) + ": PRIVATE")
+                            d < privacy_criterion) + ": PRIVATE")
                     else:
                         self.log.debug("manifoldprivacycallback: " + user + ": " + name + ": " + str(d) + " " + str(
-                            d < PrivacyCriterion) + ": UNKNOWN_PRIVACY")
+                            d < privacy_criterion) + ": UNKNOWN_PRIVACY")
                         self.privacy_sampler_results[name][user] = "public"
 
                     print(self.privacy_sampler_results[name])
@@ -1388,7 +1384,7 @@ except Exception as e:
     def init_ts(self):
         for job_type in [compute_key, sampler_key, manifold_key]:
             self.ts[job_type] = {}
-            for user in self.userids:
+            for user in self.user_ids:
                 self.ts[job_type][user] = {}
 
     def reg_ts(self, job_key, user, n_id, ts_key, ts):
