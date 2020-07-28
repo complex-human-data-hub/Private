@@ -211,10 +211,10 @@ class Graph:
             unsatisfied_depends = []
             for name in self.code.keys():
                 unsatisfied_depends.append(
-                    ", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+                    ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
             for name in self.probcode.keys():
                 unsatisfied_depends.append(
-                    ", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+                    ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
             return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
                              codebit, valuebit, commentbit, unsatisfied_depend in
                              zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
@@ -257,7 +257,7 @@ class Graph:
         result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
         return result
 
-    def showGlobals(self):
+    def show_globals(self):
         result = ""
         result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
         for user in self.user_ids:
@@ -320,12 +320,7 @@ class Graph:
         self.release()
         return result
 
-    def showPrivacy(self):
-        res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(
-            self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
-        return res
-
-    def showSamplerResults(self):
+    def show_sampler_results(self):
         res = str(len(self.privacy_sampler_results)) + " results\n"
         for k in self.privacy_sampler_results.keys():
             res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(
@@ -366,7 +361,6 @@ class Graph:
         successors = [s for s in self.p_graph.successors(name) if not s.startswith(pd_key)]
         for child in successors:
             self.compute_graph_privacy(child)
-
 
     def compute_probabilistic_privacy(self, i_node):
         """
@@ -579,26 +573,29 @@ class Graph:
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
         enter = OrderedSet(sorted(list(enter)))
-        GRAY, BLACK = 0, 1
+        gray, black = 0, 1
 
         def dfs(node):
-            state[node] = GRAY
+            state[node] = gray
             for k in sorted(list(self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
                 sk = state.get(k, None)
                 try:
-                    if sk == GRAY: raise ValueError("cycle")
-                except Exception as e:
+                    if sk == gray:
+                        raise ValueError("cycle")
+                except Exception:
                     _log.debug("topological_sort GREY")
                     _log.debug(self.dependson.get(node))
                     _log.debug(self.probdependson.get(node))
                     raise ValueError("cycle 2")
-                if sk == BLACK: continue
+                if sk == black:
+                    continue
                 enter.discard(k)
                 dfs(k)
             order.appendleft(node)
-            state[node] = BLACK
+            state[node] = black
 
-        while enter: dfs(enter.pop())
+        while enter:
+            dfs(enter.pop())
         result = [name for name in order if name in self.probabilistic - self.deterministic]
         result.reverse()
         return result
@@ -705,7 +702,7 @@ class Graph:
                 raise Exception("Exception: Cyclic Dependency Found, " + name)
         self.deterministic.add(name)
         self.functions.add(name)
-        self.code[name] = "User Function"
+        self.code[name] = code
         self.evalcode[name] = evalcode
         self.dependson[name] = dependson.difference(defines).difference(arguments)
         self.add_to_inf_graph(name, dependson, {}, False)

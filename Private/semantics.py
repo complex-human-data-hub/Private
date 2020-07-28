@@ -287,10 +287,10 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.construct_pymc3_code()[1])
     def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler("All", verbose=True))
     #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", self.depGraph.showSamplerChains())
-    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.showSamplerResults())
+    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.show_sampler_results())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(self.depGraph.server.get_stats()['local']))
     def visit_show_sets(self, node, children):                return result("show_sets", self.depGraph.show_sets())
-    def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.showGlobals())
+    def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.show_globals())
     def visit_show_jobs(self, node, children):                return result("show_jobs", self.depGraph.show_jobs())
     def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", self.depGraph.variablesToBeCalculated())
     def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", self.depGraph.variablesToBeSampled())
@@ -383,7 +383,7 @@ help: this message
                 if c.result_type == "function_return":
                     code += '\t' + c.code
                     evalcode += '\t' + c.evalcode
-            self.depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
+            self.depGraph.define_function(func_name, "User Function", evalcode, depends, defines, set(children[0].depend))
             return
 
     def visit_code_block(self, node, children):
