@@ -90,7 +90,7 @@ class graph:
 
         # variable types
         if not shell_id:
-            shell_id='shell1'
+            shell_id = 'shell1'
         # clear the cache for the shell
         redis_helper.delete_user_keys(project_id, shell_id)
 
@@ -101,8 +101,8 @@ class graph:
 
         # dependencies
 
-        self.dependson = {} # deterministic dependencies
-        self.probdependson = {} # probabilistic dependencies
+        self.dependson = {}  # deterministic dependencies
+        self.probdependson = {}  # probabilistic dependencies
 
         # variables related to values
         if events and type(events) == RedisReference:
@@ -116,13 +116,14 @@ class graph:
             self.userids = OrderedSet(user_ids)
             self.globals = setGlobals2(user_ids)
         else:
-            self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id, load_demo_events=self.load_demo_events)
+            self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
+                                      load_demo_events=self.load_demo_events)
             self.userids = setUserIds(events=events)
 
-        self.locals = {}   # do we need this?
-        self.stale = dict([(u, set() ) for u in self.userids])
-        self.computing = dict([(u, set() ) for u in self.userids])
-        self.exception = dict([(u, set() ) for u in self.userids])
+        self.locals = {}  # do we need this?
+        self.stale = dict([(u, set()) for u in self.userids])
+        self.computing = dict([(u, set()) for u in self.userids])
+        self.exception = dict([(u, set()) for u in self.userids])
         self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.userids])
         self.samplerexception = dict([(u, {}) for u in self.userids])
 
@@ -131,16 +132,16 @@ class graph:
         self.private = set()
         self.public = set()
         self.unknown_privacy = set()
-        self.privacy_sampler_results = {} # this holds results from privacy samplers so we know the difference between when
-                                        # the privacy samplers haven't been run since last compute and when they have been run
+        self.privacy_sampler_results = {}  # this holds results from privacy samplers so we know the difference between when
+        # the privacy samplers haven't been run since last compute and when they have been run
 
         # code associated with variables
 
-        self.code = OrderedDict()   # private code for deterministic variables
-        self.probcode = OrderedDict() # private code of probabilistic variables
-        self.evalcode = OrderedDict() # python code for determinitisitc variables
-        self.pyMC3code = OrderedDict() # pyMC3 code for probabilistic variables
-        self.hierarchical = {} # what is the index variable of this hierarchical variable
+        self.code = OrderedDict()  # private code for deterministic variables
+        self.probcode = OrderedDict()  # private code of probabilistic variables
+        self.evalcode = OrderedDict()  # python code for determinitisitc variables
+        self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
+        self.hierarchical = {}  # what is the index variable of this hierarchical variable
 
         # comments
 
@@ -167,12 +168,13 @@ class graph:
 
         self.SamplerParameterUpdated = False
 
-        setBuiltinPrivacy(self) # set privacy of builtins
+        setBuiltinPrivacy(self)  # set privacy of builtins
 
         if user_ids:
             self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"])
             if self.load_demo_events:
-                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)", dependson=["getDemoEvents"])
+                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)",
+                            dependson=["getDemoEvents"])
 
     def check_dask_connection(self):
 
@@ -193,28 +195,28 @@ class graph:
 
     def show_sets(self):
         result = ""
-        result += "deterministic: "+ ppset(self.deterministic) + "\n"
-        result += "probabilistic: "+ ppset(self.probabilistic) + "\n"
-        result += "builtin: "+ ppset(self.builtins) + "\n"
+        result += "deterministic: " + ppset(self.deterministic) + "\n"
+        result += "probabilistic: " + ppset(self.probabilistic) + "\n"
+        result += "builtin: " + ppset(self.builtins) + "\n"
         result += "\n"
-        result += "uptodate: "+ ppset(self.uptodate["All"]) + "\n"
-        result += "computing: "+ ppset(self.computing["All"]) + "\n"
-        result += "exception: "+ ppset(self.exception["All"]) + "\n"
-        result += "stale: "+ ppset(self.stale["All"]) + "\n"
+        result += "uptodate: " + ppset(self.uptodate["All"]) + "\n"
+        result += "computing: " + ppset(self.computing["All"]) + "\n"
+        result += "exception: " + ppset(self.exception["All"]) + "\n"
+        result += "stale: " + ppset(self.stale["All"]) + "\n"
         result += "\n"
-        result += "private: "+ ppset(self.private) + "\n"
-        result += "public: "+ ppset(self.public) + "\n"
-        result += "unknown_privacy: "+ ppset(self.unknown_privacy) + "\n"
+        result += "private: " + ppset(self.private) + "\n"
+        result += "public: " + ppset(self.public) + "\n"
+        result += "unknown_privacy: " + ppset(self.unknown_privacy) + "\n"
         result += "\n"
-        result += "locals: "+ ppset(self.locals.keys()) + "\n"
-        result += "globals: "+ ppset(self.globals["All"].keys()) + "\n"
+        result += "locals: " + ppset(self.locals.keys()) + "\n"
+        result += "globals: " + ppset(self.globals["All"].keys()) + "\n"
         return result
 
     def showGlobals(self):
         result = ""
-        result += "All: "+ str(self.globals["All"].get("r", "Not here")) + "\n"
+        result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
         for user in self.userids:
-            result += user + ": "+ str(self.globals[user].get("r", "Not here")) + "\n"
+            result += user + ": " + str(self.globals[user].get("r", "Not here")) + "\n"
         return result
 
     def show_jobs(self):
@@ -282,13 +284,15 @@ class graph:
                 print("Pickle error with: ", key)
 
     def showPrivacy(self):
-        res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
+        res = "Private: " + " ".join(self.private - self.builtins) + " Public: " + " ".join(
+            self.public - self.builtins) + " Unknown: " + " ".join(self.unknown_privacy - self.builtins)
         return res
 
     def showSamplerResults(self):
         res = str(len(self.privacy_sampler_results)) + " results\n"
         for k in self.privacy_sampler_results.keys():
-            res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(len(self.privacy_sampler_results[k])) + "\n"
+            res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(
+                len(self.privacy_sampler_results[k])) + "\n"
         return res
 
     def checkPrivacyUp(self, name):
@@ -333,10 +337,10 @@ class graph:
 
             something_changed = False
 
-            #tmpUnknownPrivacy = self.unknown_privacy.copy()
+            # tmpUnknownPrivacy = self.unknown_privacy.copy()
 
             for name in self.deterministic | self.probabilistic:
-                #self.log.debug("Considering " + name)
+                # self.log.debug("Considering " + name)
 
                 oldPrivacy = self.getPrivacy(name)
 
@@ -361,9 +365,9 @@ class graph:
 
                 if self.getPrivacy(name) != oldPrivacy:
                     something_changed = True
-                    #self.log.debug("Something changed")
+                    # self.log.debug("Something changed")
                 else:
-                    #self.log.debug("Nothing changed")
+                    # self.log.debug("Nothing changed")
                     pass
 
     def computeProbabilisticPrivacy(self, node):
@@ -373,8 +377,8 @@ class graph:
         node_ts = node[attr_last_ts]
         for name in self.deterministic | self.probabilistic:
             if name in self.unknown_privacy:
-                #self.log.debug( "looking at privacySamplerResults: " + name)
-                #self.log.debug( "unknown: " + str(self.unknown_privacy))
+                # self.log.debug( "looking at privacySamplerResults: " + name)
+                # self.log.debug( "unknown: " + str(self.unknown_privacy))
                 if name in self.privacy_sampler_results:
                     self.setPrivacy(name, self.get_privacy_sampler_result(name))
 
@@ -384,23 +388,24 @@ class graph:
         self.computing[user].discard(name)
         self.exception[user].discard(name)
         self.stale[user].discard(name)
-        if newstate == "uptodate":   # whenever a variable changes to be uptodate the privacy could have changed
+        if newstate == "uptodate":  # whenever a variable changes to be uptodate the privacy could have changed
             self.uptodate[user].add(name)
-        elif newstate == "computing": # when a variable changes to be computing its privacy is unknown
+        elif newstate == "computing":  # when a variable changes to be computing its privacy is unknown
             self.computing[user].add(name)
-        elif newstate == "exception": # when a variable changes to be exception its privacy is unknown
+        elif newstate == "exception":  # when a variable changes to be exception its privacy is unknown
             self.exception[user].add(name)
-        elif newstate == "stale": # when a variable changes to be stale its privacy is unknown
+        elif newstate == "stale":  # when a variable changes to be stale its privacy is unknown
             self.stale[user].add(name)
             # check dependencies to see if other variables need to be made stale
-            #print name, self.deterministicParents(name)
-            for parent in self.deterministicParents(name): # parents via deterministic links
+            # print name, self.deterministicParents(name)
+            for parent in self.deterministicParents(name):  # parents via deterministic links
                 # print name, " det ", self.deterministicParents(name)
                 if parent not in self.stale[user]:
                     self.changeState(user, parent, "stale")
-            for child in self.probabilisticChildren(name): # children via probabilistic links
+            for child in self.probabilisticChildren(name):  # children via probabilistic links
                 # print name, " prob ", self.probabilisticChildren(name)
-                if child not in self.stale[user] and child not in self.builtins and child not in (self.deterministic & self.uptodate[user]):
+                if child not in self.stale[user] and child not in self.builtins and child not in (
+                        self.deterministic & self.uptodate[user]):
                     self.changeState(user, child, "stale")
         else:
             raise Exception("Exception: " + "Unknown state %s in changeState" % newstate)
@@ -464,111 +469,7 @@ class graph:
                 if self.check_cyclic_dependencies(name, dependent_dependents):
                     return True
 
-    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None):
-        self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-        if name in prob_builtins | illegal_variable_names:
-            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
-        self.acquire("define " + name)
-        if not dependson:
-            dependson = []
-        else:
-            if self.check_cyclic_dependencies(name, set(dependson)):
-                self.release()
-                raise Exception("Exception: Cyclic Dependency Found, " + name)
-
-        if prob:
-            self.probabilistic.add(name)
-            self.probcode[name] = code
-            self.pyMC3code[name] = pyMC3code
-            if dependson:
-                self.probdependson[name] = set(dependson)
-            if hier:
-                self.hierarchical[name] = hier
-        else:
-            self.deterministic.add(name)
-            self.code[name] = code
-            self.evalcode[name] = evalcode
-            self.dependson[name] = set(dependson)
-        if name not in {'Events', 'DemoEvents'}:
-            self.add_to_inf_graph(name, dependson, hier, prob)
-        node = self.get_node(name, prob)
-        for n in node[attr_contains]:
-            for user in self.userids:
-                self.changeState(user, n, "stale")
-        # set the timestamp for node define
-        node[attr_last_ts] = int(time.time() * 1000)
-        # need computePrivacy before compute so we don't compute public variables for each participant
-        self.compute_privacy(node, lock=False)
-        if name not in self.public:
-            for user in self.userids:
-                self.start_computation(user, node, lock=False)
-        else:
-            self.start_computation(user_all, node, lock=False)
-        self.release()
-
-        self.compute_privacy(node) # every definition could change the privacy assignments
-
-    def define_function(self, name, code, evalcode, dependson, defines, arguments):
-        if name in prob_builtins | illegal_variable_names:
-            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
-        self.acquire("define " + name)
-        if not dependson:
-            dependson = set()
-        else:
-            if self.check_cyclic_dependencies(name, dependson):
-                self.release()
-                raise Exception("Exception: Cyclic Dependency Found, " + name)
-        self.deterministic.add(name)
-        self.functions.add(name)
-        self.code[name] = "User Function"
-        self.evalcode[name] = evalcode
-        self.dependson[name] = dependson.difference(defines).difference(arguments)
-        for user in self.userids:
-            self.changeState(user, name, "stale")
-        self.release()
-        node = self.i_graph.nodes[name]
-        self.compute_privacy(node)  # need computePrivacy before compute so we don't compute public variables for each participant
-        if name not in self.public:
-            for user in self.userids:
-                self.start_computation(user, node)
-        else:
-            self.start_computation(user_all, node)
-        self.compute_privacy(node)
-
-    def delete(self, name):
-        self.acquire("delete "+name)
-        if name in self.probabilistic | self.deterministic:
-
-            for user in self.userids:
-                self.changeState(user, name, "stale")
-                self.globals[user].pop(name, None)
-
-            self.deterministic.discard(name)
-            self.probabilistic.discard(name)
-            self.stale[user].discard(name)
-            self.private.discard(name)
-            self.public.discard(name)
-            self.unknown_privacy.discard(name)
-            #self.computing_privacy.discard(name)
-
-            self.code.pop(name, None)
-            self.probcode.pop(name, None)
-            self.pyMC3code.pop(name, None)
-            self.hierarchical.pop(name, None)
-
-            self.dependson.pop(name, None)
-            self.probdependson.pop(name, None)
-            self.comment.pop(name, None)
-            self.del_from_inf_graph(name)
-            res = ""
-        else:
-            res = name + " not found."
-
-        self.release()
-        # self.compute_privacy(self.get_sub_graphs(name)) # every delete could change the privacy assignments
-        return res
-
-    def getValue(self, name, longFormat = False):
+    def getValue(self, name, longFormat=False):
         res = ""
         formatter_string = "%%.%sf" % display_precision
         if name in self.deterministic | self.probabilistic:
@@ -582,13 +483,13 @@ class graph:
                 res += "Private"
             elif name in self.unknown_privacy:
                 if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
-                 'All'].get(name) == "Not retained.":
+                    'All'].get(name) == "Not retained.":
                     res += "Not retained."
                 else:
                     res += "Privacy Unknown"
             elif name in self.uptodate["All"]:
-                if type(self.globals["All"][name]) == io.BytesIO:   # write image to file
-                #res += reprlib.repr(self.globals["All"][name])
+                if type(self.globals["All"][name]) == io.BytesIO:  # write image to file
+                    # res += reprlib.repr(self.globals["All"][name])
                     res += "[PNG Image]"
                 elif type(self.globals["All"][name]) == RedisReference:
                     res += self.globals["All"][name].display_value
@@ -650,10 +551,14 @@ class graph:
                 commentbits.append(self.comment.get(name, ""))
             unsatisfied_depends = []
             for name in self.code.keys():
-                unsatisfied_depends.append(", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+                unsatisfied_depends.append(
+                    ", ".join(self.dependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
             for name in self.probcode.keys():
-                unsatisfied_depends.append(", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
-            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for codebit, valuebit, commentbit, unsatisfied_depend in zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
+                unsatisfied_depends.append(
+                    ", ".join(self.probdependson[name] - ((self.deterministic | self.probabilistic | self.builtins))))
+            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
+                             codebit, valuebit, commentbit, unsatisfied_depend in
+                             zip(newcodebits, valuebits, commentbits, unsatisfied_depends))
         else:
             return ""
 
@@ -740,7 +645,7 @@ class graph:
             if parent in self.dependson:
                 if name in self.dependson[parent]:
                     parents.add(parent)
-        return(parents)
+        return (parents)
 
     def probabilisticParents(self, name):
         parents = set([])
@@ -748,7 +653,7 @@ class graph:
             if parent in self.probdependson:
                 if name in self.probdependson[parent]:
                     parents.add(parent)
-        return(parents)
+        return (parents)
 
     def getChildren(self, name):
         return self.dependson.get(name, set([])) | self.probdependson.get(name, set([]))
@@ -761,18 +666,18 @@ class graph:
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
-        enter = OrderedSet( sorted(list(enter)) )
+        enter = OrderedSet(sorted(list(enter)))
         GRAY, BLACK = 0, 1
 
         def dfs(node):
             state[node] = GRAY
-            for k in sorted( list( self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
+            for k in sorted(list(self.dependson.get(node, set()) | self.probdependson.get(node, set()))):
                 sk = state.get(k, None)
                 try:
                     if sk == GRAY: raise ValueError("cycle")
                 except Exception as e:
                     _log.debug("topological_sort GREY")
-                    _log.debug(self.dependson.get(node ))
+                    _log.debug(self.dependson.get(node))
                     _log.debug(self.probdependson.get(node))
                     raise ValueError("cycle 2")
                 if sk == BLACK: continue
@@ -782,7 +687,7 @@ class graph:
             state[node] = BLACK
 
         while enter: dfs(enter.pop())
-        result =  [name for name in order if name in self.probabilistic - self.deterministic]
+        result = [name for name in order if name in self.probabilistic - self.deterministic]
         result.reverse()
         return result
 
@@ -840,6 +745,109 @@ class graph:
         return final_set
 
     # Core functions
+    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None):
+        self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
+        if name in prob_builtins | illegal_variable_names:
+            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+        self.acquire("define " + name)
+        if not dependson:
+            dependson = []
+        else:
+            if self.check_cyclic_dependencies(name, set(dependson)):
+                self.release()
+                raise Exception("Exception: Cyclic Dependency Found, " + name)
+
+        if prob:
+            self.probabilistic.add(name)
+            self.probcode[name] = code
+            self.pyMC3code[name] = pyMC3code
+            if dependson:
+                self.probdependson[name] = set(dependson)
+            if hier:
+                self.hierarchical[name] = hier
+        else:
+            self.deterministic.add(name)
+            self.code[name] = code
+            self.evalcode[name] = evalcode
+            self.dependson[name] = set(dependson)
+        if name not in {'Events', 'DemoEvents'}:
+            self.add_to_inf_graph(name, dependson, hier, prob)
+        node = self.get_node(name, prob)
+        for n in node[attr_contains]:
+            for user in self.userids:
+                self.changeState(user, n, "stale")
+        # set the timestamp for node define
+        node[attr_last_ts] = int(time.time() * 1000)
+        # need computePrivacy before compute so we don't compute public variables for each participant
+        self.compute_privacy(node, lock=False)
+        if name not in self.public:
+            for user in self.userids:
+                self.start_computation(user, node, lock=False)
+        else:
+            self.start_computation(user_all, node, lock=False)
+        self.release()
+
+        self.compute_privacy(node)  # every definition could change the privacy assignments
+
+    def define_function(self, name, code, evalcode, dependson, defines, arguments):
+        if name in prob_builtins | illegal_variable_names:
+            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+        self.acquire("define " + name)
+        if not dependson:
+            dependson = set()
+        else:
+            if self.check_cyclic_dependencies(name, dependson):
+                self.release()
+                raise Exception("Exception: Cyclic Dependency Found, " + name)
+        self.deterministic.add(name)
+        self.functions.add(name)
+        self.code[name] = "User Function"
+        self.evalcode[name] = evalcode
+        self.dependson[name] = dependson.difference(defines).difference(arguments)
+        for user in self.userids:
+            self.changeState(user, name, "stale")
+        self.release()
+        node = self.i_graph.nodes[name]
+        self.compute_privacy(
+            node)  # need computePrivacy before compute so we don't compute public variables for each participant
+        if name not in self.public:
+            for user in self.userids:
+                self.start_computation(user, node)
+        else:
+            self.start_computation(user_all, node)
+        self.compute_privacy(node)
+
+    def delete(self, name):
+        self.acquire("delete " + name)
+        if name in self.probabilistic | self.deterministic:
+
+            for user in self.userids:
+                self.changeState(user, name, "stale")
+                self.globals[user].pop(name, None)
+                self.stale[user].discard(name)
+
+            self.deterministic.discard(name)
+            self.probabilistic.discard(name)
+            self.private.discard(name)
+            self.public.discard(name)
+            self.unknown_privacy.discard(name)
+
+            self.code.pop(name, None)
+            self.probcode.pop(name, None)
+            self.pyMC3code.pop(name, None)
+            self.hierarchical.pop(name, None)
+
+            self.dependson.pop(name, None)
+            self.probdependson.pop(name, None)
+            self.comment.pop(name, None)
+            self.del_from_inf_graph(name)
+            res = ""
+        else:
+            res = name + " not found."
+
+        self.release()
+        # self.compute_privacy(self.get_sub_graphs(name)) # every delete could change the privacy assignments
+        return res
 
     def construct_pymc3_code(self, node, user=None):
         #try:
@@ -987,7 +995,8 @@ except Exception as e:
                     job_name = "Sampler:  " + user + ", " + str(node[attr_label])
                     job_locals, sampler_code = self.construct_pymc3_code(node, user)
                     self.reset_privacy_results(node, user)
-                    self.jobs[job_name] = self.server.submit(sampler_job, job_name, user, node, sampler_code, job_globals,
+                    self.jobs[job_name] = self.server.submit(sampler_job, job_name, user, node, sampler_code,
+                                                             job_globals,
                                                              job_locals, resources={'process': 1})
                     self.jobs[job_name].add_done_callback(self.sampler_callback)
                     print('started job ', job_name, node_ts)
@@ -996,7 +1005,8 @@ except Exception as e:
                 if success:
                     job_name = "Compute:  " + user + " " + n_id
                     user_func = [self.evalcode[func_name] for func_name in self.functions]
-                    self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.evalcode[n_id], job_globals,
+                    self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.evalcode[n_id],
+                                                             job_globals,
                                                              self.locals, user_func, self.project_id, self.shell_id)
                     self.jobs[job_name].add_done_callback(self.callback)
         if lock:
@@ -1288,7 +1298,13 @@ except Exception as e:
         Delete a node from the inferential graph (i_graph), **Yet to implement
         :param name: String, name of the node
         """
-        return
+        self.raw_graph.remove_node(name)
+
+        # update i_graph and p_graph
+        self.i_graph = self.modified_inferential_graph()
+        self.p_graph = self.modified_privacy_graph()
+
+        return name
 
     def modified_inferential_graph(self):
         """
@@ -1320,7 +1336,6 @@ except Exception as e:
                     node_label = node_0 + ', ' + node_1
                     sub_graph.extend(node_0_graph)
                     sub_graph.extend(node_1_graph)
-
 
                 i_graph = nx.contracted_edge(i_graph, e, self_loops=False)
                 i_graph.nodes[e[0]][attr_label] = node_label
@@ -1478,7 +1493,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
     s3_var_globals = retrieve_s3_vars(globals)
     for func in user_func:
         try:
-            exec (func, s3_var_globals)
+            exec(func, s3_var_globals)
         except Exception as e:
             e = Exception("Error in User Function: " + func[4:10] + "...")
             return ((job_name, name, user, e))
@@ -1488,19 +1503,19 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
         else:
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
-        #if True:
+            # if True:
             value = RedisReference(redis_key, value)
 
         return (job_name, node, user, value)
     except Exception as e:
-        return((job_name, node, user, e))
+        return ((job_name, node, user, e))
 
 
 def sampler_job(job_name, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_s3_vars(globals)
-        exec (code, s3vars, locals)
+        exec(code, s3vars, locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
         if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
@@ -1525,13 +1540,15 @@ def sampler_job(job_name, user, node, code, globals, locals):
         return (job_name, user, node, e, "No Exception Variable", None)
 
 
-def mp_job(jobname, node, name, user, firstarray, secondarray):
+def mp_job(job_name, node, name, user, first_array, second_array):
     from Private.manifoldprivacy import distManifold
-    debug_logger("manifoldprivacyjob : {} [{}] Shape sminus: {} \nSall {}".format(name, user, firstarray.shape, secondarray.shape) )
-    debug_logger("manifoldprivacyjob : {} [{}] Sum sminus: {} \nSall {}".format(name, user, firstarray.sum(), secondarray.sum()) )
+    debug_logger("mp_job : {} [{}] Shape user: {} \nall {}".format(name, user, first_array.shape,
+                                                                   second_array.shape))
+    debug_logger(
+        "mp_job : {} [{}] Sum user: {} \nall {}".format(name, user, first_array.sum(), second_array.sum()))
 
-    d = distManifold(firstarray, secondarray) * 100.
-    return jobname, node, name, user, d
+    d = distManifold(first_array, second_array) * 100.
+    return job_name, node, name, user, d
 
 
 def get_size(obj, seen=None):
