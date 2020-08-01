@@ -472,40 +472,40 @@ class Graph:
         return "\n".join(value_bits)
 
     def show_code(self):
-        codebits = []
+        code_bits = []
         for name in self.code.keys():
             if name in self.functions:
-                codebits.append(self.evalcode[name].replace("\t", "    "))
+                code_bits.append(self.evalcode[name].replace("\t", "    "))
             else:
-                codebits.append(name + " = " + str(self.code[name]))
+                code_bits.append(name + " = " + str(self.code[name]))
         for name in self.probcode.keys():
             if name in self.hierarchical:
-                codebits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
             else:
-                codebits.append(name + " ~ " + str(self.probcode[name]))
-        if len(codebits) > 0:
-            commentbits = []
+                code_bits.append(name + " ~ " + str(self.probcode[name]))
+        if len(code_bits) > 0:
+            comment_bits = []
             for name in self.code.keys():
-                commentbits.append(self.comment.get(name, ""))
+                comment_bits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
-                commentbits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([codebit, commentbit]) for codebit, commentbit in zip(codebits, commentbits))
+                comment_bits.append(self.comment.get(name, ""))
+            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
         else:
             return ""
 
     def show_eval_code(self):
-        codebits = []
+        code_bits = []
         for name in self.code.keys():
-            codebits.append(name + " = " + str(self.evalcode[name]))
+            code_bits.append(name + " = " + str(self.evalcode[name]))
         for name in self.probcode.keys():
-            codebits.append(name + " ~ " + str(self.pyMC3code[name]))
-        if len(codebits) > 0:
-            commentbits = []
+            code_bits.append(name + " ~ " + str(self.pyMC3code[name]))
+        if len(code_bits) > 0:
+            comment_bits = []
             for name in self.code.keys():
-                commentbits.append(self.comment.get(name, ""))
+                comment_bits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
-                commentbits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([codebit, commentbit]) for codebit, commentbit in zip(codebits, commentbits))
+                comment_bits.append(self.comment.get(name, ""))
+            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
         else:
             return ""
 
