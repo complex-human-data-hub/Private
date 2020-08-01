@@ -460,16 +460,16 @@ class Graph:
         return res
 
     def show_values(self):
-        valuewidth = 120
-        valuebits = []
+        value_width = 120
+        value_bits = []
         for name in self.code.keys():
-            valuebits.append(name + " = " + self.get_value(name)[0:valuewidth])
+            value_bits.append(name + " = " + self.get_value(name)[0:value_width])
         for name in self.probcode.keys():
             if name in self.samplerexception:
-                valuebits.append(name + " ~ " + self.samplerexception[name])
+                value_bits.append(name + " ~ " + self.samplerexception[name])
             else:
-                valuebits.append(name + " ~ " + self.get_value(name)[0:valuewidth])
-        return "\n".join(valuebits)
+                value_bits.append(name + " ~ " + self.get_value(name)[0:value_width])
+        return "\n".join(value_bits)
 
     def show_code(self):
         codebits = []
