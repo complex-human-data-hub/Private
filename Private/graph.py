@@ -321,13 +321,11 @@ class Graph:
         :param name: String, name of the node. Note that privacy graph has raw nodes.
         """
         predecessors = [p for p in self.p_graph.predecessors(name) if not p.startswith(pd_key)]
+        is_prob = self.p_graph.nodes[name][attr_is_prob]
         if all([self.get_privacy(parent) == pt_public for parent in predecessors]):
-            new_privacy = pt_public
-        elif any([self.get_privacy(parent) == pt_private for parent in predecessors]):
-            new_privacy = pt_private
-        else:
-            new_privacy = pt_unknown
-        self.set_privacy(name, new_privacy)
+            self.set_privacy(name, pt_public)
+        elif any([self.get_privacy(parent) == pt_private for parent in predecessors]) and not is_prob:
+            self.set_privacy(name, pt_private)
 
         successors = [s for s in self.p_graph.successors(name) if not s.startswith(pd_key)]
         for child in successors:
@@ -365,7 +363,7 @@ class Graph:
         # Set all to children to stale
         if new_state == st_stale:
                 for child in self.i_graph.successors(node[attr_id]):
-                    self.change_state(user, child, new_state)
+                    self.change_state(user, self.i_graph.nodes[child], new_state)
 
     def set_all_unknown(self, node):
         # set all variables except builtins to unknown privacy
@@ -641,7 +639,7 @@ class Graph:
             self.evalcode[name] = evalcode
             self.dependson[name] = set(dependson)
         if name not in {'Events', 'DemoEvents'}:
-            self.add_to_inf_graph(name, dependson, hier, prob)
+            self.add_to_raw_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
         for user in self.user_ids:
             self.change_state(user, node, "stale")
@@ -673,7 +671,7 @@ class Graph:
         self.code[name] = code
         self.evalcode[name] = evalcode
         self.dependson[name] = dependson.difference(defines).difference(arguments)
-        self.add_to_inf_graph(name, dependson, {}, False)
+        self.add_to_raw_graph(name, dependson, {}, False)
         node = self.i_graph.nodes[name]
         for user in self.user_ids:
             self.change_state(user, node, "stale")
@@ -1028,7 +1026,7 @@ except Exception as e:
         self.acquire("mp_callback")
         job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
-        print('at mp callback ', name, user, node_ts)
+        print('at mp callback ', name, user, node_ts, d)
         if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
                 self.log.debug(
@@ -1072,7 +1070,7 @@ except Exception as e:
         self.raw_graph.graph[d_key] = []
         self.raw_graph.graph[p_key] = []
 
-    def add_to_inf_graph(self, name, linked_nodes, h_node, is_prob):
+    def add_to_raw_graph(self, name, linked_nodes, h_node, is_prob):
         """
         Adds a node to the inferential graph (i_graph)
         :param name: String, Node name
@@ -1115,8 +1113,7 @@ except Exception as e:
             self.raw_graph.add_edges_from(edges)
 
         # update i_graph and p_graph
-        self.i_graph = self.modified_inferential_graph()
-        self.p_graph = self.modified_privacy_graph()
+        self.update_graphs()
 
     def raw_graph_add_node(self, name, is_prob):
         """
@@ -1141,18 +1138,16 @@ except Exception as e:
         self.raw_graph.remove_node(name)
 
         # update i_graph and p_graph
-        self.i_graph = self.modified_inferential_graph()
-        self.p_graph = self.modified_privacy_graph()
+        self.update_graphs()
 
         return name
 
-    def modified_inferential_graph(self):
+    def update_graphs(self):
         """
         Original raw_graph keeps the nodes in more ground level with more information.
-        We are getting a abstract representation by modifying it.
-
-        :return: networkX graph
+        We generate privacy graph and inferential graph using the raw graph.
         """
+
         # Generating modified inferential graph
         i_graph = copy.deepcopy(self.raw_graph)
         p_nodes = self.raw_graph.graph[p_key]
@@ -1185,38 +1180,31 @@ except Exception as e:
 
                 edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
 
-        return i_graph
+        self.i_graph = i_graph
 
-    def modified_privacy_graph(self):
-        """
-        Original raw_graph keeps the nodes in more ground level with more information.
-        We are getting a privacy by modifying it.
-
-        :return: networkX graph
-        """
         # Generating modified privacy graph
-        p_graph = copy.deepcopy(self.raw_graph)
-        p_nodes = self.raw_graph.graph[p_key]
-        pd_nodes = []
-        for p_node in p_nodes:
-            if p_node.startswith(pd_key):
-                pd_nodes.append(p_node)
-        if len(pd_nodes) > 0:
-            edge_permutations = set(product((set(p_nodes) - set(pd_nodes)), pd_nodes))
-            # These are the edges between pd_nodes and p_nodes
-            edges_to_remove = edge_permutations.intersection(set(p_graph.edges))
-            # We add the dependencies of each pd_nodes to adjacent p_nodes
-            for e in edges_to_remove:
-                # get in edges to the pd_node
-                pd_in_edges = set(p_graph.in_edges(e[1]))
-                pd_in_edges = pd_in_edges.difference(edges_to_remove)
-                for pd_in_edge in pd_in_edges:
-                    p_graph.add_edge(pd_in_edge[0], e[0])
-            # Finally remove the pd_nodes
-            for pd_node in pd_nodes:
-                p_graph.remove_node(pd_node)
+        p_graph = copy.deepcopy(self.i_graph)
 
-        return p_graph
+        # have to split the probabilistic nodes
+        for node_id, node in self.i_graph.nodes(data=True):
+            if node[attr_is_prob]:
+                contains = [p for p in node[attr_contains] if (not p.startswith(pd_key) or p != node_id)]
+                in_nodes = set(self.i_graph.predecessors(node_id))
+                for name in contains:
+                    if name not in p_graph.nodes:
+                        p_graph.add_node(name)
+                    p_graph.nodes[name][attr_label] = name
+                    p_graph.nodes[name][attr_contains] = [name]
+                    p_graph.nodes[name][attr_is_prob] = True
+                    p_graph.nodes[name][attr_id] = name
+                    p_graph.nodes[name][attr_last_ts] = 0
+                    p_graph.nodes[name][attr_color] = 'red'
+                    for dep in in_nodes:
+                        p_graph.add_edge(dep, name)
+                p_graph.nodes[node_id][attr_contains] = [node_id]
+
+        self.p_graph = p_graph
+
 
     def reset_privacy_results(self, node, user):
         for name in node[attr_contains]:
@@ -1288,8 +1276,7 @@ except Exception as e:
 
         :return: graph as a base 64 string
         """
-        p_graph = self.modified_privacy_graph()
-        nx.drawing.nx_pydot.write_dot(p_graph, graph_name)
+        nx.drawing.nx_pydot.write_dot(self.p_graph, graph_name)
         gv.render('dot', 'png', graph_name)
         result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
@@ -1309,19 +1296,6 @@ except Exception as e:
         gv.render('dot', 'png', graph_name)
         result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
-        # pos = nx.spring_layout(g_graph, scale=2)
-        # nx.draw_networkx(g_graph, pos, node_color='cornflowerblue', node_size=100, with_labels=False)
-        # if len(pos) > 1:
-        #     for p in pos:  # raise text positions
-        #         pos[p][1] += 0.15
-        # nx.draw_networkx_labels(g_graph, pos, font_size=10)
-        # buf = io.BytesIO()
-        # plt.savefig(buf, format="png")
-        # result = "data:image/png;base64, " + base64.b64encode(buf.getvalue()).decode()
-        # plt.savefig('generative_graph.png')
-        # plt.clf()
-        # plt.close()
-        # return result
 
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
