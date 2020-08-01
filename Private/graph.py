@@ -209,97 +209,7 @@ class Graph:
         self.whohaslock = None
         self.lock.release()
 
-    def show_sets(self):
-        result = ""
-        result += "deterministic: " + pp_set(self.deterministic) + "\n"
-        result += "probabilistic: " + pp_set(self.probabilistic) + "\n"
-        result += "builtin: " + pp_set(self.builtins) + "\n"
-        result += "\n"
-        result += "uptodate: " + pp_set(self.uptodate["All"]) + "\n"
-        result += "computing: " + pp_set(self.computing["All"]) + "\n"
-        result += "exception: " + pp_set(self.exception["All"]) + "\n"
-        result += "stale: " + pp_set(self.stale["All"]) + "\n"
-        result += "\n"
-        result += "private: " + pp_set(self.private) + "\n"
-        result += "public: " + pp_set(self.public) + "\n"
-        result += "unknown_privacy: " + pp_set(self.unknown_privacy) + "\n"
-        result += "\n"
-        result += "locals: " + pp_set(self.locals.keys()) + "\n"
-        result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
-        return result
-
-    def show_globals(self):
-        result = ""
-        result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
-        for user in self.user_ids:
-            result += user + ": " + str(self.globals[user].get("r", "Not here")) + "\n"
-        return result
-
-    def show_jobs(self):
-        """
-        Returns a list of jobs currently running, divided into compute, sampler and manifold
-
-        :return: String(list of jobs)
-        """
-        job_keys = self.jobs.keys()
-        sampler_jobs = 0
-        compute_jobs = 0
-        manifold_jobs = 0
-
-        sampler_vars = set()
-        compute_vars = set()
-        manifold_vars = set()
-
-        for job_id in job_keys:
-            job_type = job_id.split(" ")[0]
-            job_var = job_id.split(" ")[-1]
-            if job_type == 'Compute:':
-                compute_jobs += 1
-                compute_vars.add(job_var)
-            elif job_type == 'Sampler:':
-                sampler_jobs += 1
-                sampler_vars.add(job_var)
-            elif job_type == 'Manifold:':
-                manifold_jobs += 1
-                manifold_vars.add(job_var)
-        result = f"Total jobs: {compute_jobs + sampler_jobs + manifold_jobs}\n" \
-            f"Compute Jobs: {compute_jobs}\t{compute_vars if compute_vars else ''}\n" \
-            f"Sampler Jobs: {sampler_jobs}\n" \
-            f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
-        return result
-
-    def eval_command_line_expression(self, code, user="All"):
-        self.acquire("eval_command_line_expression")
-        result = ""
-
-        if code not in (self.deterministic | self.probabilistic | self.builtins):
-            result += code + " is undefined  "
-        elif code not in self.uptodate[user]:
-            result += code + " is not uptodate  "
-        elif code not in (self.public | self.unknown_privacy):
-            result += code + " is private  "
-        elif code not in self.public:
-            result += code + " is of unknown privacy  "
-        elif type(self.globals[user][code]) == RedisReference:
-            result += code + " is too big to print  "
-        else:
-            val = self.globals[user][code]
-            if type(val) == io.BytesIO:
-                result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
-            else:
-                result = str(val)
-        self.release()
-        return result
-
-    def show_sampler_results(self):
-        res = str(len(self.privacy_sampler_results)) + " results\n"
-        for k in self.privacy_sampler_results.keys():
-            res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(
-                len(self.privacy_sampler_results[k])) + "\n"
-        return res
-
-    def add_comment(self, name, the_comment):
-        self.comment[name] = the_comment
+    # Helper functions (might be able to rewrite with new graph)
 
     def check_cyclic_dependencies(self, name, dependents):
         if dependents == set():
@@ -311,134 +221,6 @@ class Graph:
                 dependent_dependents = self.dependson.get(dependent, set()) | self.probdependson.get(dependent, set())
                 if self.check_cyclic_dependencies(name, dependent_dependents):
                     return True
-
-    def get_value(self, name, long_format=False):
-        res = ""
-        formatter_string = "%%.%sf" % display_precision
-        if name in self.deterministic | self.probabilistic:
-            if name in self.stale["All"]:
-                res += "Stale"
-            elif name in self.computing["All"]:
-                res += "Computing"
-            elif name in self.exception["All"]:
-                res += "Exception: " + str(self.globals["All"][name])
-            elif name in self.private:
-                res += "Private"
-            elif name in self.unknown_privacy:
-                if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
-                 'All'].get(name) == "Not retained.":
-                    res += "Not retained."
-                else:
-                    res += "Privacy Unknown"
-            elif name in self.uptodate["All"]:
-                if type(self.globals["All"][name]) == io.BytesIO:  # write image to file
-                    res += "[PNG Image]"
-                elif type(self.globals["All"][name]) == RedisReference:
-                    res += self.globals["All"][name].display_value
-                elif type(self.globals["All"][name]) == numpy.ndarray:
-                    if long_format:
-                        res += str(self.globals["All"][name])
-                    else:
-                        s = self.globals["All"][name].shape
-                        res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
-                            0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
-                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
-                    res += str((formatter_string % self.globals["All"][name]))
-                else:
-                    if long_format:
-                        res += json.dumps(self.globals["All"][name], indent=4)
-                    else:
-                        res += reprlib.repr(self.globals["All"][name])
-            else:
-                raise Exception("Exception: " + name + " is not stale, computing, exception or uptodate.")
-        elif name in self.builtins:
-            if name in self.public:
-                if long_format:
-                    res += str(self.globals["All"][name])
-                else:
-                    res += reprlib.repr(self.globals["All"][name])
-            else:
-                res += "Private"
-        else:
-            raise Exception("Exception: Unknown variable in getValue " + name)
-        return res
-
-    def show_values(self):
-        value_width = 120
-        value_bits = []
-        for name in self.code.keys():
-            value_bits.append(name + " = " + self.get_value(name)[0:value_width])
-        for name in self.probcode.keys():
-            if name in self.samplerexception:
-                value_bits.append(name + " ~ " + self.samplerexception[name])
-            else:
-                value_bits.append(name + " ~ " + self.get_value(name)[0:value_width])
-        return "\n".join(value_bits)
-
-    def show_code(self):
-        code_bits = []
-        for name in self.code.keys():
-            if name in self.functions:
-                code_bits.append(self.evalcode[name].replace("\t", "    "))
-            else:
-                code_bits.append(name + " = " + str(self.code[name]))
-        for name in self.probcode.keys():
-            if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
-            else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
-        if len(code_bits) > 0:
-            comment_bits = []
-            for name in self.code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
-        else:
-            return ""
-
-    def show_eval_code(self):
-        code_bits = []
-        for name in self.code.keys():
-            code_bits.append(name + " = " + str(self.evalcode[name]))
-        for name in self.probcode.keys():
-            code_bits.append(name + " ~ " + str(self.pyMC3code[name]))
-        if len(code_bits) > 0:
-            comment_bits = []
-            for name in self.code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
-        else:
-            return ""
-
-    def show_dependencies(self):
-        res = ""
-        for name in self.code.keys():
-            res += name + " = "
-            if name not in self.private:
-                res += self.code[name][0:60]
-            else:
-                res += "Private"
-            if name in self.dependson:
-                if self.dependson[name] != set([]):
-                    res += "    " + repr(list(self.dependson[name]))
-            res += "\n"
-        for name in self.probcode.keys():
-            if name in self.hierarchical:
-                res += name + "[" + self.hierarchical[name] + "] ~ "
-            else:
-                res += name + " ~ "
-            if name not in self.private:
-                res += self.probcode[name][0:60]
-            else:
-                res += "Private"
-            if name in self.probdependson:
-                if self.probdependson[name] != set([]):
-                    res += "    " + repr(list(self.probdependson[name]))
-            res += "\n"
-        return res[0:-1]
 
     def topological_sort(self):
         order, enter, state = deque(), self.probabilistic | self.deterministic, {}
@@ -1292,6 +1074,228 @@ except Exception as e:
         gv.render('dot', 'png', graph_name)
         result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
         return result
+
+    # Private commands
+
+    def show_sets(self):
+        result = ""
+        result += "deterministic: " + pp_set(self.deterministic) + "\n"
+        result += "probabilistic: " + pp_set(self.probabilistic) + "\n"
+        result += "builtin: " + pp_set(self.builtins) + "\n"
+        result += "\n"
+        result += "uptodate: " + pp_set(self.uptodate["All"]) + "\n"
+        result += "computing: " + pp_set(self.computing["All"]) + "\n"
+        result += "exception: " + pp_set(self.exception["All"]) + "\n"
+        result += "stale: " + pp_set(self.stale["All"]) + "\n"
+        result += "\n"
+        result += "private: " + pp_set(self.private) + "\n"
+        result += "public: " + pp_set(self.public) + "\n"
+        result += "unknown_privacy: " + pp_set(self.unknown_privacy) + "\n"
+        result += "\n"
+        result += "locals: " + pp_set(self.locals.keys()) + "\n"
+        result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
+        return result
+
+    def show_globals(self):
+        result = ""
+        result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
+        for user in self.user_ids:
+            result += user + ": " + str(self.globals[user].get("r", "Not here")) + "\n"
+        return result
+
+    def show_jobs(self):
+        """
+        Returns a list of jobs currently running, divided into compute, sampler and manifold
+
+        :return: String(list of jobs)
+        """
+        job_keys = self.jobs.keys()
+        sampler_jobs = 0
+        compute_jobs = 0
+        manifold_jobs = 0
+
+        sampler_vars = set()
+        compute_vars = set()
+        manifold_vars = set()
+
+        for job_id in job_keys:
+            job_type = job_id.split(" ")[0]
+            job_var = job_id.split(" ")[-1]
+            if job_type == 'Compute:':
+                compute_jobs += 1
+                compute_vars.add(job_var)
+            elif job_type == 'Sampler:':
+                sampler_jobs += 1
+                sampler_vars.add(job_var)
+            elif job_type == 'Manifold:':
+                manifold_jobs += 1
+                manifold_vars.add(job_var)
+        result = f"Total jobs: {compute_jobs + sampler_jobs + manifold_jobs}\n" \
+            f"Compute Jobs: {compute_jobs}\t{compute_vars if compute_vars else ''}\n" \
+            f"Sampler Jobs: {sampler_jobs}\n" \
+            f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
+        return result
+
+    def eval_command_line_expression(self, code, user="All"):
+        self.acquire("eval_command_line_expression")
+        result = ""
+
+        if code not in (self.deterministic | self.probabilistic | self.builtins):
+            result += code + " is undefined  "
+        elif code not in self.uptodate[user]:
+            result += code + " is not uptodate  "
+        elif code not in (self.public | self.unknown_privacy):
+            result += code + " is private  "
+        elif code not in self.public:
+            result += code + " is of unknown privacy  "
+        elif type(self.globals[user][code]) == RedisReference:
+            result += code + " is too big to print  "
+        else:
+            val = self.globals[user][code]
+            if type(val) == io.BytesIO:
+                result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
+            else:
+                result = str(val)
+        self.release()
+        return result
+
+    def show_sampler_results(self):
+        res = str(len(self.privacy_sampler_results)) + " results\n"
+        for k in self.privacy_sampler_results.keys():
+            res += k + ": " + self.get_privacy_sampler_result(k) + " " + str(
+                len(self.privacy_sampler_results[k])) + "\n"
+        return res
+
+    def add_comment(self, name, the_comment):
+        self.comment[name] = the_comment
+
+    def get_value(self, name, long_format=False):
+        res = ""
+        formatter_string = "%%.%sf" % display_precision
+        if name in self.deterministic | self.probabilistic:
+            if name in self.stale["All"]:
+                res += "Stale"
+            elif name in self.computing["All"]:
+                res += "Computing"
+            elif name in self.exception["All"]:
+                res += "Exception: " + str(self.globals["All"][name])
+            elif name in self.private:
+                res += "Private"
+            elif name in self.unknown_privacy:
+                if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
+                 'All'].get(name) == "Not retained.":
+                    res += "Not retained."
+                else:
+                    res += "Privacy Unknown"
+            elif name in self.uptodate["All"]:
+                if type(self.globals["All"][name]) == io.BytesIO:  # write image to file
+                    res += "[PNG Image]"
+                elif type(self.globals["All"][name]) == RedisReference:
+                    res += self.globals["All"][name].display_value
+                elif type(self.globals["All"][name]) == numpy.ndarray:
+                    if long_format:
+                        res += str(self.globals["All"][name])
+                    else:
+                        s = self.globals["All"][name].shape
+                        res += "[" * len(s) + formatter_string % self.globals["All"][name].ravel()[
+                            0] + " ... " + formatter_string % self.globals["All"][name].ravel()[-1] + "]" * len(s)
+                elif type(self.globals["All"][name]) == float or type(self.globals["All"][name]) == numpy.float64:
+                    res += str((formatter_string % self.globals["All"][name]))
+                else:
+                    if long_format:
+                        res += json.dumps(self.globals["All"][name], indent=4)
+                    else:
+                        res += reprlib.repr(self.globals["All"][name])
+            else:
+                raise Exception("Exception: " + name + " is not stale, computing, exception or uptodate.")
+        elif name in self.builtins:
+            if name in self.public:
+                if long_format:
+                    res += str(self.globals["All"][name])
+                else:
+                    res += reprlib.repr(self.globals["All"][name])
+            else:
+                res += "Private"
+        else:
+            raise Exception("Exception: Unknown variable in getValue " + name)
+        return res
+
+    def show_values(self):
+        value_width = 120
+        value_bits = []
+        for name in self.code.keys():
+            value_bits.append(name + " = " + self.get_value(name)[0:value_width])
+        for name in self.probcode.keys():
+            if name in self.samplerexception:
+                value_bits.append(name + " ~ " + self.samplerexception[name])
+            else:
+                value_bits.append(name + " ~ " + self.get_value(name)[0:value_width])
+        return "\n".join(value_bits)
+
+    def show_code(self):
+        code_bits = []
+        for name in self.code.keys():
+            if name in self.functions:
+                code_bits.append(self.evalcode[name].replace("\t", "    "))
+            else:
+                code_bits.append(name + " = " + str(self.code[name]))
+        for name in self.probcode.keys():
+            if name in self.hierarchical:
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+            else:
+                code_bits.append(name + " ~ " + str(self.probcode[name]))
+        if len(code_bits) > 0:
+            comment_bits = []
+            for name in self.code.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            for name in self.probcode.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
+        else:
+            return ""
+
+    def show_eval_code(self):
+        code_bits = []
+        for name in self.code.keys():
+            code_bits.append(name + " = " + str(self.evalcode[name]))
+        for name in self.probcode.keys():
+            code_bits.append(name + " ~ " + str(self.pyMC3code[name]))
+        if len(code_bits) > 0:
+            comment_bits = []
+            for name in self.code.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            for name in self.probcode.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
+        else:
+            return ""
+
+    def show_dependencies(self):
+        res = ""
+        for name in self.code.keys():
+            res += name + " = "
+            if name not in self.private:
+                res += self.code[name][0:60]
+            else:
+                res += "Private"
+            if name in self.dependson:
+                if self.dependson[name] != set([]):
+                    res += "    " + repr(list(self.dependson[name]))
+            res += "\n"
+        for name in self.probcode.keys():
+            if name in self.hierarchical:
+                res += name + "[" + self.hierarchical[name] + "] ~ "
+            else:
+                res += name + " ~ "
+            if name not in self.private:
+                res += self.probcode[name][0:60]
+            else:
+                res += "Private"
+            if name in self.probdependson:
+                if self.probdependson[name] != set([]):
+                    res += "    " + repr(list(self.probdependson[name]))
+            res += "\n"
+        return res[0:-1]
 
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
