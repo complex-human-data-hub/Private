@@ -569,14 +569,14 @@ class Graph:
     def get_privacy_sampler_result(self, name):
         public_count = 0
         for user in self.privacy_sampler_results[name]:
-            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'private':
-                return 'private'
-            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == 'public':
+            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_private:
+                return pt_private
+            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_public:
                 public_count += 1
         if public_count == len(self.user_ids) - 1:
-            return 'public'
+            return pt_public
         else:
-            return 'unknown_privacy'
+            return pt_unknown
 
     def get_globals(self, names, user):
         user_globals = self.globals[user]
@@ -877,13 +877,13 @@ except Exception as e:
         names = node[attr_contains]
         node_ts = node[attr_last_ts]
         for name in names:
-            if self.get_privacy_sampler_result(name) != 'private' and not (
+            if self.get_privacy_sampler_result(name) != pt_private and not (
                     isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained."):
                 # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
                 if name in self.globals[user].keys() and name in self.globals["All"].keys():
                     # if shape is affected by dropping a user then this variable is private
                     if self.globals[user][name].shape != self.globals["All"][name].shape:
-                        self.privacy_sampler_results[name][user] = 'private'
+                        self.privacy_sampler_results[name][user] = pt_private
                     else:
                         success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
                         if success:
@@ -1029,22 +1029,17 @@ except Exception as e:
         print('at mp callback ', name, user, node_ts, d)
         if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
-                self.log.debug(
-                    "mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(d < privacy_criterion))
-                if self.get_privacy_sampler_result(name) != 'private':
+                self.log.debug(f"mp_callback: {user}: {name}: {d}")
+                if self.get_privacy_sampler_result(name) != pt_private:
                     if d > privacy_criterion:
-                        self.privacy_sampler_results[name][user] = "private"
+                        self.privacy_sampler_results[name][user] = pt_private
 
                         self.globals['All'][name] = self.globals['All'][name][::step_size][
                                                     :Private.config.max_sample_size]
-                        self.log.debug("mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(
-                            d < privacy_criterion) + ": PRIVATE")
                     else:
-                        self.log.debug("mp_callback: " + user + ": " + name + ": " + str(d) + " " + str(
-                            d < privacy_criterion) + ": UNKNOWN_PRIVACY")
-                        self.privacy_sampler_results[name][user] = "public"
+                        self.privacy_sampler_results[name][user] = pt_public
 
-                if self.get_privacy_sampler_result(name) == 'public':
+                if self.get_privacy_sampler_result(name) == pt_public:
                     self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
                     self.log.debug("mp_callback: " + user + ": " + name + ": PUBLIC")
                 self.reg_ts(manifold_key, user, name, completed_key, node_ts)
@@ -1209,7 +1204,7 @@ except Exception as e:
     def reset_privacy_results(self, node, user):
         for name in node[attr_contains]:
             if name in self.privacy_sampler_results and user != user_all:
-                self.privacy_sampler_results[name][user] = 'unknown_privacy'
+                self.privacy_sampler_results[name][user] = pt_unknown
             else:
                 self.privacy_sampler_results[name] = {}
 
