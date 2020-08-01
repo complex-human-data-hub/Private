@@ -298,102 +298,6 @@ class Graph:
                 len(self.privacy_sampler_results[k])) + "\n"
         return res
 
-    def compute_privacy(self, node, lock=True):
-
-        if lock:
-            self.acquire("computePrivacy")
-
-        # set all variables except builtins to unknown_privacy
-        self.set_all_unknown(node)
-        node_contains = [n for n in node[attr_contains] if not n.startswith(pd_key)]
-        for name in node_contains:
-            self.compute_graph_privacy(name)
-        self.compute_probabilistic_privacy(node)
-        for name in node_contains:
-            self.compute_graph_privacy(name)
-        if lock:
-            self.release()
-
-    def compute_graph_privacy(self, name):
-        """
-        Starting from the name, traverse the privacy graph
-
-        :param name: String, name of the node. Note that privacy graph has raw nodes.
-        """
-        predecessors = [p for p in self.p_graph.predecessors(name) if not p.startswith(pd_key)]
-        is_prob = self.p_graph.nodes[name][attr_is_prob]
-        if all([self.get_privacy(parent) == pt_public for parent in predecessors]):
-            self.set_privacy(name, pt_public)
-        elif any([self.get_privacy(parent) == pt_private for parent in predecessors]) and not is_prob:
-            self.set_privacy(name, pt_private)
-
-        successors = [s for s in self.p_graph.successors(name) if not s.startswith(pd_key)]
-        for child in successors:
-            self.compute_graph_privacy(child)
-
-    def compute_probabilistic_privacy(self, i_node):
-        """
-        Check the privacy sampler results to see if we can fill in variables
-        We don't want to overwrite the values calculated directly from the graph, so we do this if privacy unknown only
-        :param i_node: node from inferential graph
-        """
-        for name in i_node[attr_contains]:
-            if name in self.unknown_privacy:
-                if name in self.privacy_sampler_results:
-                    self.set_privacy(name, self.get_privacy_sampler_result(name))
-
-    def change_state(self, user, node, new_state):
-        for name in node[attr_contains]:
-            self.log.debug("Change state of %s to %s for user %s." % (name, new_state, user))
-            self.uptodate[user].discard(name)
-            self.computing[user].discard(name)
-            self.exception[user].discard(name)
-            self.stale[user].discard(name)
-            if new_state == st_uptodate:  # whenever a variable changes to be uptodate the privacy could have changed
-                self.uptodate[user].add(name)
-            elif new_state == st_computing:  # when a variable changes to be computing its privacy is unknown
-                self.computing[user].add(name)
-            elif new_state == st_exception:  # when a variable changes to be exception its privacy is unknown
-                self.exception[user].add(name)
-            elif new_state == st_stale:  # when a variable changes to be stale its privacy is unknown
-                self.stale[user].add(name)
-            else:
-                raise Exception("Exception: " + "Unknown state %s in changeState" % new_state)
-
-        # Set all to children to stale
-        if new_state == st_stale:
-                for child in self.i_graph.successors(node[attr_id]):
-                    self.change_state(user, self.i_graph.nodes[child], new_state)
-
-    def set_all_unknown(self, node):
-        # set all variables except builtins to unknown privacy
-        for name in (set(node[attr_contains]) & (self.deterministic | self.probabilistic)):
-            self.set_privacy(name, pt_unknown)
-
-    def set_privacy(self, name, privacy):
-        self.private.discard(name)
-        self.public.discard(name)
-        self.unknown_privacy.discard(name)
-
-        if privacy == pt_private:
-            self.private.add(name)
-        elif privacy == pt_public:
-            self.public.add(name)
-        elif privacy == pt_unknown:
-            self.unknown_privacy.add(name)
-        else:
-            self.log.error("Unexpected privacy type in setPrivacy: " + privacy)
-
-    def get_privacy(self, name):
-        if name in self.private:
-            return pt_private
-        elif name in self.public:
-            return pt_public
-        elif name in self.unknown_privacy:
-            return pt_unknown
-        else:
-            self.log.error("Privacy value of %s is not set." % name)
-
     def add_comment(self, name, the_comment):
         self.comment[name] = the_comment
 
@@ -566,18 +470,6 @@ class Graph:
         result.reverse()
         return result
 
-    def get_privacy_sampler_result(self, name):
-        public_count = 0
-        for user in self.privacy_sampler_results[name]:
-            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_private:
-                return pt_private
-            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_public:
-                public_count += 1
-        if public_count == len(self.user_ids) - 1:
-            return pt_public
-        else:
-            return pt_unknown
-
     def get_globals(self, names, user):
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
@@ -611,6 +503,123 @@ class Graph:
             to_visit = to_visit.difference(final_set)
 
         return final_set
+
+    # Privacy manipulations
+
+    def compute_privacy(self, node, lock=True):
+
+        if lock:
+            self.acquire("computePrivacy")
+
+        # set all variables except builtins to unknown_privacy
+        self.set_all_unknown(node)
+        node_contains = [n for n in node[attr_contains] if not n.startswith(pd_key)]
+        for name in node_contains:
+            self.compute_graph_privacy(name)
+        self.compute_probabilistic_privacy(node)
+        for name in node_contains:
+            self.compute_graph_privacy(name)
+        if lock:
+            self.release()
+
+    def compute_graph_privacy(self, name):
+        """
+        Starting from the name, traverse the privacy graph
+
+        :param name: String, name of the node. Note that privacy graph has raw nodes.
+        """
+        predecessors = [p for p in self.p_graph.predecessors(name) if not p.startswith(pd_key)]
+        is_prob = self.p_graph.nodes[name][attr_is_prob]
+        if all([self.get_privacy(parent) == pt_public for parent in predecessors]):
+            self.set_privacy(name, pt_public)
+        elif any([self.get_privacy(parent) == pt_private for parent in predecessors]) and not is_prob:
+            self.set_privacy(name, pt_private)
+
+        successors = [s for s in self.p_graph.successors(name) if not s.startswith(pd_key)]
+        for child in successors:
+            self.compute_graph_privacy(child)
+
+    def compute_probabilistic_privacy(self, i_node):
+        """
+        Check the privacy sampler results to see if we can fill in variables
+        We don't want to overwrite the values calculated directly from the graph, so we do this if privacy unknown only
+        :param i_node: node from inferential graph
+        """
+        for name in i_node[attr_contains]:
+            if name in self.unknown_privacy:
+                if name in self.privacy_sampler_results:
+                    self.set_privacy(name, self.get_privacy_sampler_result(name))
+
+    def change_state(self, user, node, new_state):
+        for name in node[attr_contains]:
+            self.log.debug("Change state of %s to %s for user %s." % (name, new_state, user))
+            self.uptodate[user].discard(name)
+            self.computing[user].discard(name)
+            self.exception[user].discard(name)
+            self.stale[user].discard(name)
+            if new_state == st_uptodate:  # whenever a variable changes to be uptodate the privacy could have changed
+                self.uptodate[user].add(name)
+            elif new_state == st_computing:  # when a variable changes to be computing its privacy is unknown
+                self.computing[user].add(name)
+            elif new_state == st_exception:  # when a variable changes to be exception its privacy is unknown
+                self.exception[user].add(name)
+            elif new_state == st_stale:  # when a variable changes to be stale its privacy is unknown
+                self.stale[user].add(name)
+            else:
+                raise Exception("Exception: " + "Unknown state %s in changeState" % new_state)
+
+        # Set all to children to stale
+        if new_state == st_stale:
+                for child in self.i_graph.successors(node[attr_id]):
+                    self.change_state(user, self.i_graph.nodes[child], new_state)
+
+    def set_all_unknown(self, node):
+        # set all variables except builtins to unknown privacy
+        for name in (set(node[attr_contains]) & (self.deterministic | self.probabilistic)):
+            self.set_privacy(name, pt_unknown)
+
+    def set_privacy(self, name, privacy):
+        self.private.discard(name)
+        self.public.discard(name)
+        self.unknown_privacy.discard(name)
+
+        if privacy == pt_private:
+            self.private.add(name)
+        elif privacy == pt_public:
+            self.public.add(name)
+        elif privacy == pt_unknown:
+            self.unknown_privacy.add(name)
+        else:
+            self.log.error("Unexpected privacy type in setPrivacy: " + privacy)
+
+    def get_privacy(self, name):
+        if name in self.private:
+            return pt_private
+        elif name in self.public:
+            return pt_public
+        elif name in self.unknown_privacy:
+            return pt_unknown
+        else:
+            self.log.error("Privacy value of %s is not set." % name)
+
+    def reset_privacy_results(self, node, user):
+        for name in node[attr_contains]:
+            if name in self.privacy_sampler_results and user != user_all:
+                self.privacy_sampler_results[name][user] = pt_unknown
+            else:
+                self.privacy_sampler_results[name] = {}
+
+    def get_privacy_sampler_result(self, name):
+        public_count = 0
+        for user in self.privacy_sampler_results[name]:
+            if name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_private:
+                return pt_private
+            elif name in self.uptodate[user] and self.privacy_sampler_results[name][user] == pt_public:
+                public_count += 1
+        if public_count == len(self.user_ids) - 1:
+            return pt_public
+        else:
+            return pt_unknown
 
     # Core functions
     def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None):
@@ -1065,6 +1074,22 @@ except Exception as e:
         self.raw_graph.graph[d_key] = []
         self.raw_graph.graph[p_key] = []
 
+    def init_ts(self):
+        for job_type in [compute_key, sampler_key, manifold_key]:
+            self.ts[job_type] = {}
+            for user in self.user_ids:
+                self.ts[job_type][user] = {}
+
+    def reg_ts(self, job_key, user, n_id, ts_key, ts):
+        if n_id not in self.ts[job_key][user]:
+            self.ts[job_key][user][n_id] = {}
+        current_ts = self.ts[job_key][user][n_id].get(ts_key, 0)
+        if current_ts < ts:
+            self.ts[job_key][user][n_id][ts_key] = ts
+            return True
+        else:
+            return False
+
     def add_to_raw_graph(self, name, linked_nodes, h_node, is_prob):
         """
         Adds a node to the inferential graph (i_graph)
@@ -1199,30 +1224,6 @@ except Exception as e:
                 p_graph.nodes[node_id][attr_contains] = [node_id]
 
         self.p_graph = p_graph
-
-
-    def reset_privacy_results(self, node, user):
-        for name in node[attr_contains]:
-            if name in self.privacy_sampler_results and user != user_all:
-                self.privacy_sampler_results[name][user] = pt_unknown
-            else:
-                self.privacy_sampler_results[name] = {}
-
-    def init_ts(self):
-        for job_type in [compute_key, sampler_key, manifold_key]:
-            self.ts[job_type] = {}
-            for user in self.user_ids:
-                self.ts[job_type][user] = {}
-
-    def reg_ts(self, job_key, user, n_id, ts_key, ts):
-        if n_id not in self.ts[job_key][user]:
-            self.ts[job_key][user][n_id] = {}
-        current_ts = self.ts[job_key][user][n_id].get(ts_key, 0)
-        if current_ts < ts:
-            self.ts[job_key][user][n_id][ts_key] = ts
-            return True
-        else:
-            return False
 
     def is_node_computable(self, user, n_id):
         """
