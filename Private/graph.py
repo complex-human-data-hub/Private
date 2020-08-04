@@ -789,7 +789,9 @@ except Exception as e:
         self.release()
         self.compute_privacy(node)
         for u in self.i_graph.successors(node[attr_id]):
-            self.start_computation(user, self.i_graph.nodes[u])
+            successor = self.i_graph.nodes[u]
+            successor[attr_last_ts] = node_ts
+            self.start_computation(user, successor)
         self.compute_privacy(node)
 
     def mp_callback(self, return_value):
