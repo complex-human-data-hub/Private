@@ -442,10 +442,12 @@ class Graph:
         self.code[name] = code
         self.evalcode[name] = evalcode
         self.dependson[name] = dependson.difference(defines).difference(arguments)
-        self.add_to_raw_graph(name, dependson, {}, False)
+        self.add_to_raw_graph(name, dependson.difference(defines).difference(arguments), None, False)
         node = self.i_graph.nodes[name]
         for user in self.user_ids:
             self.change_state(user, node, "stale")
+
+        node[attr_last_ts] = int(time.time() * 1000)
         # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute_privacy(node, lock=False)
         if name not in self.public:
