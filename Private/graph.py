@@ -19,7 +19,7 @@ from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlob
     illegal_variable_names, setGlobals2
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, attr_id, \
     attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, pt_public, \
-    pt_unknown, st_stale, st_uptodate, st_computing, st_exception
+    pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder
 
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -252,39 +252,20 @@ class Graph:
         result.reverse()
         return result
 
-    def get_globals(self, names, user):
+    def get_globals_new(self, node, user):
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
-        for name in names:
-            if name in self.dependson:
-                deps = deps.union(self.dependson[name])
-            if name in self.probdependson:
-                deps = deps.union(self.probdependson[name])
-        deps = self.get_all_required_dependents(deps)
-        for key in user_globals.keys():
-            if key in deps:
+        predecessors = self.i_graph.predecessors(node[attr_id])
+        for predecessor in predecessors:
+            deps = deps.union(set([p for p in self.i_graph.nodes[predecessor][attr_contains] if not p.startswith(pd_key)]))
+        for key in deps:
+            if key in user_globals.keys():
                 if type(user_globals[key]) == RedisReference:
                     job_globals[key] = copy.copy(user_globals[key])
                 else:
                     job_globals[key] = user_globals[key]
         return job_globals
-
-    def get_all_required_dependents(self, names):
-        to_visit = names
-        final_set = set()
-        while to_visit != set():
-            new_additions = set()
-            for vname in to_visit:
-                final_set.add(vname)
-                if vname in self.dependson and vname in self.functions:
-                    new_additions = new_additions.union(self.dependson[vname])
-                if vname in self.probdependson:
-                    new_additions = new_additions.union(self.probdependson[vname])
-            to_visit = to_visit.union(new_additions)
-            to_visit = to_visit.difference(final_set)
-
-        return final_set
 
     # Privacy manipulations
 
@@ -640,7 +621,7 @@ except Exception as e:
                 self.release()
             return
         else:
-            job_globals = self.get_globals(node[attr_contains], user)
+            job_globals = self.get_globals_new(node, user)
             self.change_state(user, node, "computing")
             if node[attr_is_prob]:
                 success = self.reg_ts(sampler_key, user, n_id, started_key, node_ts)
@@ -992,6 +973,9 @@ except Exception as e:
             if node[attr_is_prob]:
                 contains = [p for p in node[attr_contains] if (not p.startswith(pd_key) or p != node_id)]
                 in_nodes = set(self.i_graph.predecessors(node_id))
+                out_nodes = set(self.i_graph.successors(node_id))
+                for out_node in out_nodes:
+                    p_graph.remove_edge(node_id, out_node)
                 for name in contains:
                     if name not in p_graph.nodes:
                         p_graph.add_node(name)
@@ -1003,6 +987,9 @@ except Exception as e:
                     p_graph.nodes[name][attr_color] = 'red'
                     for dep in in_nodes:
                         p_graph.add_edge(dep, name)
+                    ori_out_nodes = set(self.raw_graph.successors(name)) & out_nodes
+                    for out_node in ori_out_nodes:
+                        p_graph.add_edge(name, out_node)
                 p_graph.nodes[node_id][attr_contains] = [node_id]
 
         self.p_graph = p_graph
@@ -1040,39 +1027,44 @@ except Exception as e:
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
         Draws the modified inferential graph
-
         :return: graph as a base 64 string
         """
-        nx.drawing.nx_pydot.write_dot(self.i_graph, graph_name)
-        gv.render('dot', 'png', graph_name)
-        result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
-        return result
+        return self.draw_graph(self.i_graph, graph_name)
 
     def draw_privacy_graph(self, graph_name='privacy_graph'):
         """
         Draws the modified privacy graph
-
         :return: graph as a base 64 string
         """
-        nx.drawing.nx_pydot.write_dot(self.p_graph, graph_name)
-        gv.render('dot', 'png', graph_name)
-        result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
-        return result
+        return self.draw_graph(self.p_graph, graph_name)
 
     def draw_generative_graph(self, graph_name='generative_graph'):
-        g_graph = nx.DiGraph()
-        visited, stack = set(), list(self.probabilistic | self.deterministic)
-        while stack:
-            vertex = stack.pop()
-            g_graph.add_node(vertex)
-            if vertex not in visited:
-                visited.add(vertex)
-                for k in self.dependson.get(vertex, set()) | self.probdependson.get(vertex, set()):
-                    g_graph.add_edge(vertex, k)
-                    stack.append(k)
-        nx.drawing.nx_pydot.write_dot(g_graph, graph_name)
-        gv.render('dot', 'png', graph_name)
-        result = "data:image/png;base64, " + base64.b64encode(open(f"{graph_name}.png", "rb").read()).decode()
+        """
+        Draws the modified generative graph
+        :return: graph as a base 64 string
+        """
+        g_graph = copy.deepcopy(self.raw_graph)
+        for node_id, node in g_graph.nodes(data=True):
+            if node_id.startswith(pd_key):
+                ori_id = node_id.replace(pd_key, '')
+                in_nodes = set(g_graph.predecessors(node_id))
+                for in_node in in_nodes:
+                    if in_node == ori_id:
+                        g_graph = nx.contracted_edge(g_graph, (in_node, node_id), self_loops=False)
+
+        return self.draw_graph(g_graph, graph_name)
+
+    @staticmethod
+    def draw_graph(graph, graph_name):
+        """
+        Draws the given graph under given name
+        :return: graph as a base 64 string
+        """
+        file_path = graph_folder + '/' + graph_name
+        nx.drawing.nx_pydot.write_dot(graph, file_path)
+        gv.render('dot', 'png', file_path)
+        os.remove(file_path)
+        result = "data:image/png;base64, " + base64.b64encode(open(f"{file_path}.png", "rb").read()).decode()
         return result
 
     # Private commands

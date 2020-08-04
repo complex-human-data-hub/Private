@@ -32,3 +32,4 @@ manifold_key = 'manifold_privacy_job'
 
 # other constants
 user_all = 'All'
+graph_folder = 'graphs'
