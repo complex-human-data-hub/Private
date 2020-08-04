@@ -253,6 +253,7 @@ class Graph:
         return result
 
     def get_globals(self, node, user):
+        all_globals = self.globals[user_all]
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
@@ -260,11 +261,12 @@ class Graph:
         for p in predecessors:
             deps = deps.union(set([p for p in self.i_graph.nodes[p][attr_contains] if not p.startswith(pd_key)]))
         for key in deps:
-            if key in user_globals.keys():
-                if type(user_globals[key]) == RedisReference:
-                    job_globals[key] = copy.copy(user_globals[key])
+            globals_edited = all_globals if key in self.public else user_globals
+            if key in globals_edited.keys():
+                if type(globals_edited[key]) == RedisReference:
+                    job_globals[key] = copy.copy(globals_edited[key])
                 else:
-                    job_globals[key] = user_globals[key]
+                    job_globals[key] = globals_edited[key]
         return job_globals
 
     # Privacy manipulations
@@ -707,10 +709,19 @@ except Exception as e:
 
         self.release()
         self.compute_privacy(node)
-        for u in self.i_graph.successors(name):
-            successor = self.i_graph.nodes[u]
+        for n in self.i_graph.successors(name):
+            successor = self.i_graph.nodes[n]
             successor[attr_last_ts] = node_ts
-            self.start_computation(user, successor)
+            all_public = all([p in self.public for p in self.p_graph.successors(name)])
+            node_public = node[attr_id] in self.public
+            if not node_public:
+                self.start_computation(user, successor)
+            else:
+                if all_public:
+                    self.start_computation(user, successor)
+                else:
+                    for u in self.user_ids:
+                        self.start_computation(u, successor)
         self.compute_privacy(node)
 
     def sampler_callback(self, return_value):
@@ -1006,7 +1017,8 @@ except Exception as e:
         """
         is_computable = True
         for u in self.i_graph.predecessors(n_id):
-            if (u not in self.builtins) and (u not in self.uptodate[user]):
+            user_edited = user_all if u in self.public else user
+            if (u not in self.builtins) and (u not in self.uptodate[user_edited]):
                 is_computable = False
                 break
         return is_computable
