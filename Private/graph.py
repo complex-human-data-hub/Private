@@ -252,13 +252,13 @@ class Graph:
         result.reverse()
         return result
 
-    def get_globals_new(self, node, user):
+    def get_globals(self, node, user):
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
         predecessors = self.i_graph.predecessors(node[attr_id])
-        for predecessor in predecessors:
-            deps = deps.union(set([p for p in self.i_graph.nodes[predecessor][attr_contains] if not p.startswith(pd_key)]))
+        for p in predecessors:
+            deps = deps.union(set([p for p in self.i_graph.nodes[p][attr_contains] if not p.startswith(pd_key)]))
         for key in deps:
             if key in user_globals.keys():
                 if type(user_globals[key]) == RedisReference:
@@ -410,8 +410,7 @@ class Graph:
             self.code[name] = code
             self.evalcode[name] = evalcode
             self.dependson[name] = set(dependson)
-        if name not in {'Events', 'DemoEvents'}:
-            self.add_to_raw_graph(name, dependson, hier, prob)
+        self.add_to_raw_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
         for user in self.user_ids:
             self.change_state(user, node, "stale")
@@ -621,7 +620,7 @@ except Exception as e:
                 self.release()
             return
         else:
-            job_globals = self.get_globals_new(node, user)
+            job_globals = self.get_globals(node, user)
             self.change_state(user, node, "computing")
             if node[attr_is_prob]:
                 success = self.reg_ts(sampler_key, user, n_id, started_key, node_ts)
@@ -1242,7 +1241,8 @@ except Exception as e:
                 comment_bits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
+            return "\n".join(
+                "  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
         else:
             return ""
 
@@ -1258,7 +1258,8 @@ except Exception as e:
                 comment_bits.append(self.comment.get(name, ""))
             for name in self.probcode.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            return "\n".join("  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
+            return "\n".join(
+                "  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
         else:
             return ""
 
