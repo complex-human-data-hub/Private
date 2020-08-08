@@ -812,7 +812,6 @@ except Exception as e:
         self.acquire("mp_callback")
         job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
-        print('at mp callback ', name, user, node_ts, d)
         if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
                 self.log.debug(f"mp_callback: {user}: {name}: {d}")
