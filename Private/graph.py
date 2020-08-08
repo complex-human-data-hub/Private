@@ -709,10 +709,10 @@ except Exception as e:
 
         self.release()
         self.compute_privacy(node)
+        all_public = all([p in self.public for p in self.p_graph.successors(name)])
         for n in self.i_graph.successors(name):
             successor = self.i_graph.nodes[n]
             successor[attr_last_ts] = node_ts
-            all_public = all([p in self.public for p in self.p_graph.successors(name)])
             node_public = node[attr_id] in self.public
             if not node_public:
                 self.start_computation(user, successor)
@@ -820,13 +820,13 @@ except Exception as e:
                     if d > privacy_criterion:
                         self.privacy_sampler_results[name][user] = pt_private
 
-                        self.globals['All'][name] = self.globals['All'][name][::step_size][
-                                                    :Private.config.max_sample_size]
+                        # self.globals['All'][name] = self.globals['All'][name][::step_size][
+                                                    # :Private.config.max_sample_size]
                     else:
                         self.privacy_sampler_results[name][user] = pt_public
 
                 if self.get_privacy_sampler_result(name) == pt_public:
-                    self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
+                    # self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
                     self.log.debug("mp_callback: " + user + ": " + name + ": PUBLIC")
                 self.reg_ts(manifold_key, user, name, completed_key, node_ts)
 
