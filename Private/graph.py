@@ -1309,6 +1309,13 @@ except Exception as e:
             res += "\n"
         return res[0:-1]
 
+    def show_pymc3_code(self):
+        pymc3_code = ''
+        for node_id, node in self.i_graph.nodes(data=True):
+            if node[attr_is_prob]:
+                pymc3_code = pymc3_code + self.construct_pymc3_code(node, user_all)[1]
+        return pymc3_code
+
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
     name = node[attr_id]
