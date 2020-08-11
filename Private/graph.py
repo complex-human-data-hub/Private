@@ -718,10 +718,11 @@ except Exception as e:
 
         self.release()
         self.compute_privacy(node)
-        all_public = all([p in self.public for p in self.p_graph.successors(name)])
         for n in self.i_graph.successors(name):
             successor = self.i_graph.nodes[n]
             successor[attr_last_ts] = node_ts
+            successor_contains = successor[attr_contains]
+            all_public = all([p in self.public for p in successor_contains if not p.startswith(pd_key)])
             node_public = node[attr_id] in self.public
             if not node_public:
                 self.start_computation(user, successor)
