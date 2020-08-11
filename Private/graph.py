@@ -209,7 +209,7 @@ class Graph:
         self.whohaslock = None
         self.lock.release()
 
-    # Helper functions (might be able to rewrite with new graph)
+    # Helper functions
 
     def check_cyclic_dependencies(self, name, dependents):
         if dependents == set():
@@ -258,15 +258,24 @@ class Graph:
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
         predecessors = self.i_graph.predecessors(node[attr_id])
-        for p in predecessors:
-            deps = deps.union(set([p for p in self.i_graph.nodes[p][attr_contains] if not p.startswith(pd_key)]))
-        for key in deps:
-            globals_edited = all_globals if key in self.public else user_globals
-            if key in globals_edited.keys():
-                if type(globals_edited[key]) == RedisReference:
-                    job_globals[key] = copy.copy(globals_edited[key])
-                else:
-                    job_globals[key] = globals_edited[key]
+        for p_id in predecessors:
+            predecessor = self.i_graph.nodes[p_id]
+            is_prob = predecessor[attr_is_prob]
+            deps = deps.union(set([p for p in predecessor[attr_contains] if not p.startswith(pd_key)]))
+            for key in set([p for p in predecessor[attr_contains] if not p.startswith(pd_key)]):
+                globals_edited = all_globals if key in self.public else user_globals
+                if key in globals_edited.keys() and key not in job_globals.keys():
+                    value = globals_edited[key]
+                    if type(value) == RedisReference:
+                        job_globals[key] = copy.copy(value)
+                    else:
+                        if is_prob and type(value) == numpy.ndarray:
+                            sample_size = all_globals['NumberOfSamples'] * all_globals['NumberOfChains']
+                            # Thinning the samples if used for further calculations
+                            if value.size > Private.config.max_sample_size:
+                                step_size = max(int(sample_size / Private.config.max_sample_size), 1)
+                                value = value[::step_size][:Private.config.max_sample_size]
+                        job_globals[key] = value
         return job_globals
 
     # Privacy manipulations
@@ -807,8 +816,6 @@ except Exception as e:
 
     def mp_callback(self, return_value):
         return_value = return_value.result()
-        sample_size = self.globals['All']['NumberOfSamples'] * self.globals['All']['NumberOfChains']
-        step_size = max(int(sample_size / Private.config.max_sample_size), 1)
         self.acquire("mp_callback")
         job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
@@ -818,14 +825,10 @@ except Exception as e:
                 if self.get_privacy_sampler_result(name) != pt_private:
                     if d > privacy_criterion:
                         self.privacy_sampler_results[name][user] = pt_private
-
-                        # self.globals['All'][name] = self.globals['All'][name][::step_size][
-                                                    # :Private.config.max_sample_size]
                     else:
                         self.privacy_sampler_results[name][user] = pt_public
 
                 if self.get_privacy_sampler_result(name) == pt_public:
-                    # self.globals['All'][name] = self.globals['All'][name][::step_size][:Private.config.max_sample_size]
                     self.log.debug("mp_callback: " + user + ": " + name + ": PUBLIC")
                 self.reg_ts(manifold_key, user, name, completed_key, node_ts)
 
