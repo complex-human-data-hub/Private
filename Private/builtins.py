@@ -21,6 +21,9 @@ from . import plotting as plot
 from .demo_experiment_events import ExpEvents, DemoProjects
 import json
 import reprlib
+from dateutil import parser as dateutil_parser
+from datetime import timedelta
+
 #from demo_events import Events, DemoEvents
 
 # Import our source data 
@@ -244,6 +247,7 @@ def Sigmoid(x):
     return 1 / (1 + theano.tensor.exp(-x))
 
 
+
 def private_array(x):
     return numpy.array(x, numpy.float)
 
@@ -274,6 +278,8 @@ def private_pearsonr(*args, **kwargs):
 
 
 
+def private_flatten(arr):
+    return [y for x in arr for y in x]
 
 
 
@@ -539,6 +545,16 @@ def private_get_demo_events(project_id,user_id):
     return RedisReference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
 
 
+# Datetime functions
+
+def private_dateutil_parse(datestr):
+    return dateutil_parser.parse(datestr)
+
+
+
+def private_datetime_timedelta(*args, **kwargs):
+    return timedelta(*args, **kwargs)
+
 builtins = {\
 
             # make __bultins__ None
@@ -647,6 +663,8 @@ builtins = {\
             # Scipy Statistics
             "pearsonr": private_pearsonr,
 
+            # Convenience functions
+            "flatten": private_flatten,
 
             # Standard python builtins that don't generate privacy problems
 
@@ -729,6 +747,10 @@ builtins = {\
 
             "getEvents": private_get_events,
             "getDemoEvents": private_get_demo_events,
+
+            #datetime functions
+            "dateutilparse": private_dateutil_parse,
+            "datetimetimedelta": private_datetime_timedelta,
     }
 
 prob_builtins = set(["Normal", "HalfNormal", "Uniform", "SkewNormal", "Beta", "Kumaraswamy", "Exponential", "Laplace", "StudentT", "HalfStudentT", "Cauchy", "HalfCauchy", "Gamma", "Weibull", "Lognormal", "ChiSquared", "Wald", "Pareto", "InverseGamma", "Exgaussian", "VonMises", "Triangular", "Gumbel", "Logistic", "LogitNormal"]) # continuous distributions
