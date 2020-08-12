@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from datetime import datetime
 import os
 import hashlib
-
 from . import s3_helper
+import logging
+_log = logging.getLogger("Private")
+
 SOURCE_TYPE_S3 = 's3'
 SOURCE_TYPE_LOCAL_FILE_SYSTEM = 'localfs'
 SOURCE_LOCAL_FILE_PATH_KEY = 'filepath'
@@ -27,10 +29,14 @@ class FileIterator:
     ]
     """
 
-    def __init__(self, datafile_obj_list, aws_profile=None):
+    def __init__(self, datafile_obj_list, aws_profile=None, check_files=False):
         self.file_id = -1
-        self.file_obj_list = datafile_obj_list
+        if check_files:
+            self.file_obj_list = self.check_files(datafile_obj_list)
+        else:
+            self.file_obj_list = datafile_obj_list
         self.aws_profile = aws_profile
+
 
     def __iter__(self):
         return self
@@ -56,6 +62,30 @@ class FileIterator:
                 raise Exception('Unknown data source type')
         else:
             raise StopIteration
+
+    def check_files(self, datafile_obj_list):
+        file_obj_list = [] 
+        print("list", type(datafile_obj_list))
+
+        # A tuple is sometimes being sent through
+        # Need to find from where
+        # This is a patch, needs to be FIXED
+
+        if isinstance(datafile_obj_list, tuple) and isinstance(datafile_obj_list[0], list):
+            _log.warning("Tuple sent to FileIterator instead of list")
+            datafile_obj_list = datafile_obj_list[0]
+
+        for x in datafile_obj_list:
+            if x.get('type') == 'localfs':
+                if not os.path.isfile(x.get('filepath')):
+                    _log.warning('Removing missing local file from FileIterator: {}'.format(x.get('filepath')))
+                    continue
+                elif os.path.getsize(x.get('filepath')) == 0:
+                    _log.warning('Removing empty local file from FileIterator: {}'.format(x.get('filepath')))
+                    continue
+            file_obj_list.append(x)
+        return file_obj_list
+
 
     def reset(self):
         self.file_id = -1
