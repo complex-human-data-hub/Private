@@ -31,7 +31,7 @@ def _debug(msg):
 
 
 #debug = False
-depGraph = graph()
+depGraph = Graph()
 
 class result:
 
@@ -265,23 +265,32 @@ class InputVisitor(PTNodeVisitor):
             self.depGraph.add_comment(children[0].code, children[1].code)
         #depGraph.compute()
     def visit_command(self, node, children):                  return result("command", children[0].code)
-    def visit_draw_tree(self, node, children):                return result("draw_tree", self.depGraph.draw_dependency_graph())
+
+    def visit_draw_generative_graph(self, node, children):
+        return result("draw_generative_graph", self.depGraph.draw_generative_graph())
+
+    def visit_draw_inferential_graph(self, node, children):
+        return result("draw_inferential_graph", self.depGraph.draw_inferential_graph())
+
+    def visit_draw_privacy_graph(self, node, children):
+        return result("draw_privacy_graph", self.depGraph.draw_privacy_graph())
+
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
         self.depGraph.__init__(events=self.depGraph.globals["All"]["Events"], project_id=self.depGraph.project_id,
-                               shell_id=self.depGraph.shell_id, load_demo_events=self.depGraph.load_demo_events, user_ids=self.depGraph.userids)
+                               shell_id=self.depGraph.shell_id, load_demo_events=self.depGraph.load_demo_events, user_ids=self.depGraph.user_ids)
         return result("clear_variables", "All variables removed.")
     def visit_show_dependencies(self, node, children):        return result("show_dependencies", self.depGraph.show_dependencies())
     def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", self.depGraph.show_eval_code())
-    def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.constructPyMC3code()[1])
+    def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.show_pymc3_code())
     def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler("All", verbose=True))
     #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", self.depGraph.showSamplerChains())
-    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.showSamplerResults())
+    def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.show_sampler_results())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(self.depGraph.server.get_stats()['local']))
     def visit_show_sets(self, node, children):                return result("show_sets", self.depGraph.show_sets())
-    def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.showGlobals())
+    def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.show_globals())
     def visit_show_jobs(self, node, children):                return result("show_jobs", self.depGraph.show_jobs())
     def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", self.depGraph.variablesToBeCalculated())
     def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", self.depGraph.variablesToBeSampled())
@@ -294,7 +303,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_help(self, node, children):
         res = """
 clear: remove all variables and restart
-dt: draw variable dependency tree
+dgg: draw generative graph
+dig: draw inferential graph
 sv: show variables
 sd: show dependencies
 spp: show pp stats
@@ -373,7 +383,7 @@ help: this message
                 if c.result_type == "function_return":
                     code += '\t' + c.code
                     evalcode += '\t' + c.evalcode
-            self.depGraph.define_function(func_name, code, evalcode, depends, defines, set(children[0].depend))
+            self.depGraph.define_function(func_name, "User Function", evalcode, depends, defines, set(children[0].depend))
             return
 
     def visit_code_block(self, node, children):
@@ -383,7 +393,7 @@ help: this message
             return
 
     def visit_value(self, node, children):
-        print(self.depGraph.getValue(node.value, longFormat=True))
+        print(self.depGraph.get_value(node.value, long_format=True))
 
     def visit_command_line_expression(self, node, children):
         return result("command_line_expression",

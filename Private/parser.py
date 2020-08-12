@@ -15,7 +15,9 @@ from arpeggio import RegExMatch as _
 
 def command():                  return [delete, \
                                         comment, \
-                                        draw_tree, \
+                                        draw_generative_graph, \
+                                        draw_inferential_graph, \
+                                        draw_privacy_graph, \
                                         show_variables, \
                                         show_values, \
                                         clear_variables, \
@@ -40,7 +42,9 @@ def command():                  return [delete, \
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
 def comment_line():             return comment_string    # need this to stop interpreter from printing the comment_string
-def draw_tree():                return "dt"
+def draw_generative_graph():    return "dgg"
+def draw_inferential_graph():   return "dig"
+def draw_privacy_graph():       return "dpg"
 def show_variables():           return "sv"
 def show_values():              return "sval"
 def clear_variables():          return "clear"

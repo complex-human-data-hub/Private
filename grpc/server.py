@@ -41,7 +41,7 @@ logging.basicConfig(filename=logfile,level=logging.DEBUG)
 #Import DataSource
 #from Private.unforgettable_data import Source
 from Private.private_data import Source
-from Private.graph import graph
+from Private.graph import Graph
 
 import os 
 
@@ -67,7 +67,7 @@ class Private:
         if args.port > 51150:
             self.data_source = Source(args, project_uid=project_uid)
             events = self.data_source.get_events()
-            self.graph = graph(events=events)
+            self.graph = Graph(events=events)
         _debug("Loading Private")
 
     def execute(self, line):
