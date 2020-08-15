@@ -257,7 +257,7 @@ class Graph:
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
-        predecessors = self.i_graph.predecessors(node[attr_id])
+        predecessors = self.get_dep_predecessors(node[attr_id])
         for p_id in predecessors:
             predecessor = self.i_graph.nodes[p_id]
             is_prob = predecessor[attr_is_prob]
@@ -1060,6 +1060,21 @@ except Exception as e:
                        pd_key + var_name == self.i_graph.nodes[n][attr_pd_node]):
                 return self.i_graph.nodes[n]
         return None
+
+    def get_dep_predecessors(self, node_id):
+        """
+        get dependant predecessors of a given node
+        :param node_id: i_graph node
+        :return: dependants
+        """
+        dep_predecessors = set()
+        predecessors = set(self.i_graph.predecessors(node_id))
+        dep_predecessors = dep_predecessors.union(predecessors)
+        for predecessor in predecessors:
+            if predecessor in self.functions:
+                dep_predecessors = dep_predecessors.union(self.get_dep_predecessors(predecessor))
+
+        return dep_predecessors
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
