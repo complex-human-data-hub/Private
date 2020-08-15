@@ -493,7 +493,7 @@ class Graph:
             self.dependson.pop(name, None)
             self.probdependson.pop(name, None)
             self.comment.pop(name, None)
-            self.del_from_raw_graph(name)
+            self.raw_graph_del_node(name)
             res = ""
         else:
             res = name + " not found."
@@ -879,6 +879,15 @@ except Exception as e:
         :param is_prob: Boolean, if it's a probabilistic node
         :return:
         """
+        # if a re-define
+        if (is_prob and name in self.raw_graph.graph[p_key]) or ((not is_prob) and name in self.raw_graph.graph[p_key]):
+            # delete the existing node before adding
+            if is_prob and name in self.raw_graph.graph[d_key]:
+                edges = list(self.raw_graph.in_edges(pd_key + name))
+                self.raw_graph.remove_edges_from(edges)
+            else:
+                edges = list(self.raw_graph.in_edges(name))
+                self.raw_graph.remove_edges_from(edges)
 
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
         if name not in self.raw_graph.nodes:
@@ -904,11 +913,13 @@ except Exception as e:
 
         # Adding the edges
         if is_prob:
-            self.raw_graph.graph[p_key].append(name)
+            if name not in self.raw_graph.graph[p_key]:
+                self.raw_graph.graph[p_key].append(name)
             edges = [(a, name) for a in set(linked_nodes)]
             self.raw_graph.add_edges_from(edges)
         else:
-            self.raw_graph.graph[d_key].append(name)
+            if name not in self.raw_graph.graph[d_key]:
+                self.raw_graph.graph[d_key].append(name)
             edges = [(a, name) for a in set(linked_nodes) - {h_node}]
             self.raw_graph.add_edges_from(edges)
 
@@ -930,7 +941,7 @@ except Exception as e:
         self.raw_graph.nodes[name][attr_id] = name
         self.raw_graph.nodes[name][attr_last_ts] = 0
 
-    def del_from_raw_graph(self, name):
+    def raw_graph_del_node(self, name):
         """
         Delete a node from the inferential graph (i_graph), **Yet to implement
         :param name: String, name of the node
