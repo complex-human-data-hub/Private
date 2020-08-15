@@ -19,7 +19,7 @@ from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlob
     illegal_variable_names, setGlobals2
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, attr_id, \
     attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, pt_public, \
-    pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder
+    pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
 
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -940,6 +940,10 @@ except Exception as e:
         self.raw_graph.nodes[name][attr_is_prob] = is_prob
         self.raw_graph.nodes[name][attr_id] = name
         self.raw_graph.nodes[name][attr_last_ts] = 0
+        if name.startswith(pd_key):
+            self.raw_graph.nodes[name][attr_pd_node] = name
+        else:
+            self.raw_graph.nodes[name][attr_pd_node] = None
 
     def raw_graph_del_node(self, name):
         """
@@ -971,6 +975,9 @@ except Exception as e:
                 node_1 = i_graph.nodes[e[1]][attr_label]
                 node_0_graph = i_graph.nodes[e[0]][attr_contains]
                 node_1_graph = i_graph.nodes[e[1]][attr_contains]
+                node_0_pd = i_graph.nodes[e[0]][attr_pd_node]
+                node_1_pd = i_graph.nodes[e[1]][attr_pd_node]
+                pd_node = node_0_pd if node_0_pd else node_1_pd
                 sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
@@ -988,6 +995,7 @@ except Exception as e:
                 i_graph.nodes[e[0]][attr_color] = 'red'
                 i_graph.nodes[e[0]][attr_is_prob] = True
                 i_graph.nodes[e[0]][attr_contains] = sub_graph
+                i_graph.nodes[e[0]][attr_pd_node] = pd_node
 
                 edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
 
@@ -1049,7 +1057,7 @@ except Exception as e:
             return self.i_graph.nodes[var_name]
         for n, ip in self.i_graph.nodes(data=attr_is_prob):
             if ip and (var_name in self.i_graph.nodes[n][attr_contains] or
-                       pd_key + var_name in self.i_graph.nodes[n][attr_contains]):
+                       pd_key + var_name == self.i_graph.nodes[n][attr_pd_node]):
                 return self.i_graph.nodes[n]
         return None
 
