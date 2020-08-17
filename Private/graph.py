@@ -880,7 +880,7 @@ except Exception as e:
         :return:
         """
         # if a re-define
-        if (is_prob and name in self.raw_graph.graph[p_key]) or ((not is_prob) and name in self.raw_graph.graph[p_key]):
+        if (is_prob and name in self.raw_graph.graph[p_key]) or ((not is_prob) and name in self.raw_graph.graph[d_key]):
             # delete the existing node before adding
             if is_prob and name in self.raw_graph.graph[d_key]:
                 edges = list(self.raw_graph.in_edges(pd_key + name))
