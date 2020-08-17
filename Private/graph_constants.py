@@ -6,6 +6,7 @@ attr_label = 'label'
 attr_color = 'color'
 attr_is_prob = 'is_prob'
 attr_contains = 'sub_graph'
+attr_pd_node = 'pd_node'
 attr_id = 'id'
 attr_last_ts = 'last_ts'
 

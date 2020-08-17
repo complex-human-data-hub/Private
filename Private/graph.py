@@ -19,7 +19,7 @@ from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlob
     illegal_variable_names, setGlobals2
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, attr_id, \
     attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, pt_public, \
-    pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder
+    pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
 
 from Private.redis_reference import RedisReference
 import Private.redis_helper as redis_helper
@@ -257,7 +257,7 @@ class Graph:
         user_globals = self.globals[user]
         job_globals = {'user_id': user, 'project_id': self.project_id}
         deps = set()
-        predecessors = self.i_graph.predecessors(node[attr_id])
+        predecessors = self.get_dep_predecessors(node[attr_id])
         for p_id in predecessors:
             predecessor = self.i_graph.nodes[p_id]
             is_prob = predecessor[attr_is_prob]
@@ -493,7 +493,7 @@ class Graph:
             self.dependson.pop(name, None)
             self.probdependson.pop(name, None)
             self.comment.pop(name, None)
-            self.del_from_raw_graph(name)
+            self.raw_graph_del_node(name)
             res = ""
         else:
             res = name + " not found."
@@ -879,6 +879,15 @@ except Exception as e:
         :param is_prob: Boolean, if it's a probabilistic node
         :return:
         """
+        # if a re-define
+        if (is_prob and name in self.raw_graph.graph[p_key]) or ((not is_prob) and name in self.raw_graph.graph[p_key]):
+            # delete the existing node before adding
+            if is_prob and name in self.raw_graph.graph[d_key]:
+                edges = list(self.raw_graph.in_edges(pd_key + name))
+                self.raw_graph.remove_edges_from(edges)
+            else:
+                edges = list(self.raw_graph.in_edges(name))
+                self.raw_graph.remove_edges_from(edges)
 
         # Add a new node. It get automatically added, when adding a edge but we need to set the id
         if name not in self.raw_graph.nodes:
@@ -904,11 +913,13 @@ except Exception as e:
 
         # Adding the edges
         if is_prob:
-            self.raw_graph.graph[p_key].append(name)
+            if name not in self.raw_graph.graph[p_key]:
+                self.raw_graph.graph[p_key].append(name)
             edges = [(a, name) for a in set(linked_nodes)]
             self.raw_graph.add_edges_from(edges)
         else:
-            self.raw_graph.graph[d_key].append(name)
+            if name not in self.raw_graph.graph[d_key]:
+                self.raw_graph.graph[d_key].append(name)
             edges = [(a, name) for a in set(linked_nodes) - {h_node}]
             self.raw_graph.add_edges_from(edges)
 
@@ -929,8 +940,12 @@ except Exception as e:
         self.raw_graph.nodes[name][attr_is_prob] = is_prob
         self.raw_graph.nodes[name][attr_id] = name
         self.raw_graph.nodes[name][attr_last_ts] = 0
+        if name.startswith(pd_key):
+            self.raw_graph.nodes[name][attr_pd_node] = name
+        else:
+            self.raw_graph.nodes[name][attr_pd_node] = None
 
-    def del_from_raw_graph(self, name):
+    def raw_graph_del_node(self, name):
         """
         Delete a node from the inferential graph (i_graph), **Yet to implement
         :param name: String, name of the node
@@ -960,6 +975,9 @@ except Exception as e:
                 node_1 = i_graph.nodes[e[1]][attr_label]
                 node_0_graph = i_graph.nodes[e[0]][attr_contains]
                 node_1_graph = i_graph.nodes[e[1]][attr_contains]
+                node_0_pd = i_graph.nodes[e[0]][attr_pd_node]
+                node_1_pd = i_graph.nodes[e[1]][attr_pd_node]
+                pd_node = node_0_pd if node_0_pd else node_1_pd
                 sub_graph = []
                 if node_0.startswith(pd_key):
                     node_label = node_1
@@ -977,6 +995,7 @@ except Exception as e:
                 i_graph.nodes[e[0]][attr_color] = 'red'
                 i_graph.nodes[e[0]][attr_is_prob] = True
                 i_graph.nodes[e[0]][attr_contains] = sub_graph
+                i_graph.nodes[e[0]][attr_pd_node] = pd_node
 
                 edges_to_remove = edge_permutations.intersection(set(i_graph.edges))
 
@@ -1038,9 +1057,24 @@ except Exception as e:
             return self.i_graph.nodes[var_name]
         for n, ip in self.i_graph.nodes(data=attr_is_prob):
             if ip and (var_name in self.i_graph.nodes[n][attr_contains] or
-                       pd_key + var_name in self.i_graph.nodes[n][attr_contains]):
+                       pd_key + var_name == self.i_graph.nodes[n][attr_pd_node]):
                 return self.i_graph.nodes[n]
         return None
+
+    def get_dep_predecessors(self, node_id):
+        """
+        get dependant predecessors of a given node
+        :param node_id: i_graph node
+        :return: dependants
+        """
+        dep_predecessors = set()
+        predecessors = set(self.i_graph.predecessors(node_id))
+        dep_predecessors = dep_predecessors.union(predecessors)
+        for predecessor in predecessors:
+            if predecessor in self.functions:
+                dep_predecessors = dep_predecessors.union(self.get_dep_predecessors(predecessor))
+
+        return dep_predecessors
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """
