@@ -716,8 +716,7 @@ except Exception as e:
         except Exception as e:
             self.log.debug(str(e))
 
-        self.release()
-        self.compute_privacy(node)
+        self.compute_privacy(node, lock=False)
         for n in self.i_graph.successors(name):
             successor = self.i_graph.nodes[n]
             successor[attr_last_ts] = node_ts
@@ -725,13 +724,14 @@ except Exception as e:
             all_public = all([p in self.public for p in successor_contains if not p.startswith(pd_key)])
             node_public = node[attr_id] in self.public
             if not node_public:
-                self.start_computation(user, successor)
+                self.start_computation(user, successor, lock=False)
             else:
                 if all_public:
-                    self.start_computation(user, successor)
+                    self.start_computation(user, successor, lock=False)
                 else:
                     for u in self.user_ids:
-                        self.start_computation(u, successor)
+                        self.start_computation(u, successor, lock=False)
+        self.release()
         self.compute_privacy(node)
 
     def sampler_callback(self, return_value):
@@ -807,12 +807,13 @@ except Exception as e:
 
         self.log.debug("sampler_callback: delete jobs ...done")
 
-        self.release()
-        self.compute_privacy(node)
+
+        self.compute_privacy(node, lock=False)
         for u in self.i_graph.successors(node[attr_id]):
             successor = self.i_graph.nodes[u]
             successor[attr_last_ts] = node_ts
-            self.start_computation(user, successor)
+            self.start_computation(user, successor, lock=False)
+        self.release()
         self.compute_privacy(node)
 
     def mp_callback(self, return_value):
@@ -880,7 +881,8 @@ except Exception as e:
         :return:
         """
         # if a re-define
-        if (is_prob and name in self.raw_graph.graph[p_key]) or ((not is_prob) and name in self.raw_graph.graph[d_key]):
+        if (is_prob and (name in self.raw_graph.graph[p_key] or pd_key + name in self.raw_graph.graph[p_key])) or (
+                (not is_prob) and name in self.raw_graph.graph[d_key]):
             # delete the existing node before adding
             if is_prob and name in self.raw_graph.graph[d_key]:
                 edges = list(self.raw_graph.in_edges(pd_key + name))
@@ -1075,6 +1077,13 @@ except Exception as e:
                 dep_predecessors = dep_predecessors.union(self.get_dep_predecessors(predecessor))
 
         return dep_predecessors
+
+    def draw_raw_graph(self, graph_name='raw_graph'):
+        """
+        Draws the raw graph
+        :return: graph as a base 64 string
+        """
+        return self.draw_graph(self.raw_graph, graph_name)
 
     def draw_inferential_graph(self, graph_name='inferential_graph'):
         """

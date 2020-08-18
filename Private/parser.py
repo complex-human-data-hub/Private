@@ -18,6 +18,7 @@ def command():                  return [delete, \
                                         draw_generative_graph, \
                                         draw_inferential_graph, \
                                         draw_privacy_graph, \
+                                        draw_raw_graph, \
                                         show_variables, \
                                         show_values, \
                                         clear_variables, \
@@ -45,6 +46,7 @@ def comment_line():             return comment_string    # need this to stop int
 def draw_generative_graph():    return "dgg"
 def draw_inferential_graph():   return "dig"
 def draw_privacy_graph():       return "dpg"
+def draw_raw_graph():           return "drg"
 def show_variables():           return "sv"
 def show_values():              return "sval"
 def clear_variables():          return "clear"
