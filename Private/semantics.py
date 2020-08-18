@@ -345,7 +345,8 @@ help: this message
     def visit_function_header(self, node, children):
         defines = set()
         for c in children:
-            defines = defines.union(c.defines)
+            if type(c) == result:
+                defines = defines.union(c.defines)
         children[1].remove_dependencies(children[1].depend)
         code = " ".join(c if type(c) == str else c.code for c in children)
         evalcode = " ".join(c if type(c) == str else c.evalcode for c in children)
