@@ -275,6 +275,9 @@ class InputVisitor(PTNodeVisitor):
     def visit_draw_privacy_graph(self, node, children):
         return result("draw_privacy_graph", self.depGraph.draw_privacy_graph())
 
+    def visit_draw_raw_graph(self, node, children):
+        return result("draw_raw_graph", self.depGraph.draw_raw_graph())
+
     def visit_show_variables(self, node, children):           return result("show_variables", str(self.depGraph))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
@@ -305,6 +308,7 @@ class InputVisitor(PTNodeVisitor):
 clear: remove all variables and restart
 dgg: draw generative graph
 dig: draw inferential graph
+dpg: draw private graph
 sv: show variables
 sd: show dependencies
 spp: show pp stats
