@@ -907,6 +907,11 @@ except Exception as e:
                 self.raw_graph.graph[p_key].append(pd_key + name)
                 self.raw_graph_add_node(name, is_prob)
                 self.raw_graph.add_edge(name, pd_key + name)
+                # for all the depends on pd node, trasfer to the d node
+                out_nodes = set(self.raw_graph.successors(pd_key + name))
+                for out_node in out_nodes:
+                    self.raw_graph.remove_edge(pd_key + name, out_node)
+                    self.raw_graph.add_edge(name, out_node)
 
         # Add the linked nodes as well
         for node in linked_nodes:
