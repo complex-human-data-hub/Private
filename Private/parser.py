@@ -47,7 +47,7 @@ def draw_generative_graph():    return "dgg"
 def draw_inferential_graph():   return "dig"
 def draw_privacy_graph():       return "dpg"
 def draw_raw_graph():           return "drg"
-def show_variables():           return "sv"
+def show_variables():           return "sv", Optional(identifier)
 def show_values():              return "sval"
 def clear_variables():          return "clear"
 def show_dependencies():        return "sd"
