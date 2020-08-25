@@ -1,4 +1,0 @@
-temperatures = [e.Temperature for e in Events if e.hasField("Temperature")]                                                         
-temperatures~Normal(mu,sigma)
-mu ~ Normal(0,100)
-sigma ~ HalfNormal(100)

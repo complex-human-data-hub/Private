@@ -1,5 +1,0 @@
-k = 1
-f = [e.Weather  == "rain" for e in Events if e.hasField("Weather") and k == 1] 
-f ~ Binomial(10, r)
-r ~ Uniform(0,1)
-

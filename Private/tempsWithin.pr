@@ -1,2 +1,0 @@
-subjects = list(set([e.UserId for e in DemoEvents]))
-winter = [mean([e.Temperature for e in DemoEvents if (e.hasField("Temperature") and ("winter" in e.keywords or "autumn" in e.keywords)) and e.UserId == s]) for s in subjects]

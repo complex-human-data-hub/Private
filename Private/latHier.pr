@@ -1,9 +1,0 @@
-latitudes = [e.latitude for e in Events if e.hasField("latitude")]                                                         
-subjects = [e.UserId for e in Events if e.hasField("latitude")]
-latitudes[subjects]~Normal(mu[subjects],sigma[subjects])
-muMu ~ Normal(0,100)
-sigmaSigma ~ HalfNormal(100)
-muSigma ~ HalfNormal(100)
-
-sigma[subjects]~HalfNormal(sigmaSigma)
-mu[subjects]~Normal(muMu, muSigma)

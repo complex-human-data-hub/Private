@@ -1,4 +1,0 @@
-f = Bernoulli(0.3, 100)
-f ~ Bernoulli(r)
-r ~ Uniform(0,1)
-

@@ -1,6 +1,0 @@
-usersWithWeatherInfo = [e.UserId for e in DemoEvents if e.hasField("Weather")]
-uniqueUsers = set(usersWithWeatherInfo)
-numEventsByUser = array([len([e for e in DemoEvents if e.hasField("Weather") and e.UserId == user]) for user in uniqueUsers])
-numRainEventsByUser = array([len([e for e in DemoEvents if (e.hasField("Weather") and e.UserId == user) and e.Weather == "rain"]) for user in uniqueUsers])
-propsByUser = numRainEventsByUser / numEventsByUser
-

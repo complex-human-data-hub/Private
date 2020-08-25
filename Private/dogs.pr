@@ -1,9 +1,0 @@
-before = array([20, 22, 28, 27, 22, 28, 20, 24, 28, 29, 26, 25, 23, 23, 23, 21, 22, 27, 22])
-after = array([20, 14, 20, 24, 19, 21, 22, 20, 14, 19, 15, 18, 16, 12, 12, 15, 11, 13, 11])
-
-diff = before - after
-
-diff ~ Normal(mu, sigma)
-mu ~ Normal(0,20)
-sigma ~ HalfNormal(20)
-

@@ -1,7 +1,0 @@
-ButtonEvents = [e for e in DemoEvents if e.type == "Button"]
-Anxious = ["Anxious" in e.keywords for e in ButtonEvents]
-Wednesday = ["Wednesday" in e.keywords for e in ButtonEvents]
-Anxious ~ Bernoulli(p)
-p ~ Sigmoid(bWednesday * Wednesday + Intercept)
-bWednesday ~ Normal(0, 10)
-Intercept ~ Normal(0, 10)

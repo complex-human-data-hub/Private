@@ -1,4 +1,0 @@
-latitudes = [e.latitude for e in Events if e.hasField("latitude")]                                                         
-latitudes~Normal(mu,sigma)
-mu ~ Normal(0,100)
-sigma ~ HalfNormal(100)
