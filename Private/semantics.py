@@ -31,7 +31,7 @@ def _debug(msg):
 
 
 #debug = False
-depGraph = Graph()
+# depGraph = Graph()
 
 class result:
 
@@ -410,7 +410,7 @@ help: this message
 #    return visit_parse_tree(parse_tree, InputVisitor())
 
 def PrivateSemanticAnalyser(parse_tree, update_graph=None):
-    if not update_graph:
-        update_graph = depGraph
+    # if not update_graph:
+    #     update_graph = depGraph
     return visit_parse_tree(parse_tree, InputVisitor(depGraph=update_graph))
 

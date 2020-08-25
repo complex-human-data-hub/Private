@@ -401,6 +401,13 @@ class Graph:
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
+
+        # check if the exact thing already defined
+        if (name in self.probabilistic and self.probcode[name] == code and self.pyMC3code[name] == pyMC3code) or (
+                name in self.deterministic and self.code[name] == code and self.evalcode[name] == evalcode):
+            self.release()
+            return
+
         if not dependson:
             dependson = []
         else:
@@ -442,6 +449,12 @@ class Graph:
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
+
+        # check if the exact thing already defined
+        if name in self.deterministic and self.code[name] == code and self.evalcode[name] == evalcode:
+            self.release()
+            return
+
         if not dependson:
             dependson = set()
         else:
@@ -469,30 +482,32 @@ class Graph:
         self.release()
         self.compute_privacy(node)
 
-    def delete(self, name):
+    def delete(self, name, is_prob=False):
         self.acquire("delete " + name)
         if name in self.probabilistic | self.deterministic:
-            node = self.get_node(name, name in self.probabilistic)
+            node = self.get_node(name, is_prob)
 
             for user in self.user_ids:
                 self.change_state(user, node, "stale")
                 self.globals[user].pop(name, None)
                 self.stale[user].discard(name)
 
-            self.deterministic.discard(name)
-            self.probabilistic.discard(name)
             self.private.discard(name)
             self.public.discard(name)
             self.unknown_privacy.discard(name)
-
-            self.code.pop(name, None)
-            self.probcode.pop(name, None)
-            self.pyMC3code.pop(name, None)
-            self.hierarchical.pop(name, None)
-
-            self.dependson.pop(name, None)
-            self.probdependson.pop(name, None)
             self.comment.pop(name, None)
+
+            if is_prob:
+                self.probabilistic.discard(name)
+                self.probcode.pop(name, None)
+                self.pyMC3code.pop(name, None)
+                self.hierarchical.pop(name, None)
+                self.probdependson.pop(name, None)
+            else:
+                self.deterministic.discard(name)
+                self.code.pop(name, None)
+                self.dependson.pop(name, None)
+
             self.raw_graph_del_node(name)
             res = ""
         else:
