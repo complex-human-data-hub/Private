@@ -1,0 +1,3 @@
+rain = [e.Weather  == "rain" for e in DemoEvents if e.hasField("Weather")]
+rain ~ Bernoulli(rate)
+rate ~ Uniform(0,1)
