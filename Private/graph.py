@@ -403,8 +403,8 @@ class Graph:
         self.acquire("define " + name)
 
         # check if the exact thing already defined
-        if (name in self.probabilistic and self.probcode[name] == code and self.pyMC3code[name] == pyMC3code) or (
-                name in self.deterministic and self.code[name] == code and self.evalcode[name] == evalcode):
+        if (name in self.probabilistic and self.probcode[name] == code) or (
+                name in self.deterministic and self.code[name] == code):
             self.release()
             return
 
