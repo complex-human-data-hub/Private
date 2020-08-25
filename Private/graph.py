@@ -705,7 +705,7 @@ except Exception as e:
                     debug_logger(["callback Exception", user, name, value])
                     self.globals[user][name] = str(value)
                     self.change_state(user, node, "exception")
-            elif self.ts[compute_key][user][name][started_key] == node_ts:
+            elif name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts:
                 original_value = self.globals[user].get(name, '')
                 self.globals[user][name] = value
                 self.change_state(user, node, "uptodate")
@@ -773,7 +773,7 @@ except Exception as e:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        elif self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
+        elif n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
             try:
                 self.log.debug("sampler_callback: name in names ")
                 for name in names:
@@ -836,7 +836,7 @@ except Exception as e:
         self.acquire("mp_callback")
         job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
-        if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
+        if node[attr_id] in self.ts[manifold_key][user] and self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
                 self.log.debug(f"mp_callback: {user}: {name}: {d}")
                 if self.get_privacy_sampler_result(name) != pt_private:

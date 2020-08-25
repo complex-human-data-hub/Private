@@ -66,7 +66,7 @@ def execute_lines(code_lines):
                 current_probabilistic.add(variable)
 
     delete_probabilistic = graph.probabilistic.difference(current_probabilistic)
-    delete_deterministic = graph.deterministic.difference(current_deterministic)
+    delete_deterministic = graph.deterministic.difference(current_deterministic).difference(graph.builtins)
 
     for v in delete_probabilistic:
         graph.delete(v, is_prob=True)
