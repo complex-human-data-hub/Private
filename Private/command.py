@@ -16,15 +16,10 @@ _log.debug("============================= Starting new interpreter =============
 
 from Private.parser import PrivateParser
 from Private.semantics import PrivateSemanticAnalyser
+from Private.graph import Graph
 
-#from private_data import Source
-from Private import graph
+graph = Graph()
 
-#data_source = Source()
-#events = data_source.get_events()
-#current_graph = graph(events=events)
-
-current_graph = None
 
 def execute(line):
     if line != "":
@@ -34,39 +29,72 @@ def execute(line):
             print("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
         else:
             try:
-                #if not current_graph:
-                #    global current_graph 
-                #    current_graph = graph(events=events)
-                result = PrivateSemanticAnalyser(parse_tree, update_graph=current_graph)
+                result = PrivateSemanticAnalyser(parse_tree, update_graph=graph)
                 if result:
                     print(result)
             except Exception as e:
                 print("Error: " + str(e))
                 traceback.print_exc(file=sys.stdout)
 
-def load_code(filename):
-    f = open(filename, "r").readlines()
-    function = ""
-    for line in f:
+
+def get_value(var):
+    execute(var)
+
+
+def execute_block(code_block):
+    execute_lines(code_block.split('\n'))
+
+
+def execute_file(file_name):
+    try:
+        code_lines = open("samples/" + file_name, "r").readlines()
+        execute_lines(code_lines)
+    except Exception as e:
+        print(e)
+
+
+def execute_lines(code_lines):
+    function_code = ""
+    current_probabilistic = set()
+    current_deterministic = set()
+    for line in code_lines:
+        if not line.isspace():
+            variable = parser.parse(line).value.split('|')[0].strip()
+            if '=' in line:
+                current_deterministic.add(variable)
+            elif '~' in line:
+                current_probabilistic.add(variable)
+
+    delete_probabilistic = graph.probabilistic.difference(current_probabilistic)
+    delete_deterministic = graph.deterministic.difference(current_deterministic).difference(graph.builtins)
+
+    for v in delete_probabilistic:
+        graph.delete(v, is_prob=True)
+
+    for v in delete_deterministic:
+        graph.delete(v, is_prob=False)
+
+    for line in code_lines:
         input_line = line[0:-1]
         print(input_line)
         if input_line.startswith("def"):
-            function += input_line + '\n'
-            continue 
+            function_code += input_line + '\n'
+            continue
 
         if input_line.startswith("    "):
-            function += input_line + ';'
+            function_code += input_line + ';'
             if input_line.strip().startswith("return"):
-                execute(function)
-                function = ""
+                execute(function_code)
+                function_code = ""
             continue
 
         elif input_line != "":
             execute(input_line)
 
+
 parser = PrivateParser()
 if args.filename:
-    load_code(args.filename)
+    execute_file(args.filename)
 
 input_line = input("> ")
 while input_line != 'exit':
@@ -80,6 +108,9 @@ while input_line != 'exit':
                 break
             input_line = input("> ")
         execute(function)
+    elif input_line.startswith("file"):
+        filename = input_line.split(" ")[1]
+        execute_file(filename)
     elif input_line != "":
         execute(input_line)
 

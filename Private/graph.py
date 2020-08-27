@@ -199,6 +199,10 @@ class Graph:
 
         return None
 
+    def cancel_all_jobs(self):
+        for future in self.jobs.values():
+            future.cancel()
+
     def acquire(self, who):
         self.lock.acquire()
         self.whohaslock = who
@@ -401,6 +405,13 @@ class Graph:
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
+
+        # check if the exact thing already defined
+        if (name in self.probabilistic and self.probcode[name] == code) or (
+                name in self.deterministic and self.code[name] == code):
+            self.release()
+            return
+
         if not dependson:
             dependson = []
         else:
@@ -442,6 +453,12 @@ class Graph:
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
+
+        # check if the exact thing already defined
+        if name in self.deterministic and self.code[name] == code and self.evalcode[name] == evalcode:
+            self.release()
+            return
+
         if not dependson:
             dependson = set()
         else:
@@ -469,31 +486,37 @@ class Graph:
         self.release()
         self.compute_privacy(node)
 
-    def delete(self, name):
+    def delete(self, name, is_prob=True):
         self.acquire("delete " + name)
         if name in self.probabilistic | self.deterministic:
-            node = self.get_node(name, name in self.probabilistic)
+            if name in self.deterministic:
+                is_prob = False
+
+            node = self.get_node(name, is_prob)
 
             for user in self.user_ids:
                 self.change_state(user, node, "stale")
                 self.globals[user].pop(name, None)
                 self.stale[user].discard(name)
 
-            self.deterministic.discard(name)
-            self.probabilistic.discard(name)
             self.private.discard(name)
             self.public.discard(name)
             self.unknown_privacy.discard(name)
-
-            self.code.pop(name, None)
-            self.probcode.pop(name, None)
-            self.pyMC3code.pop(name, None)
-            self.hierarchical.pop(name, None)
-
-            self.dependson.pop(name, None)
-            self.probdependson.pop(name, None)
             self.comment.pop(name, None)
-            self.raw_graph_del_node(name)
+
+            if is_prob:
+                self.probabilistic.discard(name)
+                self.probcode.pop(name, None)
+                self.pyMC3code.pop(name, None)
+                self.hierarchical.pop(name, None)
+                self.probdependson.pop(name, None)
+            else:
+                self.deterministic.discard(name)
+                self.code.pop(name, None)
+                self.dependson.pop(name, None)
+
+            self.raw_graph_del_node(name, is_prob)
+            self.del_ts(node[attr_id], int(time.time() * 1000))
             res = ""
         else:
             res = name + " not found."
@@ -684,13 +707,14 @@ except Exception as e:
         job_name, node, user, value = return_value
         name = node[attr_id]
         node_ts = node[attr_last_ts]
+        successful_return = name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts
         try:
             if isinstance(value, Exception):
                 if user == "All":
                     debug_logger(["callback Exception", user, name, value])
                     self.globals[user][name] = str(value)
                     self.change_state(user, node, "exception")
-            elif self.ts[compute_key][user][name][started_key] == node_ts:
+            elif name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts:
                 original_value = self.globals[user].get(name, '')
                 self.globals[user][name] = value
                 self.change_state(user, node, "uptodate")
@@ -716,23 +740,25 @@ except Exception as e:
         except Exception as e:
             self.log.debug(str(e))
 
-        self.compute_privacy(node, lock=False)
-        for n in self.i_graph.successors(name):
-            successor = self.i_graph.nodes[n]
-            successor[attr_last_ts] = node_ts
-            successor_contains = successor[attr_contains]
-            all_public = all([p in self.public for p in successor_contains if not p.startswith(pd_key)])
-            node_public = node[attr_id] in self.public
-            if not node_public:
-                self.start_computation(user, successor, lock=False)
-            else:
-                if all_public:
+        if successful_return:
+            self.compute_privacy(node, lock=False)
+            for n in self.i_graph.successors(name):
+                successor = self.i_graph.nodes[n]
+                successor[attr_last_ts] = node_ts
+                successor_contains = successor[attr_contains]
+                all_public = all([p in self.public for p in successor_contains if not p.startswith(pd_key)])
+                node_public = node[attr_id] in self.public
+                if not node_public:
                     self.start_computation(user, successor, lock=False)
                 else:
-                    for u in self.user_ids:
-                        self.start_computation(u, successor, lock=False)
+                    if all_public:
+                        self.start_computation(user, successor, lock=False)
+                    else:
+                        for u in self.user_ids:
+                            self.start_computation(u, successor, lock=False)
         self.release()
-        self.compute_privacy(node)
+        if successful_return:
+            self.compute_privacy(node)
 
     def sampler_callback(self, return_value):
         return_value = return_value.result()
@@ -742,6 +768,7 @@ except Exception as e:
         names = node[attr_contains]
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]
+        successful_return = n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -758,7 +785,7 @@ except Exception as e:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        elif self.ts[sampler_key][user][n_id][started_key] == node_ts:  # successful sampler return
+        elif n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts:
             try:
                 self.log.debug("sampler_callback: name in names ")
                 for name in names:
@@ -807,21 +834,24 @@ except Exception as e:
 
         self.log.debug("sampler_callback: delete jobs ...done")
 
-
-        self.compute_privacy(node, lock=False)
-        for u in self.i_graph.successors(node[attr_id]):
-            successor = self.i_graph.nodes[u]
-            successor[attr_last_ts] = node_ts
-            self.start_computation(user, successor, lock=False)
+        if successful_return:
+            self.compute_privacy(node, lock=False)
+            for u in self.i_graph.successors(node[attr_id]):
+                successor = self.i_graph.nodes[u]
+                successor[attr_last_ts] = node_ts
+                self.start_computation(user, successor, lock=False)
         self.release()
-        self.compute_privacy(node)
+        if successful_return:
+            self.compute_privacy(node)
 
     def mp_callback(self, return_value):
         return_value = return_value.result()
         self.acquire("mp_callback")
         job_name, node, name, user, d = return_value
         node_ts = node[attr_last_ts]
-        if self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
+        successful_return = node[attr_id] in self.ts[manifold_key][user] and self.ts[manifold_key][user][node[attr_id]][
+            started_key] == node_ts
+        if node[attr_id] in self.ts[manifold_key][user] and self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
             try:
                 self.log.debug(f"mp_callback: {user}: {name}: {d}")
                 if self.get_privacy_sampler_result(name) != pt_private:
@@ -842,7 +872,8 @@ except Exception as e:
         except Exception as e:
             self.log.debug("trying to del job " + str(e))
         self.release()
-        self.compute_privacy(node)
+        if successful_return:
+            self.compute_privacy(node)
 
     # New graph methods
 
@@ -870,6 +901,15 @@ except Exception as e:
             return True
         else:
             return False
+
+    def del_ts(self, n_id, ts):
+        for job_key in self.ts.keys():
+            for user in self.ts[job_key].keys():
+                if n_id in self.ts[job_key][user]:
+                    for ts_key in self.ts[job_key][user][n_id].keys():
+                        current_ts = self.ts[job_key][user][n_id].get(ts_key, 0)
+                        if current_ts < ts:
+                            self.ts[job_key][user][n_id][ts_key] = ts
 
     def add_to_raw_graph(self, name, linked_nodes, h_node, is_prob):
         """
@@ -952,12 +992,23 @@ except Exception as e:
         else:
             self.raw_graph.nodes[name][attr_pd_node] = None
 
-    def raw_graph_del_node(self, name):
+    def raw_graph_del_node(self, name, is_prob):
         """
         Delete a node from the inferential graph (i_graph), **Yet to implement
         :param name: String, name of the node
+        :param is_prob: is probabilistic
         """
-        self.raw_graph.remove_node(name)
+        if is_prob and name in self.raw_graph.graph[d_key]:
+            name = pd_key + name
+        if is_prob:
+            self.raw_graph.graph[p_key].remove(name)
+        else:
+            self.raw_graph.graph[d_key].remove(name)
+        if not set(self.raw_graph.out_edges(name)):
+            self.raw_graph.remove_node(name)
+        else:
+            edges = list(self.raw_graph.in_edges(name))
+            self.raw_graph.remove_edges_from(edges)
 
         # update i_graph and p_graph
         self.update_graphs()
