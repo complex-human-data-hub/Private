@@ -281,6 +281,9 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_variables(self, node, children):
         pattern = children[1].code if len(children)>1 else ''
         return result("show_variables", self.depGraph.show_variables(pattern))
+    def visit_show_variables_dict(self, node, children):
+        pattern = children[1].code if len(children)>1 else ''
+        return result("show_variables_dict", self.depGraph.show_variables_dict(pattern))
     def visit_show_values(self, node, children):              return result("show_values", self.depGraph.show_values())
     def visit_clear_variables(self, node, children):
         self.depGraph.__init__(events=self.depGraph.globals["All"]["Events"], project_id=self.depGraph.project_id,

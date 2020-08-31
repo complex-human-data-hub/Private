@@ -20,6 +20,7 @@ def command():                  return [delete, \
                                         draw_privacy_graph, \
                                         draw_raw_graph, \
                                         show_variables, \
+                                        show_variables_dict, \
                                         show_values, \
                                         clear_variables, \
                                         show_dependencies, \
@@ -48,6 +49,7 @@ def draw_inferential_graph():   return "dig"
 def draw_privacy_graph():       return "dpg"
 def draw_raw_graph():           return "drg"
 def show_variables():           return "sv", Optional(identifier)
+def show_variables_dict():      return "svdict", Optional(identifier)
 def show_values():              return "sval"
 def clear_variables():          return "clear"
 def show_dependencies():        return "sd"

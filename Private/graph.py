@@ -404,6 +404,7 @@ class Graph:
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+
         self.acquire("define " + name)
 
         # check if the exact thing already defined
@@ -432,18 +433,21 @@ class Graph:
             self.code[name] = code
             self.evalcode[name] = evalcode
             self.dependson[name] = set(dependson)
+
+
         self.add_to_raw_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
-        for user in self.user_ids:
-            self.change_state(user, node, "stale")
         # set the timestamp for node define
         node[attr_last_ts] = int(time.time() * 1000)
         # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute_privacy(node, lock=False)
         if name not in self.public:
             for user in self.user_ids:
+                self.change_state(user, node, "stale")
+            for user in self.user_ids:
                 self.start_computation(user, node, lock=False)
         else:
+            self.change_state(user_all, node, "stale")
             self.start_computation(user_all, node, lock=False)
         self.release()
 
@@ -1110,6 +1114,7 @@ except Exception as e:
         :param prob: Boolean, is probabilistic
         :return: (node id, node data)
         """
+
         # if deterministic, node id is same as the variable name
         if not prob:
             return self.i_graph.nodes[var_name]
@@ -1456,6 +1461,63 @@ except Exception as e:
         else:
             return ""
 
+    def show_variables_dict(self, pattern):
+        name_bits = []
+        code_bits = []
+        code_width = 50
+        value_width = 80
+        for name in [c for c in self.code.keys() if pattern.lower() in c.lower()]:
+            code_bits.append(name + " = " + str(self.code[name]))
+            name_bits.append(name)
+        for name in [pc for pc in self.probcode.keys() if pattern.lower() in pc.lower()]:
+            if name in self.hierarchical:
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                name_bits.append(name + "[" + self.hierarchical[name] + "]")
+            else:
+                code_bits.append(name + " ~ " + str(self.probcode[name]))
+                name_bits.append(name)
+        if len(code_bits) > 0:
+            m = max(len(line) for line in code_bits)
+            m = min(m, code_width)
+            newcodebits = [line[0:code_width].ljust(m, " ") for line in code_bits]
+            value_bits = []
+            for name in self.code.keys():
+                value_bits.append(self.get_value(name)[0:value_width])
+            for name in self.probcode.keys():
+                if name in self.samplerexception:
+                    value_bits.append(self.samplerexception[name])
+                else:
+                    value_bits.append(self.get_value(name)[0:value_width])
+            comment_bits = []
+            for name in self.code.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            for name in self.probcode.keys():
+                comment_bits.append(self.comment.get(name, ""))
+            unsatisfied_depends = []
+            for name in self.code.keys():
+                unsatisfied_depends.append(
+                    ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
+            for name in self.probcode.keys():
+                unsatisfied_depends.append(
+                    ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
+            debug_logger("show_variables_ace")
+            debug_logger([name_bits, newcodebits, value_bits, comment_bits, unsatisfied_depends])
+            sv_ace = {}
+            for i, k in enumerate(name_bits):
+                if k in sv_ace:
+                    continue
+                sv_ace[k] = {
+                    'name': k,
+                    'value': value_bits[i],
+                    'comment': comment_bits[i],
+                    'unsatified': unsatisfied_depends[i]
+                    }
+            return json.dumps(sv_ace)
+            #return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
+            #                 codebit, valuebit, commentbit, unsatisfied_depend in
+            #                 zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
+        else:
+            return '{}'
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
     name = node[attr_id]
