@@ -35,7 +35,7 @@ redis_server_ip = "localhost"
 numpy_seed = 8623574
 
 # Return sample size
-max_sample_size = 100
+max_sample_size = 1000
 
 ppservers = ()
 ppservers_list = []
