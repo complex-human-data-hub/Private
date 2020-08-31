@@ -1,0 +1,395 @@
+<style>
+
+
+    /* Ace editor  */
+    .ace_editor, .toolbar {
+        //border: 1px solid lightgray;
+        margin: auto;
+        width: 90%;
+    }
+
+    .toolbar button {
+        float:right;
+    }
+    .ace_editor {
+        height: 200px;
+    }
+
+    .full-screen {
+        position:fixed;
+        top:0px;
+        right:0px;
+        bottom:0px;
+        left:0px;
+    }
+
+    .flex-container {
+        /* We first create a flex layout context */
+        display: flex;
+
+        /* Then we define the flow direction 
+         and if we allow the items to wrap 
+        * Remember this is the same as:
+        * flex-direction: row;
+        * flex-wrap: wrap;
+        */
+        flex-flow: row wrap;
+
+        /* Then we define how is distributed the remaining space */
+        justify-content: space-around;
+
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+
+    .flex-editor {
+        min-width:70%;
+    }
+
+    .flex-variables {
+        padding: 5px;
+        max-width:400px;
+    }
+
+
+    /* Variable Table */
+
+    * {
+        box-sizing: border-box;
+    }
+
+    #variable_input {
+        background-image: url('/static/css/search_icon.png');
+        background-position: 10px 10px;
+        background-repeat: no-repeat;
+        width: 100%;
+        font-size: 16px;
+        padding: 12px 20px 12px 40px;
+        border: 1px solid #ddd;
+        margin-bottom: 12px;
+    }
+
+    #variable_table {
+        border-collapse: collapse;
+        width: 100%;
+        border: 1px solid #ddd;
+        font-size: 12px;
+    }
+
+    #variable_table th, #variable_table td {
+        text-align: left;
+        padding: 9px;
+    }
+
+    #variable_table tr {
+        border-bottom: 1px solid #ddd;
+    }
+
+    #variable_table tr.header, #variable_table tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    .tr-variable-display:hover {
+        cursor: pointer;
+    }
+
+    .td-red {
+        color: red;
+    }
+
+    /* Results Display*/
+
+    .modal-outer {
+        background-color: rgba(0, 0, 0, 0.5);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+    }
+
+    .modal-inner {
+        background-color: #fff;
+        width: 50%;
+        padding: 25px;
+        margin: 25% auto;
+        min-height: 260px;
+        overflow: scroll;
+        text-align: left;
+        max-height:600px;
+        z-index: 1000;
+        max-width: 700px;
+        margin-top:100px;
+    }
+
+    .figure{
+        margin-bottom:30px;
+    }
+
+    @media only screen and (max-width: 1200px) {
+        .figure{
+            margin-bottom:30px;
+            width: 250px;
+            float: left;
+        }
+
+    }
+
+    #figures-caption{
+        text-align:center;
+        margin-bottom: 20px;
+    }
+
+    .figures-close{
+        color:#CCC;
+        float:right;
+        font-size:2em;
+    }
+
+    .figures-close:hover{
+        color:#000;
+        cursor: pointer;
+    }
+
+    .figures-data{
+        text-align: left;
+    }
+
+
+</style>
+
+<div style="display: none;" class="figures-outer modal-outer">
+    <div style="text-align:center;" class="figures-inner modal-inner">
+    <span class="glyphicon glyphicon-remove figures-close"></span>
+        <div id="figures-caption"></div>
+        <img class="img-responsive" id="figures-img" src="" />
+        <div id="figures-data"></div>
+    </div>
+</div>
+
+
+<div class="flex-container" id="interface-container">
+    <div class="flex-editor" id="editor-container">
+        <pre id="editor"></pre>
+    </div>
+    <div class="flex-variables">
+        <input type="text" id="variable_input" onkeyup="variable_filter()" placeholder="Search for variables..." title="Type in a name">
+        <table id="variable_table">
+            <tr class="header">
+                <th style="width:40%;">Name</th>
+                <th style="width:60%;">Value</th>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+
+    /** Ace editor Start **/
+    var buildDom = require("ace/lib/dom").buildDom;
+    var editor = ace.edit("editor");
+    var local_storage_key = '{{project_id}}_code'
+    editor.setOptions({
+        theme: "ace/theme/tomorrow_night_eighties",
+        mode: "ace/mode/python",
+        maxLines: 40,
+        minLines: 40,
+        autoScrollEditorIntoView: true,
+    });
+    var refs = {};
+    function updateToolbar() {
+    }
+
+    editor.on("input", updateToolbar);
+    editor.session.setValue(localStorage.getItem(local_storage_key) || "")
+
+    function save(code) {
+        localStorage.setItem(local_storage_key, code);
+    }
+
+    function sv() {
+        console.log("svdict");
+        // Fetch result
+        send_exec(null, "svdict")
+
+    }
+
+    function send_exec(e, cmd, display_individual_value=false) {
+        
+        if(!cmd){
+            // Sending all data
+            cmd = editor.getValue();
+            save(cmd);
+        }
+
+        data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
+        console.log(data);
+        $.ajax({
+            type: "POST",
+            url: '{{analyze_url}}',
+            data: data,
+            success: function(data){
+                console.log("ajax:success:cmd", cmd, data);
+
+                if(data.response){
+                    if(!display_individual_value){
+                        build_variable_table(JSON.parse(data.response));
+                    }else if(data.type == 'graph'){
+                        // show graph
+                        $("#figures-img").prop("src", data.response);
+                        $("#figures-caption").text(cmd);
+                        $(".figures-outer").fadeIn('slow');
+
+                    }else if (data.type == 'terminal'){
+                        // show data
+                        $("#figures-data").text(data.response);
+                        $("#figures-caption").text(cmd);
+                        $(".figures-outer").fadeIn('slow');
+                    }
+                }
+
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                //_hide_loader();
+                console.log("ajax:fail:cmd", cmd);
+                alert("Command could not be run at this time: " + cmd + ". Please try again");  
+            },
+            complete: function(xhr, textStatus){
+                // pass
+            },            
+            dataType: "json"
+        });
+
+
+    }
+
+
+    editor.commands.addCommand({
+        name: "sv",
+        exec: sv,
+        bindKey: { win: "ctrl-s", mac: "cmd-s" }
+    });
+    
+    editor.commands.addCommand({
+        name: "send",
+        exec: send_exec,
+        bindKey: { win: "ctrl-m", mac: "cmd-m" }
+    });
+
+    buildDom(["div", { class: "toolbar" },
+        ["button", {
+            ref: "sendButton",
+            onclick: send_exec
+        }, "send"],
+        ["button", {
+            ref: "svButton",
+            onclick: sv
+        }, "sv"],
+    ], document.getElementById('editor-container'), refs);
+
+
+    editor.commands.addCommand({
+        name: "showKeyboardShortcuts",
+        bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
+        exec: function(editor) {
+            ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
+                module.init(editor);
+                editor.showKeyboardShortcuts()
+            })
+        }
+    })
+
+
+    
+    window.editor = editor;
+
+    /* Ace editor End */
+
+
+
+    /** Variable Table **/
+    function variable_filter() {
+        var input, filter, table, tr, td, i, txtValue;
+        input = document.getElementById("variable_input");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("variable_table");
+        tr = table.getElementsByTagName("tr");
+        for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td")[0];
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }       
+        }
+    }
+
+    function build_variable_table(res) {
+        var table = document.getElementById("variable_table");
+        for (var i = table.rows.length-1; i > 0 ; i--){
+            table.deleteRow(i);
+        }
+
+        // 'name': k,
+        // 'value': value_bits[i],
+        // 'comment': comment_bits[i],
+        // 'unsatified': unsatisfied_depends[i]
+
+        var index = 1;
+        for (var key in res){
+            if(!res.hasOwnProperty(key)) continue;
+            var row = table.insertRow(index++);
+            row.setAttribute('data-key', key);
+            if(key !== 'Events' && key !== 'DemoEvents'){
+                row.classList.add('tr-variable-display');
+                row.onclick = function(){
+                    console.log(this.getAttribute('data-key'));
+                    send_exec(null, this.getAttribute('data-key'), true);
+                } 
+            }
+            var td_name = row.insertCell(0); 
+            var td_value = row.insertCell(1);
+            td_name.innerHTML = key;
+            td_value.innerHTML = res[key].value || res[key].comment || res[key].unsatified ;
+            if(!res[key].value){
+                td_value.classList.add('td-red');
+            }
+        }
+    }
+
+
+    /* Variable Table End */
+
+
+
+    /* Variable Display */
+
+    $(".figures-close").on('touchstart click', function(event){
+        console.log(".figures-close: touchstart click");
+        if(event.handled === false) return
+        event.stopPropagation();
+        event.preventDefault();
+        event.handled = true;
+       
+        $(".figures-outer").hide();
+        $("#figures-img").prop("src", "");
+        $("#figures-caption").text("");
+        $("#figures-data").text("");
+    });
+
+
+
+    /* Variable Display End */
+
+    /* Page load */
+    $(document).ready(function(){
+        // Preload data or fetch current state
+        sv();
+    });
+</script>
