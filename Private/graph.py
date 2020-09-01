@@ -518,6 +518,7 @@ class Graph:
                 self.deterministic.discard(name)
                 self.code.pop(name, None)
                 self.dependson.pop(name, None)
+                self.functions.discard(name)
 
             self.raw_graph_del_node(name, is_prob)
             self.del_ts(node[attr_id], int(time.time() * 1000))

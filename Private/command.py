@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 import sys
+import re
 import traceback
 import logging
 import argparse
@@ -59,11 +60,16 @@ def execute_lines(code_lines):
     current_deterministic = set()
     for line in code_lines:
         if not line.isspace():
-            variable = parser.parse(line).value.split('|')[0].strip()
-            if '=' in line:
-                current_deterministic.add(variable)
-            elif '~' in line:
-                current_probabilistic.add(variable)
+            if line.startswith("def "):
+                function_name = re.split(r'\W+', line)[1].strip()
+                current_deterministic.add(function_name)
+            elif not line.startswith("    "):
+                if '=' in line:
+                    variable = parser.parse(line).value.split('|')[0].strip()
+                    current_deterministic.add(variable)
+                elif '~' in line:
+                    variable = parser.parse(line).value.split('|')[0].strip()
+                    current_probabilistic.add(variable)
 
     delete_probabilistic = graph.probabilistic.difference(current_probabilistic)
     delete_deterministic = graph.deterministic.difference(current_deterministic).difference(graph.builtins)
