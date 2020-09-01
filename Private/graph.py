@@ -1513,7 +1513,7 @@ except Exception as e:
                     'name': k,
                     'value': value_bits[i],
                     'comment': comment_bits[i],
-                    'unsatified': unsatisfied_depends[i]
+                    'unsatisfied': unsatisfied_depends[i]
                     }
             return json.dumps(sv_ace)
             #return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
