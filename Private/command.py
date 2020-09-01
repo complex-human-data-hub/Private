@@ -59,10 +59,14 @@ def execute_lines(code_lines):
     current_deterministic = set()
     for line in code_lines:
         if not line.isspace():
-            variable = parser.parse(line).value.split('|')[0].strip()
-            if '=' in line:
+            if 'def' in line:
+                function_name = parser.parse(line).value.split('|')[1].strip()
+                current_deterministic.add(function_name)
+            elif '=' in line:
+                variable = parser.parse(line).value.split('|')[0].strip()
                 current_deterministic.add(variable)
             elif '~' in line:
+                variable = parser.parse(line).value.split('|')[0].strip()
                 current_probabilistic.add(variable)
 
     delete_probabilistic = graph.probabilistic.difference(current_probabilistic)
