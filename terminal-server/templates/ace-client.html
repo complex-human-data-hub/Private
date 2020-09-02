@@ -168,6 +168,7 @@
         text-align: left;
     }
 
+    
 
 </style>
 
@@ -370,7 +371,7 @@
     }
 
     function make_display_value(res){
-        var p = document.createElement("p");
+        var p = document.createElement("span");
         if(res.comment){
             p.innerHTML = res.comment;
             p.classList.add('red');
@@ -439,6 +440,16 @@
 
     /* Variable Display End */
 
+    // Stop scrolling out of editor window
+    $('#editor').on('mousewheel DOMMouseScroll', function(e){
+            var delta = e.originalEvent.wheelDelta || -e.originalEvent.detail;
+            if (delta > 0 && $(this).scrollTop() <= 0) return false;
+            if (delta < 0 && $(this).scrollTop() >= this.scrollHeight - $(this).height()) return false;
+            return true;
+    });
+
+
+
     /* Page load */
     $(document).ready(function(){
         // Preload data or fetch current state
@@ -447,4 +458,6 @@
 
         sv();
     });
+
+
 </script>
