@@ -99,6 +99,10 @@ def execute_lines(code_lines):
                     elif '~' in code_lines[i]:
                         variable = parser.parse(code_lines[i]).value.split('|')[0].strip()
                         current_probabilistic.add(variable)
+                    elif code_lines[i].strip():
+                        # We have some code that will throw syntax error (i.e., no = or ~)
+                        variable = self.parser.parse(code_lines[i]).value.split('|')[0].strip()
+
                 except NoMatch as e:
                     syntax_errors.append((i+1, e.position))
 
