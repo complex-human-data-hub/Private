@@ -130,7 +130,7 @@ def execute_lines(code_lines):
                 function_code = ""
             continue
 
-        elif input_line != "":
+        elif input_line.strip() != "":
             execute(input_line)
 
 
