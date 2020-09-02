@@ -14,7 +14,8 @@ import pymc3 as pm
 import copy
 import theano.tensor
 import math
-from .config import numpy_seed
+from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples
+
 import os
 from . import preprocessing as pre
 from . import plotting as plot
@@ -544,6 +545,15 @@ def private_get_demo_events(project_id,user_id):
     display_data = DemoProjects.get(project_id, []) 
     return RedisReference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
 
+def private_get_number_of_tuning_samples():
+    return number_of_tuning_samples
+
+def private_get_number_of_chains():
+    return number_of_chains
+
+def private_get_number_of_samples():
+    return number_of_samples
+
 
 # Datetime functions
 
@@ -640,16 +650,16 @@ builtins = {\
 
             # Control of Sampler
 
-            "NumberOfTuningSamples": 200,
-            "NumberOfChains": 2,
-            "NumberOfSamples": 1000,
+            #"NumberOfTuningSamples": 200,
+            #"NumberOfChains": 2,
+            #"NumberOfSamples": 1000,
 
             # Data
 
             "DemoEvents": DemoEvents,
             "Events": Events,
             "Event": Event,
-            "ExpEvents": ExpEvents,
+            #"ExpEvents": ExpEvents,
 
             # Summary Statistics
 
@@ -740,13 +750,19 @@ builtins = {\
             "ArrayOutputThreshold": array_output_threshold,
 
             # stat and diagnostic built-ins
-            "rhat": {},
-            "ess": {},
-            "waic": {},
-            "loo": {},
+            #"rhat": {},
+            #"ess": {},
+            #"waic": {},
+            #"loo": {},
 
             "getEvents": private_get_events,
             "getDemoEvents": private_get_demo_events,
+
+
+            "getNumberOfTuningSamples": private_get_number_of_tuning_samples,
+            "getNumberOfChains": private_get_number_of_chains,
+            "getNumberOfSamples": private_get_number_of_samples,
+            
 
             #datetime functions
             "dateutilparse": private_dateutil_parse,
@@ -759,8 +775,8 @@ prob_builtins = prob_builtins | {'dot', 'softmax'} # theano
 commands = set(["del", "dt", "sv", "sval", "clear", "sd", "scode", "sevalcode", "smccode", "sss", "ssr", "spp", "ss", "sg", "sj", "vc", "vs", "sb", "spb", "sncpus", "showstats", "help"])
 config_builtins = ("ArrayOutputThreshold",)
 plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
-illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["rhat", "ess", "waic", "loo"])
-data_builtins = {'Events', 'DemoEvents', 'Event', 'ExpEvents'}
+illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["rhat", "ess", "waic", "loo"]) | set(["Events", "DemoEvents"])
+data_builtins = {'Events', 'DemoEvents', 'Event'}
 
 def setBuiltinPrivacy(graph):
     for name in builtins:
