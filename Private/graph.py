@@ -1274,6 +1274,8 @@ except Exception as e:
             val = self.globals[user][code]
             if type(val) == io.BytesIO:
                 result = "data:image/png;base64, " + base64.b64encode(val.getvalue()).decode()
+            elif type(val) == numpy.ndarray:
+                result = list(val)                
             else:
                 result = str(val)
         self.release()
