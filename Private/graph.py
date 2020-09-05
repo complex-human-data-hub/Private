@@ -146,10 +146,18 @@ class Graph:
         setBuiltinPrivacy(self)  # set privacy of builtins
 
         if user_ids:
-            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"])
+            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"], skip_illegal_name_check=True)
             if self.load_demo_events:
                 self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)",
-                            dependson=["getDemoEvents"])
+                            dependson=["getDemoEvents"], skip_illegal_name_check=True)
+
+        self.define("NumberOfTuningSamples", "", evalcode="getNumberOfTuningSamples()", dependson=["getNumberOfTuningSamples"])
+        self.define("NumberOfChains", "", evalcode="getNumberOfChains()", dependson=["getNumberOfChains"])
+        self.define("NumberOfSamples", "", evalcode="getNumberOfSamples()", dependson=["getNumberOfSamples"])
+        self.define("rhat", "", evalcode="{}", skip_illegal_name_check=True)
+        self.define("ess", "", evalcode="{}", skip_illegal_name_check=True)
+        self.define("loo", "", evalcode="{}", skip_illegal_name_check=True)
+        self.define("waic", "", evalcode="{}", skip_illegal_name_check=True)
 
     def __repr__(self):
         code_bits = []
@@ -400,9 +408,9 @@ class Graph:
             return pt_unknown
 
     # Core functions
-    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None):
+    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None, skip_illegal_name_check=False):
         self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-        if name in prob_builtins | illegal_variable_names:
+        if not skip_illegal_name_check and name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
 
         self.acquire("define " + name)
@@ -492,7 +500,11 @@ class Graph:
 
     def delete(self, name, is_prob=True):
         self.acquire("delete " + name)
-        if name in self.probabilistic | self.deterministic:
+        keep_private_variables = ['NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo', 'waic']
+        
+        if name in keep_private_variables:
+            res = name + " cannot be deleted"
+        elif name in self.probabilistic | self.deterministic:
             if name in self.deterministic:
                 is_prob = False
 
@@ -1470,6 +1482,31 @@ except Exception as e:
             return ""
 
     def show_variables_dict(self, pattern):
+        code_width = 50
+        value_width = 80
+
+        defaults = ['Events','DemoEvents']
+        names = defaults + list(set(self.globals[user_all].keys()) - self.builtins) 
+        sv = {}
+        for name in names:
+            sv[name] = {'name': name}
+            if name in self.samplerexception:
+                sv[name]['value'] = self.samplerexception[name]
+            else:
+                sv[name]['value'] = self.get_value(name)[0:value_width]
+
+            sv[name]['comment'] = self.comment.get(name, "")
+            if name in self.code:
+                sv[name]['unsatisfied'] = ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins))
+            elif name in self.probcode:
+                sv[name]['unsatisfied'] = ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins))
+            else:
+                sv[name]['unsatisfied'] = ""
+
+        return json.dumps(sv)
+
+
+    def show_variables_dict_old(self, pattern):
         name_bits = []
         code_bits = []
         code_width = 50
@@ -1518,7 +1555,7 @@ except Exception as e:
                     'name': k,
                     'value': value_bits[i],
                     'comment': comment_bits[i],
-                    'unsatified': unsatisfied_depends[i]
+                    'unsatisfied': unsatisfied_depends[i]
                     }
             return json.dumps(sv_ace)
             #return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for

@@ -37,6 +37,10 @@ numpy_seed = 8623574
 # Return sample size
 max_sample_size = 1000
 
+number_of_tuning_samples = 200
+number_of_chains = 2
+number_of_samples = 1000
+
 ppservers = ()
 ppservers_list = []
 
