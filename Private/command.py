@@ -109,9 +109,11 @@ def execute_lines(code_lines):
     if syntax_errors:
         raise Exception({'status': 'failed', 'type': 'syntax_error', 'value': syntax_errors})
 
-
+    keep_private_variables = {'NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo',
+                              'waic'}
     delete_probabilistic = graph.probabilistic.difference(current_probabilistic)
-    delete_deterministic = graph.deterministic.difference(current_deterministic).difference(graph.builtins)
+    delete_deterministic = graph.deterministic.difference(current_deterministic).difference(graph.builtins).difference(
+        keep_private_variables)
 
     for v in delete_probabilistic:
         graph.delete(v, is_prob=True)
