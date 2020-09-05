@@ -16,7 +16,7 @@ import networkx as nx
 import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
-    illegal_variable_names, setGlobals2
+    illegal_variable_names, setGlobals2, data_builtins
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
     pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
@@ -1010,10 +1010,15 @@ except Exception as e:
         else:
             self.raw_graph.graph[d_key].remove(name)
         if not set(self.raw_graph.out_edges(name)):
+            edges = list(self.raw_graph.in_edges(name))
             self.raw_graph.remove_node(name)
         else:
             edges = list(self.raw_graph.in_edges(name))
             self.raw_graph.remove_edges_from(edges)
+        # remove built-ins if they are only serving the removed node
+        for edge in edges:
+            if edge[0] in (self.builtins - data_builtins) and not set(self.raw_graph.out_edges(edge[0])):
+                self.raw_graph.remove_node(edge[0])
 
         # update i_graph and p_graph
         self.update_graphs()
