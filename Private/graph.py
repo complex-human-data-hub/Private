@@ -505,8 +505,6 @@ class Graph:
         if name in keep_private_variables:
             res = name + " cannot be deleted"
         elif name in self.probabilistic | self.deterministic:
-            if name in self.deterministic:
-                is_prob = False
 
             node = self.get_node(name, is_prob)
 
@@ -514,7 +512,6 @@ class Graph:
                 self.change_state(user, node, "stale")
                 self.globals[user].pop(name, None)
                 self.stale[user].discard(name)
-
             self.private.discard(name)
             self.public.discard(name)
             self.unknown_privacy.discard(name)
@@ -969,6 +966,9 @@ except Exception as e:
                 for out_node in out_nodes:
                     self.raw_graph.remove_edge(pd_key + name, out_node)
                     self.raw_graph.add_edge(name, out_node)
+            else:
+                # it might be a normal node that is added as a linked node
+                self.raw_graph.nodes[name][attr_is_prob] = is_prob
 
         # Add the linked nodes as well
         for node in linked_nodes:
@@ -1029,12 +1029,11 @@ except Exception as e:
             self.raw_graph.remove_edges_from(edges)
         # remove built-ins if they are only serving the removed node
         for edge in edges:
-            if edge[0] in (self.builtins - data_builtins) and not set(self.raw_graph.out_edges(edge[0])):
+            if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0])):
                 self.raw_graph.remove_node(edge[0])
 
         # update i_graph and p_graph
         self.update_graphs()
-
         return name
 
     def update_graphs(self):
