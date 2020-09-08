@@ -34,6 +34,7 @@ def command():                  return [delete, \
                                         show_sets, \
                                         show_globals, \
                                         show_jobs, \
+                                        show_jobs_dict, \
                                         variables_to_calculate, \
                                         variables_to_sample, \
                                         show_builtins, \
@@ -62,6 +63,7 @@ def show_pp_stats():            return "spp"
 def show_sets():                return "ss"
 def show_globals():             return "sg"
 def show_jobs():                return "sj"
+def show_jobs_dict():           return "sjdict"
 def variables_to_calculate():   return "vc"
 def variables_to_sample():      return "vs"
 def show_builtins():            return "sb"

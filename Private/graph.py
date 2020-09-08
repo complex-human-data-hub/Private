@@ -1236,7 +1236,8 @@ except Exception as e:
             result += user + ": " + str(self.globals[user].get("r", "Not here")) + "\n"
         return result
 
-    def show_jobs(self):
+
+    def show_jobs(self, as_dict=False):
         """
         Returns a list of jobs currently running, divided into compute, sampler and manifold
 
@@ -1263,10 +1264,20 @@ except Exception as e:
             elif job_type == 'Manifold:':
                 manifold_jobs += 1
                 manifold_vars.add(job_var)
-        result = f"Total jobs: {compute_jobs + sampler_jobs + manifold_jobs}\n" \
-            f"Compute Jobs: {compute_jobs}\t{compute_vars if compute_vars else ''}\n" \
-            f"Sampler Jobs: {sampler_jobs}\n" \
-            f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
+        result = None
+        if as_dict:
+            result = json.dumps({
+                'total_jobs': (compute_jobs + sampler_jobs + manifold_jobs),
+                'compute_jobs': compute_jobs,
+                'sampler_jobs': sampler_jobs,
+                'manifold_jobs': manifold_jobs
+            })
+
+        else:
+            result = f"Total jobs: {compute_jobs + sampler_jobs + manifold_jobs}\n" \
+                f"Compute Jobs: {compute_jobs}\t{compute_vars if compute_vars else ''}\n" \
+                f"Sampler Jobs: {sampler_jobs}\n" \
+                f"Manifold Privacy Jobs: {manifold_jobs}\t{manifold_vars if manifold_vars else ''}"
         return result
 
     def eval_command_line_expression(self, code, user="All"):

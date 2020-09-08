@@ -300,6 +300,7 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_sets(self, node, children):                return result("show_sets", self.depGraph.show_sets())
     def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.show_globals())
     def visit_show_jobs(self, node, children):                return result("show_jobs", self.depGraph.show_jobs())
+    def visit_show_jobs_dict(self, node, children):           return result("show_jobs_dict", self.depGraph.show_jobs(as_dict=True))
     def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", self.depGraph.variablesToBeCalculated())
     def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", self.depGraph.variablesToBeSampled())
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
