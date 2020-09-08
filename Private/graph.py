@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import copy
 import multiprocessing
 import reprlib
-import sys
+import sys, traceback
 import time
 from itertools import permutations
 
@@ -727,7 +727,8 @@ except Exception as e:
             if isinstance(value, Exception):
                 if user == "All":
                     debug_logger(["callback Exception", user, name, value])
-                    self.globals[user][name] = str(value)
+                    function_stack = [s.name for s in traceback.extract_tb(value.__traceback__)[2:]]
+                    self.globals[user][name] = str(value) + ' in ' + ' > '.join(function_stack)
                     self.change_state(user, node, "exception")
             elif name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts:
                 original_value = self.globals[user].get(name, '')
