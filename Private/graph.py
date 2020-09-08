@@ -671,10 +671,10 @@ except Exception as e:
             return
         else:
             job_globals = self.get_globals(node, user)
-            self.change_state(user, node, "computing")
             if node[attr_is_prob]:
                 success = self.reg_ts(sampler_key, user, n_id, started_key, node_ts)
                 if success:
+                    self.change_state(user, node, "computing")
                     job_name = "Sampler:  " + user + ", " + str(node[attr_label])
                     job_locals, sampler_code = self.construct_pymc3_code(node, user)
                     self.reset_privacy_results(node, user)
@@ -685,6 +685,7 @@ except Exception as e:
             else:
                 success = self.reg_ts(compute_key, user, n_id, started_key, node_ts)
                 if success:
+                    self.change_state(user, node, "computing")
                     job_name = "Compute:  " + user + " " + n_id
                     user_func = [self.evalcode[func_name] for func_name in self.functions]
                     self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.evalcode[n_id],
