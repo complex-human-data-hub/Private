@@ -2,10 +2,10 @@
 
 
     /* Ace editor  */
-    .ace_editor, .toolbar {
+    .ace_editor, .toolbar, .sj {
         //border: 1px solid lightgray;
         margin: auto;
-        width: 90%;
+        //width: 90%;
     }
 
     .toolbar button {
@@ -43,7 +43,6 @@
         list-style: none;
     }
 
-
     .flex-editor {
         min-width:70%;
     }
@@ -58,6 +57,14 @@
         background:rgba(100,200,100,0.2);
         z-index:20;
     }
+
+
+    /* SJ display */
+    .flex-sj-item {
+        min-width:25%;
+        color:#AAA;
+    }
+
 
 
     /* Variable Table */
@@ -183,7 +190,14 @@
 
 
 <div class="flex-container" id="interface-container">
+    
     <div class="flex-editor" id="editor-container">
+        <div class="sj flex-container">
+            <div class="flex-sj-item" id="sj-total-jobs">Total jobs: 0</div>
+            <div class="flex-sj-item" id="sj-compute-jobs">Compute jobs: 0</div>
+            <div class="flex-sj-item" id="sj-sampler-jobs">Sampler jobs: 0</div>
+            <div class="flex-sj-item" id="sj-manifold-privacy-jobs">Manifold privacy jobs: 0</div>
+        </div>
         <pre id="editor"></pre>
     </div>
     <div class="flex-variables">
@@ -229,6 +243,24 @@
 
     }
 
+    function sj() {
+        console.log("sjdict");
+        // Fetch result
+        send_exec(null, "sjdict");
+
+    }
+
+    function update_sj(res){
+        console.log("Updating sj", res);
+        sj_dict = JSON.parse(res);
+        // {"total_jobs": 0, "compute_jobs": 0, "sampler_jobs": 0, "manifold_jobs": 0}
+        $("#sj-total-jobs").text("Total jobs: " +  sj_dict.total_jobs); 
+        $("#sj-compute-jobs").text("Compute jobs: " + sj_dict.compute_jobs); 
+        $("#sj-sampler-jobs").text("Sampler jobs: " + sj_dict.sampler_jobs); 
+        $("#sj-manifold-privacy-jobs").text("Manifold privacy jobs: " + sj_dict.manifold_jobs); 
+    
+    }
+
     function send_exec(e, cmd, display_individual_value=false) {
         
         if(!cmd){
@@ -250,8 +282,17 @@
                 console.log("ajax:success:cmd", cmd, data);
                 if(data.status == 'success'){
                     if(data.response){
-                        if(!display_individual_value){
-                            build_variable_table(JSON.parse(data.response));
+                        if(cmd === 'sjdict'){
+                            update_sj(data.response); 
+                        }else if(!display_individual_value){
+                            try{
+                                build_variable_table(JSON.parse(data.response));
+                            }catch(err){
+                                // Exception coming back from private
+                                $("#figures-data").text(data.response);
+                                $("#figures-caption").text("");
+                                $(".figures-outer").fadeIn('slow');
+                            }
                         }else if(data.type == 'graph'){
                             // show graph
                             $("#figures-img").prop("src", data.response);
@@ -328,6 +369,10 @@
             ref: "svButton",
             onclick: sv
         }, "sv"],
+        ["button", {
+            ref: "sjButton",
+            onclick: sj
+        }, "sj"],
     ], document.getElementById('editor-container'), refs);
 
 
