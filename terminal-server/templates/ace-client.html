@@ -171,8 +171,9 @@
         cursor: pointer;
     }
 
-    .figures-data{
+    #figures-data{
         text-align: left;
+        border:0px;
     }
 
     
@@ -184,7 +185,7 @@
     <span class="glyphicon glyphicon-remove figures-close"></span>
         <div id="figures-caption"></div>
         <img class="img-responsive" id="figures-img" src="" />
-        <div id="figures-data"></div>
+        <div><pre id="figures-data"></pre></div>
     </div>
 </div>
 
@@ -433,7 +434,36 @@
         return p;
     }
 
+
+    function add_default_variables(res){
+        var default_variables = {
+            dgg: {name: "dgg", value: "COMMAND", comment: "", unsatisfied: ""},
+            dig: {name: "dig", value: "COMMAND", comment: "", unsatisfied: ""},
+            dpg: {name: "dpg", value: "COMMAND", comment: "", unsatisfied: ""}, // "[PNG Image]"
+            sd: {name: "sd", value: "COMMAND", comment: "", unsatisfied: ""},
+            scode: {name: "scode", value: "COMMAND", comment: "", unsatisfied: ""},
+            sevalcode: {name: "sevalcode", value: "COMMAND", comment: "", unsatisfied: ""},
+            smccode: {name: "smccode", value: "COMMAND", comment: "", unsatisfied: ""},
+            sss: {name: "sss", value: "COMMAND", comment: "", unsatisfied: ""},
+            ssr: {name: "ssr", value: "COMMAND", comment: "", unsatisfied: ""},
+            ss: {name: "ss", value: "COMMAND", comment: "", unsatisfied: ""},
+            sg: {name: "sg", value: "COMMAND", comment: "", unsatisfied: ""},
+            vc: {name: "vc", value: "COMMAND", comment: "", unsatisfied: ""},
+            vs: {name: "vs", value: "COMMAND", comment: "", unsatisfied: ""},
+            sb: {name: "sb", value: "COMMAND", comment: "", unsatisfied: ""},
+            spb: {name: "spb", value: "COMMAND", comment: "", unsatisfied: ""}
+        }
+
+        for (var key in default_variables){
+            if(!default_variables.hasOwnProperty(key)) continue;
+            res[key] = default_variables[key];
+        }
+
+        return res;
+    }
+
     function build_variable_table(res) {
+        res = add_default_variables(res);
         var table = document.getElementById("variable_table");
         for (var i = table.rows.length-1; i > 0 ; i--){
             table.deleteRow(i);
