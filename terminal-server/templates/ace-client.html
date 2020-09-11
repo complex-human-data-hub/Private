@@ -404,9 +404,11 @@
         tr = table.getElementsByTagName("tr");
         for (i = 0; i < tr.length; i++) {
             td = tr[i].getElementsByTagName("td")[0];
+            tdvalue = tr[i].getElementsByTagName("td")[1];
             if (td) {
                 txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                valValue = tdvalue.textContent || tdvalue.innerText; 
+                if ((txtValue.toUpperCase().indexOf(filter) > -1) || (valValue.toUpperCase().indexOf(filter) > -1)) {
                     tr[i].style.display = "";
                 } else {
                     tr[i].style.display = "none";
@@ -459,6 +461,9 @@
             td_name.innerHTML = key;
             td_value.appendChild( make_display_value(res[key]) ); 
         }
+
+        // Apply variable filter
+        variable_filter();
     }
 
 
