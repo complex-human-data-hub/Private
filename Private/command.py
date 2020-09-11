@@ -55,26 +55,34 @@ def execute_file(file_name):
         print(e)
 
 
+def remove_comments(s):
+    if "#" in s:
+        return s[0:s.index("#")]
+    return s
+
+
 def execute_lines(code_lines):
     current_probabilistic = set()
     current_deterministic = set()
     syntax_errors = []
     for i in range(len(code_lines)):
-        if not code_lines[i].isspace():
-            if code_lines[i].startswith("def "):
+        code_line = remove_comments(code_lines[i])
+        if code_line and not code_line.isspace():
+            if code_line.startswith("def "):
                 function_start = i
                 function_code = ""
                 function_lines = []
                 try:
-                    function_code += code_lines[i] + '\n'
-                    function_lines.append(code_lines[i])
+                    function_code += code_line + '\n'
+                    function_lines.append(code_line)
                     function_complete = False
                     while not function_complete:
                         i += 1
-                        if code_lines[i].startswith("    "):
-                            function_code += code_lines[i] + ';'
-                            function_lines.append(code_lines[i] + ';')
-                            if code_lines[i].strip().startswith("return"):
+                        code_line = remove_comments(code_lines[i])
+                        if code_line.startswith("    "):
+                            function_code += code_line + ';'
+                            function_lines.append(code_line + ';')
+                            if code_line.strip().startswith("return"):
                                 function_complete = True
                                 function_name = parser.parse(function_code).value.split('|')[1].strip()
                                 current_deterministic.add(function_name)
@@ -91,17 +99,17 @@ def execute_lines(code_lines):
                             syntax_errors.append((function_start + j +1, position))
                             break
 
-            elif not code_lines[i].startswith("    "):
+            elif not code_line.startswith("    "):
                 try:
-                    if '=' in code_lines[i]:
-                        variable = parser.parse(code_lines[i]).value.split('|')[0].strip()
+                    if '=' in code_line:
+                        variable = parser.parse(code_line).value.split('|')[0].strip()
                         current_deterministic.add(variable)
-                    elif '~' in code_lines[i]:
-                        variable = parser.parse(code_lines[i]).value.split('|')[0].strip()
+                    elif '~' in code_line:
+                        variable = parser.parse(code_line).value.split('|')[0].strip()
                         current_probabilistic.add(variable)
-                    elif code_lines[i].strip():
+                    elif code_line.strip():
                         # We have some code that will throw syntax error (i.e., no = or ~)
-                        parser.parse(code_lines[i]).value.split('|')[0].strip()
+                        parser.parse(code_line).value.split('|')[0].strip()
 
                 except NoMatch as e:
                     syntax_errors.append((i+1, e.position))
@@ -123,7 +131,7 @@ def execute_lines(code_lines):
 
     function_code = ""
     for line in code_lines:
-        input_line = line[0:-1]
+        input_line = remove_comments(line[0:-1])
         print(input_line)
         if input_line.startswith("def"):
             function_code += input_line + '\n'
