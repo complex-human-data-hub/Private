@@ -508,14 +508,17 @@ class Graph:
 
             node = self.get_node(name, is_prob)
 
-            for user in self.user_ids:
-                self.change_state(user, node, "stale")
-                self.globals[user].pop(name, None)
-                self.stale[user].discard(name)
-            self.private.discard(name)
-            self.public.discard(name)
-            self.unknown_privacy.discard(name)
-            self.comment.pop(name, None)
+            if name in self.deterministic and name in self.probabilistic:
+                self.set_all_unknown(node)
+            else:
+                for user in self.user_ids:
+                    self.change_state(user, node, "stale")
+                    self.globals[user].pop(name, None)
+                    self.stale[user].discard(name)
+                self.private.discard(name)
+                self.public.discard(name)
+                self.unknown_privacy.discard(name)
+                self.comment.pop(name, None)
 
             if is_prob:
                 self.probabilistic.discard(name)
@@ -1023,14 +1026,27 @@ except Exception as e:
             self.raw_graph.graph[p_key].remove(name)
         else:
             self.raw_graph.graph[d_key].remove(name)
-        if not set(self.raw_graph.out_edges(name)):
-            edges = list(self.raw_graph.in_edges(name))
+
+        in_edges = list(self.raw_graph.in_edges(name))
+        out_edges = list(self.raw_graph.out_edges(name))
+        p_node = pd_key + name
+        # if the deterministic definition of the pd node
+        if (not is_prob) and p_node in self.raw_graph.graph[p_key]:
+            # add all out edges it currently have to the prob node
+            for out_edge in out_edges:
+                if out_edge[1] != p_node:
+                    self.raw_graph.add_edge(p_node, out_edge[1])
+            self.raw_graph.remove_node(name)
+            nx.relabel_nodes(self.raw_graph, {p_node: name}, copy=False)
+            self.raw_graph_add_node(name, True)
+            self.raw_graph.graph[p_key].remove(pd_key + name)
+            self.raw_graph.graph[p_key].append(name)
+        elif not out_edges:
             self.raw_graph.remove_node(name)
         else:
-            edges = list(self.raw_graph.in_edges(name))
-            self.raw_graph.remove_edges_from(edges)
-        # remove built-ins if they are only serving the removed node
-        for edge in edges:
+            self.raw_graph.remove_edges_from(in_edges)
+        # remove linked nodes if they are only serving the removed node
+        for edge in in_edges:
             if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0])):
                 self.raw_graph.remove_node(edge[0])
 
