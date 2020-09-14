@@ -234,7 +234,10 @@
     }
 
     editor.on("input", updateToolbar);
-    editor.session.setValue(localStorage.getItem(local_storage_key) || "")
+    var initial_code = `{{code|safe}}`; // love multiline strings!!
+
+    // If no server side code, then use local storage or empty string
+    editor.session.setValue(initial_code || localStorage.getItem(local_storage_key) || "" ) 
 
     function save(code) {
         localStorage.setItem(local_storage_key, code);
@@ -266,17 +269,18 @@
     }
 
     function send_exec(e, cmd, display_individual_value=false) {
-        
+        var save_code = false 
         if(!cmd){
             // Sending all data
             cmd = editor.getValue();
             save(cmd);
+            save_code = true
             editor.session.getUndoManager().markClean();
             updateToolbar();
             editor.session.clearAnnotations();
         }
 
-        data = { 'cmd': cmd, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
+        var data = { 'cmd': cmd, 'save_code': save_code, 'project_id': '{{project_id}}', 'uid': '{{uid}}' };
         console.log(data);
         $.ajax({
             type: "POST",
