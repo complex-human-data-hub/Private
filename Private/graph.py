@@ -457,9 +457,8 @@ class Graph:
         else:
             self.change_state(user_all, node, "stale")
             self.start_computation(user_all, node, lock=False)
+        self.compute_privacy(node, lock=False)
         self.release()
-
-        self.compute_privacy(node)  # every definition could change the privacy assignments
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
@@ -495,8 +494,8 @@ class Graph:
                 self.start_computation(user, node, lock=False)
         else:
             self.start_computation(user_all, node, lock=False)
+        self.compute_privacy(node, lock=False)
         self.release()
-        self.compute_privacy(node)
 
     def delete(self, name, is_prob=True):
         self.acquire("delete " + name)
@@ -751,7 +750,9 @@ except Exception as e:
         job_name, node, user, value = return_value
         name = node[attr_id]
         node_ts = node[attr_last_ts]
-        successful_return = name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts
+        valid_node = name in self.i_graph.nodes and (
+                    set(self.i_graph.nodes[name][attr_contains]) == set(node[attr_contains]))
+        successful_return = valid_node and name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts
         try:
             if isinstance(value, Exception):
                 if user == "All":
@@ -759,7 +760,7 @@ except Exception as e:
                     function_stack = [s.name for s in traceback.extract_tb(value.__traceback__)[2:]]
                     self.globals[user][name] = str(value) + ' in ' + ' > '.join(function_stack)
                     self.change_state(user, node, "exception")
-            elif name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts:
+            elif successful_return:
                 original_value = self.globals[user].get(name, '')
                 self.globals[user][name] = value
                 self.change_state(user, node, "uptodate")
@@ -801,9 +802,8 @@ except Exception as e:
                     else:
                         for u in self.user_ids:
                             self.start_computation(u, successor, lock=False)
+            self.compute_privacy(node, lock=False)
         self.release()
-        if successful_return:
-            self.compute_privacy(node)
 
     def sampler_callback(self, return_value):
         return_value = return_value.result()
@@ -813,7 +813,9 @@ except Exception as e:
         names = node[attr_contains]
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]
-        successful_return = n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts
+        valid_node = n_id in self.i_graph.nodes and (
+                    set(self.i_graph.nodes[n_id][attr_contains]) == set(node[attr_contains]))
+        successful_return = valid_node and n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -830,7 +832,7 @@ except Exception as e:
                 for name in names:
                     self.samplerexception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
-        elif n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts:
+        elif successful_return:
             try:
                 self.log.debug("sampler_callback: name in names ")
                 for name in names:
@@ -885,9 +887,8 @@ except Exception as e:
                 successor = self.i_graph.nodes[u]
                 successor[attr_last_ts] = node_ts
                 self.start_computation(user, successor, lock=False)
+            self.compute_privacy(node, lock=False)
         self.release()
-        if successful_return:
-            self.compute_privacy(node)
 
     def mp_callback(self, return_value):
         return_value = return_value.result()
