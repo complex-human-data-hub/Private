@@ -446,7 +446,7 @@ class Graph:
         self.add_to_raw_graph(name, dependson, hier, prob)
         node = self.get_node(name, prob)
         # set the timestamp for node define
-        node[attr_last_ts] = int(time.time() * 1000)
+        node[attr_last_ts] = int(time.time() * 1000000)
         # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute_privacy(node, lock=False)
         if name not in self.public:
@@ -487,7 +487,7 @@ class Graph:
         for user in self.user_ids:
             self.change_state(user, node, "stale")
 
-        node[attr_last_ts] = int(time.time() * 1000)
+        node[attr_last_ts] = int(time.time() * 1000000)
         # need computePrivacy before compute so we don't compute public variables for each participant
         self.compute_privacy(node, lock=False)
         if name not in self.public:
@@ -538,13 +538,27 @@ class Graph:
                 self.functions.discard(name)
 
             self.raw_graph_del_node(name, is_prob)
-            node_ts = int(time.time() * 1000)
+            node_ts = int(time.time() * 1000000)
             self.del_ts(node[attr_id], node_ts)
+
+            # if deterministic node of the pd-node is deleted
             if pd_node:
                 successor = self.get_node(name, True)
                 if successor:
-                    successor[attr_last_ts] = node_ts
+                    successor[attr_last_ts] = int(time.time() * 1000000)
                     self.start_computation(user_all, successor, lock=False)
+
+            # if a node belongs to a probabilistic node is deleted
+            elif len(node[attr_contains]) > 1:
+                node[attr_contains].remove(name)
+                contains = {}
+                for c in node[attr_contains]:
+                    new_node = self.get_node(c, True)
+                    if new_node and new_node[attr_id] not in contains:
+                        new_node[attr_last_ts] = int(time.time() * 1000000)
+                        contains[new_node[attr_id]] = new_node
+                for new_node in contains.values():
+                    self.start_computation(user_all, new_node, lock=False)
             res = ""
 
         else:
