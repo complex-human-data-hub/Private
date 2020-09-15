@@ -507,12 +507,17 @@ class Graph:
         elif name in self.probabilistic | self.deterministic:
 
             node = self.get_node(name, is_prob)
+            pd_node = False
+
+            for user in self.user_ids:
+                self.change_state(user, node, "stale")
 
             if name in self.deterministic and name in self.probabilistic:
                 self.set_all_unknown(node)
+                if not is_prob:
+                    pd_node = True
             else:
                 for user in self.user_ids:
-                    self.change_state(user, node, "stale")
                     self.globals[user].pop(name, None)
                     self.stale[user].discard(name)
                 self.private.discard(name)
@@ -533,8 +538,15 @@ class Graph:
                 self.functions.discard(name)
 
             self.raw_graph_del_node(name, is_prob)
-            self.del_ts(node[attr_id], int(time.time() * 1000))
+            node_ts = int(time.time() * 1000)
+            self.del_ts(node[attr_id], node_ts)
+            if pd_node:
+                successor = self.get_node(name, True)
+                if successor:
+                    successor[attr_last_ts] = node_ts
+                    self.start_computation(user_all, successor, lock=False)
             res = ""
+
         else:
             res = name + " not found."
 
@@ -1591,6 +1603,7 @@ except Exception as e:
             #                 zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
         else:
             return '{}'
+
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
     name = node[attr_id]
