@@ -1075,7 +1075,8 @@ except Exception as e:
         # remove linked nodes if they are only serving the removed node
         for edge in in_edges:
             if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0])):
-                self.raw_graph.remove_node(edge[0])
+                if edge[0] not in self.raw_graph.graph[d_key]:
+                    self.raw_graph.remove_node(edge[0])
 
         # update i_graph and p_graph
         self.update_graphs()
