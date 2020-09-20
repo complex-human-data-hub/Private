@@ -513,8 +513,7 @@ class Graph:
 
             if name in self.deterministic and name in self.probabilistic:
                 self.set_all_unknown(node)
-                if not is_prob:
-                    pd_node = True
+                pd_node = True
             else:
                 for user in self.user_ids:
                     self.globals[user].pop(name, None)
@@ -541,7 +540,7 @@ class Graph:
             self.del_ts(node[attr_id], node_ts)
 
             # if deterministic node of the pd-node is deleted
-            if pd_node:
+            if pd_node and not is_prob:
                 successor = self.get_node(name, True)
                 if successor:
                     successor[attr_last_ts] = int(time.time() * 1000000)
@@ -549,7 +548,8 @@ class Graph:
 
             # if a node belongs to a probabilistic node is deleted
             elif len(node[attr_contains]) > 1:
-                node[attr_contains].remove(name)
+                if not pd_node:
+                    node[attr_contains].remove(name)
                 contains = {}
                 for c in node[attr_contains]:
                     new_node = self.get_node(c, True)
