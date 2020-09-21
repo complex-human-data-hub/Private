@@ -513,8 +513,7 @@ class Graph:
 
             if name in self.deterministic and name in self.probabilistic:
                 self.set_all_unknown(node)
-                if not is_prob:
-                    pd_node = True
+                pd_node = True
             else:
                 for user in self.user_ids:
                     self.globals[user].pop(name, None)
@@ -541,7 +540,7 @@ class Graph:
             self.del_ts(node[attr_id], node_ts)
 
             # if deterministic node of the pd-node is deleted
-            if pd_node:
+            if pd_node and not is_prob:
                 successor = self.get_node(name, True)
                 if successor:
                     successor[attr_last_ts] = int(time.time() * 1000000)
@@ -549,7 +548,8 @@ class Graph:
 
             # if a node belongs to a probabilistic node is deleted
             elif len(node[attr_contains]) > 1:
-                node[attr_contains].remove(name)
+                if not pd_node:
+                    node[attr_contains].remove(name)
                 contains = {}
                 for c in node[attr_contains]:
                     new_node = self.get_node(c, True)
@@ -790,7 +790,7 @@ except Exception as e:
             self.compute_privacy(node, lock=False)
             for n in self.i_graph.successors(name):
                 successor = self.i_graph.nodes[n]
-                successor[attr_last_ts] = node_ts
+                successor[attr_last_ts] = int(time.time() * 1000000)
                 successor_contains = successor[attr_contains]
                 all_public = all([p in self.public for p in successor_contains if not p.startswith(pd_key)])
                 node_public = node[attr_id] in self.public
@@ -885,7 +885,7 @@ except Exception as e:
             self.compute_privacy(node, lock=False)
             for u in self.i_graph.successors(node[attr_id]):
                 successor = self.i_graph.nodes[u]
-                successor[attr_last_ts] = node_ts
+                successor[attr_last_ts] = int(time.time() * 1000000)
                 self.start_computation(user, successor, lock=False)
             self.compute_privacy(node, lock=False)
         self.release()
@@ -1075,7 +1075,8 @@ except Exception as e:
         # remove linked nodes if they are only serving the removed node
         for edge in in_edges:
             if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0])):
-                self.raw_graph.remove_node(edge[0])
+                if edge[0] not in self.raw_graph.graph[d_key]:
+                    self.raw_graph.remove_node(edge[0])
 
         # update i_graph and p_graph
         self.update_graphs()
