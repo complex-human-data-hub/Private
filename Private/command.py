@@ -1,12 +1,19 @@
 from __future__ import print_function
 from __future__ import absolute_import
+
+import json
 import sys
 import re
+import time
 import traceback
 import logging
 import argparse
 from Private.config import logfile
 from arpeggio import NoMatch
+import threading
+import copy
+import random
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", nargs="?", default = None)
@@ -53,6 +60,89 @@ def execute_file(file_name):
         execute_lines(code_lines)
     except Exception as e:
         print(e)
+
+
+def code_line_to_block(code_lines):
+    code_blocks = []
+    for code_line in code_lines:
+        if code_line.startswith("    "):
+            code_blocks[-1].append(code_line)
+        else:
+            code_blocks.append([code_line])
+    return code_blocks
+
+
+def code_block_to_lines(code_blocks):
+    code_lines = []
+    for code_block in code_blocks:
+        code_lines.extend(code_block)
+    return code_lines
+
+
+def execute_test(test_cases, p_limit, t_limit):
+    random.seed(123465)
+    test_folder = "testing"
+    if test_cases == '*':
+        test_files = [f for f in os.listdir(test_folder) if f.endswith('.test')]
+    else:
+        test_files = [test]
+    for test_file in test_files:
+        test_name = test_file.split('.')[0]
+        if os.path.isfile(test_folder + "/" + test_name + '.result'):
+            result = open(test_folder + "/" + test_name + '.result', "r").read()
+        else:
+            result = None
+        try:
+            with open(test_folder + "/" + test_name + '.log', "w") as fp:
+                fp.write(f"Starting test {test_name}\n")
+                start = int(round(time.time()))
+                now = start
+                code_lines = open(test_folder + "/" + test_name + '.test', "r").readlines()
+                failed = []
+                permutations_tried = 0
+                for i in range(p_limit):
+                    permutations_tried += 1
+                    execute_lines(code_lines)
+                    job_count = 1
+                    while job_count > 0:
+                        time.sleep(5)
+                        sj = json.loads(graph.show_jobs(True))
+                        job_count = sum(sj.values())
+                    r = graph.test_variables_dict()
+                    if not result:
+                        with open(test_folder + "/" + test_name + '.result', "w") as res_file:
+                            res_file.write(r)
+                            result = r
+                    if r != result:
+                        failed.append((copy.copy(code_lines), r))
+                    execute_lines([])
+                    now = int(round(time.time()))
+                    if (now - start)/60 > t_limit:
+                        break
+                    code_blocks = code_line_to_block(code_lines)
+                    random.shuffle(code_blocks)
+                    code_lines = code_block_to_lines(code_blocks)
+                if failed:
+                    fp.write("Test Status: Failed\n")
+                else:
+                    fp.write("Test Status: Passed\n")
+                fp.write(f"Number of permutations tested: {permutations_tried}\n")
+                fp.write(f"Time Spent: {(now - start)/60} minutes\n")
+                if failed:
+                    fp.write("Failed test cases\n")
+                    count = 1
+                    for fail, wrong_val in failed:
+                        fp.write(f'--------------failed: {count} ----------------\n')
+                        for line in fail:
+                            fp.write(line)
+                        fp.write(wrong_val)
+                        fp.write('\n')
+                        count += 1
+
+        except Exception as e:
+            print(e)
+
+    print("Test Over")
 
 
 def remove_comments(s):
@@ -132,7 +222,6 @@ def execute_lines(code_lines):
     function_code = ""
     for line in code_lines:
         input_line = remove_comments(line[0:-1])
-        print(input_line)
         if input_line.startswith("def"):
             function_code += input_line + '\n'
             continue
@@ -167,6 +256,25 @@ while input_line != 'exit':
     elif input_line.startswith("file"):
         filename = input_line.split(" ")[1]
         execute_file(filename)
+    elif input_line.startswith("test"):
+        args = input_line.strip().split()
+        test = args[1]
+        permutation_limit = 50
+        time_limit = 60
+        if len(args) > 2:
+            options_str = input_line.strip().split('-')[1:]
+            options = {}
+            for option_str in options_str:
+                op, val = option_str.strip().split()
+                if op == 'p':
+                    permutation_limit = int(val)
+                elif op == 't':
+                    time_limit = int(val)
+        else:
+            permutation_limit = 1
+        x = threading.Thread(target=execute_test, args=(test, permutation_limit, time_limit))
+        x.start()
+        x.join()
     elif input_line != "":
         execute(input_line)
 
