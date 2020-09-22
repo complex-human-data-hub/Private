@@ -81,7 +81,7 @@ def code_block_to_lines(code_blocks):
 
 def execute_test(test_cases, p_limit, t_limit):
     random.seed(123465)
-    test_folder = "testing"
+    test_folder = "tests"
     if test_cases == '*':
         test_files = [f for f in os.listdir(test_folder) if f.endswith('.test')]
     else:
