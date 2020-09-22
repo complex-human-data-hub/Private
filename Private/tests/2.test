@@ -1,0 +1,14 @@
+winter = [e.Temperature for e in DemoEvents if "Winter" in e.Keywords and e.hasField("Temperature")]
+summer = [e.Temperature for e in DemoEvents if "Summer" in e.Keywords and e.hasField("Temperature")]
+winter ~ Normal(muWinter, sigma1)
+summer ~ Normal(muSummer, sigma2)
+def getResponse(x):
+    return x*2
+muWinter ~ Normal(0, var1)
+var1=100
+muSummer ~ Normal(0, 100)
+sigma1 ~ HalfNormal(100)
+sigma2 ~ HalfNormal(100)
+CILower = percentile(diff, 2.5)
+CIUpper = percentile(diff, 97.5)
+diff = muSummer - muWinter

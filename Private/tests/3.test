@@ -1,0 +1,5 @@
+summer = [e.Temperature for e in Events if "Summer" in e.Keywords and e.hasField("Temperature")]
+summer ~ Normal(muSummer, sigma2)
+muSummer ~ Normal(0, 100)
+sigma2 ~ HalfNormal(100)
+result = mean(muSummer)

@@ -1561,6 +1561,20 @@ except Exception as e:
 
         return json.dumps(sv)
 
+    def test_variables_dict(self):
+
+        untested_variables = {'NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo',
+                              'waic'}
+        names = list((set(self.globals[user_all].keys()) - self.builtins) - untested_variables)
+        sv = OrderedDict()
+        for name in sorted(names):
+            if name in self.samplerexception:
+                sv[name] = self.samplerexception[name]
+            else:
+                sv[name] = self.get_value(name, long_format=True)
+
+        return json.dumps(sv)
+
 
     def show_variables_dict_old(self, pattern):
         name_bits = []

@@ -1,0 +1,7 @@
+summer = [e.Temperature for e in DemoEvents if "Summer" in e.Keywords and e.hasField("Temperature")]
+summer ~ Normal(muSummer, sigma2)
+muSummer ~ Normal(0, 100)
+sigma2 ~ HalfNormal(100)
+result = mean(muSummer)
+def getResponse(x):
+    return x*2
