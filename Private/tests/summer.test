@@ -3,5 +3,3 @@ summer ~ Normal(muSummer, sigma2)
 muSummer ~ Normal(0, 100)
 sigma2 ~ HalfNormal(100)
 result = mean(muSummer)
-def getResponse(x):
-    return x*2
