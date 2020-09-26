@@ -693,7 +693,7 @@ except Exception as e:
             self.acquire("compute")
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]
-        if n_id.startswith(pd_key) or not self.is_node_computable(user, n_id):
+        if n_id.startswith(pd_key) or not self.is_node_computable(user, node):
             if lock:
                 self.release()
             return
@@ -1155,14 +1155,17 @@ except Exception as e:
 
         self.p_graph = p_graph
 
-    def is_node_computable(self, user, n_id):
+    def is_node_computable(self, user, node):
         """
         Given the node check if the node is computable based on the inferential graph
         :param user: String
-        :param n_id: String, node name (as in graph)
+        :param node: node (as in graph)
         :return: Boolean
         """
         is_computable = True
+        n_id = node[attr_id]
+        if node[attr_is_prob] and not node[attr_pd_node]:
+            is_computable = False
         for u in self.i_graph.predecessors(n_id):
             user_edited = user_all if u in self.public else user
             if (u not in self.builtins) and (u not in self.uptodate[user_edited]):

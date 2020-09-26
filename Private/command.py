@@ -26,8 +26,18 @@ _log.debug("============================= Starting new interpreter =============
 from Private.parser import PrivateParser
 from Private.semantics import PrivateSemanticAnalyser
 from Private.graph import Graph
+from datetime import datetime
 
 graph = Graph()
+test_folder = "tests"
+
+
+def test_logger(msg):
+    with open(test_folder + "/testing.log", "a") as fp:
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg))
 
 
 def execute(line):
@@ -81,12 +91,13 @@ def code_block_to_lines(code_blocks):
 
 def execute_test(test_cases, p_limit, t_limit):
     random.seed(123465)
-    test_folder = "tests"
     if test_cases == '*':
         test_files = [f for f in os.listdir(test_folder) if f.endswith('.test')]
     else:
         test_files = [test]
+    test_logger("Starting testing for files: " + str(test_files))
     for test_file in test_files:
+        test_logger("Starting testing: " + test_file)
         test_name = test_file.split('.')[0]
         if os.path.isfile(test_folder + "/" + test_name + '.result'):
             result = open(test_folder + "/" + test_name + '.result', "r").read()
@@ -105,8 +116,9 @@ def execute_test(test_cases, p_limit, t_limit):
                     execute_lines(code_lines)
                     job_count = 1
                     while job_count > 0:
-                        time.sleep(5)
+                        time.sleep(10)
                         sj = json.loads(graph.show_jobs(True))
+                        test_logger(sj)
                         job_count = sum(sj.values())
                     r = graph.test_variables_dict()
                     if not result:
