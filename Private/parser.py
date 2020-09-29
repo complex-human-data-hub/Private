@@ -13,29 +13,12 @@ from arpeggio import RegExMatch as _
 # - Can't pick up dependency between a and b where a = b[c]
 # - Dependencies in list comprehensions?
 
-def command():                  return [delete,
-                                        comment,
-                                        draw_generative_graph,
-                                        draw_inferential_graph,
-                                        draw_privacy_graph,
-                                        draw_raw_graph,
-                                        show_variables,
-                                        show_variables_dict,
-                                        show_values,
-                                        clear_variables,
-                                        show_dependencies,
-                                        show_code,
-                                        show_eval_code,
-                                        show_mccode,
-                                        show_sampler_results,
-                                        show_pp_stats,
-                                        show_globals,
-                                        show_jobs,
-                                        show_jobs_dict,
-                                        show_builtins,
-                                        show_prob_builtins,
-                                        show_ncpus,
-                                        show_stats,
+
+def command():                  return [delete, comment, draw_generative_graph, draw_inferential_graph,
+                                        draw_privacy_graph, draw_raw_graph, show_variables, show_variables_dict,
+                                        show_values, clear_variables, show_dependencies, show_code, show_eval_code,
+                                        show_mccode, show_sampler_results, show_pp_stats, show_globals, show_jobs,
+                                        show_jobs_dict, show_builtins, show_prob_builtins, show_ncpus, show_stats,
                                         help]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
@@ -62,10 +45,7 @@ def show_prob_builtins():       return "spb"
 def show_ncpus():               return "sncpus"
 def show_stats():               return "showstats"
 def help():                     return "help"
-
-def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')   # Note removed _ from identifier names to make sure that an attacker doesn't have access
-                                                                    # to reflection interface
-
+def identifier():               return _(r'[a-zA-Z][a-zA-Z0-9]*')   # Note removed _ from identifier names to make sure that an attacker doesn't have access to reflection interface
 def comment_string():           return _(r'#[a-zA-Z0-9_ ~=()\.,*#\[\]\///+-]*')
 def module_name():              return _(r'[a-zA-Z_]+')
 def notsym():                   return "not"
@@ -76,11 +56,9 @@ def rightsquarebrack():         return "]"
 def comma():                    return ","
 def left_bracket():             return "("
 def right_bracket():            return ")"
-def keyword_define():          return "def"
-def keyword_return():          return "return"
-
+def keyword_define():           return "def"
+def keyword_return():           return "return"
 def dottedidentifier():         return identifier, ZeroOrMore(".", identifier)
-
 def number():                   return _(r'[+-]?((\d+(\.\d*)?)|(\.\d+))')
 def string():                   return [_(r'(["\'])(?:(?=(\\?))\2.)*?\1'), _(r"([''])(?:(?=(\\?))\2.)*?\1")]
 def boolean():                  return ["True", "False"]
@@ -121,16 +99,16 @@ def function():                 return function_header,  ZeroOrMore(function_bod
 def code_block():               return [function, line]
 
 
-def PrivateParser():
-    return(ParserPython(code_block, debug = False, autokwd=True))
+def get_private_parser():
+    return ParserPython(code_block, debug=False, autokwd=True)
 
 
 if __name__ == "__main__":
 
-    input_lines = [(expression, "True or False"), \
-                   (identifier, "a"), \
-                   (line, "a="), \
-                   (boolean_expression, "True"), \
+    input_lines = [(expression, "True or False"),
+                   (identifier, "a"),
+                   (line, "a="),
+                   (boolean_expression, "True"),
                    (deterministic_assignment, "a = 9"),
                    (line, "AlisonSimon=9"),
                    (line, "Alison_Simon=9"),
