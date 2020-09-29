@@ -13,30 +13,29 @@ from arpeggio import RegExMatch as _
 # - Can't pick up dependency between a and b where a = b[c]
 # - Dependencies in list comprehensions?
 
-def command():                  return [delete, \
-                                        comment, \
-                                        draw_generative_graph, \
-                                        draw_inferential_graph, \
-                                        draw_privacy_graph, \
-                                        draw_raw_graph, \
-                                        show_variables, \
-                                        show_variables_dict, \
-                                        show_values, \
-                                        clear_variables, \
-                                        show_dependencies, \
-                                        show_code, \
-                                        show_eval_code, \
-                                        show_mccode, \
-                                        #show_sampler_chains, \
-                                        show_sampler_results, \
-                                        show_pp_stats, \
-                                        show_globals, \
-                                        show_jobs, \
-                                        show_jobs_dict, \
-                                        show_builtins, \
-                                        show_prob_builtins, \
-                                        show_ncpus, \
-                                        show_stats, \
+def command():                  return [delete,
+                                        comment,
+                                        draw_generative_graph,
+                                        draw_inferential_graph,
+                                        draw_privacy_graph,
+                                        draw_raw_graph,
+                                        show_variables,
+                                        show_variables_dict,
+                                        show_values,
+                                        clear_variables,
+                                        show_dependencies,
+                                        show_code,
+                                        show_eval_code,
+                                        show_mccode,
+                                        show_sampler_results,
+                                        show_pp_stats,
+                                        show_globals,
+                                        show_jobs,
+                                        show_jobs_dict,
+                                        show_builtins,
+                                        show_prob_builtins,
+                                        show_ncpus,
+                                        show_stats,
                                         help]
 def comment():                  return identifier, comment_string
 def delete():                   return "del", identifier
@@ -121,8 +120,10 @@ def function_return():          return keyword_return, expression, ";"
 def function():                 return function_header,  ZeroOrMore(function_body_line), function_return, EOF
 def code_block():               return [function, line]
 
+
 def PrivateParser():
     return(ParserPython(code_block, debug = False, autokwd=True))
+
 
 if __name__ == "__main__":
 
