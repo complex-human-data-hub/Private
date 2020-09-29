@@ -91,24 +91,27 @@ def code_block_to_lines(code_blocks):
 
 def execute_test(test_cases, p_limit, t_limit):
     random.seed(123465)
+    test_case_ext = '.test'
+    expected_ext = '.expected'
+    result_file = 'result.log'
     if test_cases == '*':
-        test_files = [f for f in os.listdir(test_folder) if f.endswith('.test')]
+        test_files = [f for f in os.listdir(test_folder) if f.endswith(test_case_ext)]
     else:
         test_files = [test]
     test_logger("Starting testing for files: " + str(test_files))
-    for test_file in test_files:
-        test_logger("Starting testing: " + test_file)
-        test_name = test_file.split('.')[0]
-        if os.path.isfile(test_folder + "/" + test_name + '.result'):
-            result = open(test_folder + "/" + test_name + '.result', "r").read()
-        else:
-            result = None
-        try:
-            with open(test_folder + "/" + test_name + '.log', "w") as fp:
+    with open(test_folder + "/" + result_file, "w+") as fp:
+        for test_file in test_files:
+            test_logger("Starting testing: " + test_file)
+            test_name = test_file.split('.')[0]
+            if os.path.isfile(test_folder + "/" + test_name + expected_ext):
+                result = open(test_folder + "/" + test_name + expected_ext, "r").read()
+            else:
+                result = None
+            try:
                 fp.write(f"Starting test {test_name}\n")
                 start = int(round(time.time()))
                 now = start
-                code_lines = open(test_folder + "/" + test_name + '.test', "r").readlines()
+                code_lines = open(test_folder + "/" + test_name + test_case_ext, "r").readlines()
                 failed = []
                 permutations_tried = 0
                 for i in range(p_limit):
@@ -122,7 +125,7 @@ def execute_test(test_cases, p_limit, t_limit):
                         job_count = sum(sj.values())
                     r = graph.test_variables_dict()
                     if not result:
-                        with open(test_folder + "/" + test_name + '.result', "w") as res_file:
+                        with open(test_folder + "/" + test_name + expected_ext, "w+") as res_file:
                             res_file.write(r)
                             result = r
                     if r != result:
@@ -151,10 +154,10 @@ def execute_test(test_cases, p_limit, t_limit):
                         fp.write('\n')
                         count += 1
 
-        except Exception as e:
-            print(e)
+            except Exception as e:
+                print(e)
 
-    print("Test Over")
+    print(open(test_folder + "/" + result_file, "r").read())
 
 
 def remove_comments(s):
