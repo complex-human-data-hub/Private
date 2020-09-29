@@ -297,13 +297,9 @@ spp: show pp stats
 scode: show code
 sevalcode: show eval code
 smccode: show pyMC3 code
-sss: show sampler status
 ssr: show sampler results
-ss: show sets
 sg: show globals
 sj: show jobs
-vc: variables to calculate
-vs: variables to sample
 sb: show builtins
 spb: show probabilistic builtins
 sncpus: show number of cpus
