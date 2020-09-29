@@ -1,7 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-
-
 from arpeggio import ParserPython, EOF, ZeroOrMore, Optional
 from arpeggio import RegExMatch as _
 

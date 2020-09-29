@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-
 import copy
 import multiprocessing
 import reprlib
@@ -16,7 +13,7 @@ import networkx as nx
 import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
-    illegal_variable_names, setGlobals2, data_builtins
+    illegal_variable_names, setGlobals2
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
     pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node

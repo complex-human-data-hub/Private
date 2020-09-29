@@ -1,11 +1,7 @@
-from __future__ import print_function
-
-from Private.builtins import showBuiltins, showProbBuiltins, commands, plot_builtins
-
-from Private.graph import *
-
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
+from Private.builtins import showBuiltins, showProbBuiltins, commands, plot_builtins
+from Private.graph import *
 
 def _debug(msg):
     with open('/tmp/private-debug.log', 'a') as fp:
