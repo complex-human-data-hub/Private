@@ -27,16 +27,12 @@ def command():                  return [delete, \
                                         show_code, \
                                         show_eval_code, \
                                         show_mccode, \
-                                        show_sampler_status, \
                                         #show_sampler_chains, \
                                         show_sampler_results, \
                                         show_pp_stats, \
-                                        show_sets, \
                                         show_globals, \
                                         show_jobs, \
                                         show_jobs_dict, \
-                                        variables_to_calculate, \
-                                        variables_to_sample, \
                                         show_builtins, \
                                         show_prob_builtins, \
                                         show_ncpus, \
@@ -57,15 +53,11 @@ def show_dependencies():        return "sd"
 def show_code():                return "scode"
 def show_eval_code():           return "sevalcode"
 def show_mccode():              return "smccode"
-def show_sampler_status():      return "sss"
 def show_sampler_results():     return "ssr"
 def show_pp_stats():            return "spp"
-def show_sets():                return "ss"
 def show_globals():             return "sg"
 def show_jobs():                return "sj"
 def show_jobs_dict():           return "sjdict"
-def variables_to_calculate():   return "vc"
-def variables_to_sample():      return "vs"
 def show_builtins():            return "sb"
 def show_prob_builtins():       return "spb"
 def show_ncpus():               return "sncpus"

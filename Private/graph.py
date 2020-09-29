@@ -1257,25 +1257,6 @@ except Exception as e:
 
     # Private commands
 
-    def show_sets(self):
-        result = ""
-        result += "deterministic: " + pp_set(self.deterministic) + "\n"
-        result += "probabilistic: " + pp_set(self.probabilistic) + "\n"
-        result += "builtin: " + pp_set(self.builtins) + "\n"
-        result += "\n"
-        result += "uptodate: " + pp_set(self.uptodate["All"]) + "\n"
-        result += "computing: " + pp_set(self.computing["All"]) + "\n"
-        result += "exception: " + pp_set(self.exception["All"]) + "\n"
-        result += "stale: " + pp_set(self.stale["All"]) + "\n"
-        result += "\n"
-        result += "private: " + pp_set(self.private) + "\n"
-        result += "public: " + pp_set(self.public) + "\n"
-        result += "unknown_privacy: " + pp_set(self.unknown_privacy) + "\n"
-        result += "\n"
-        result += "locals: " + pp_set(self.locals.keys()) + "\n"
-        result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
-        return result
-
     def show_globals(self):
         result = ""
         result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
@@ -1631,9 +1612,6 @@ except Exception as e:
                     'unsatisfied': unsatisfied_depends[i]
                     }
             return json.dumps(sv_ace)
-            #return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
-            #                 codebit, valuebit, commentbit, unsatisfied_depend in
-            #                 zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
         else:
             return '{}'
 

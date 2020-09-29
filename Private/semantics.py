@@ -1,27 +1,11 @@
 from __future__ import print_function
 
-import inspect
-import sys
-import io
+from Private.builtins import showBuiltins, showProbBuiltins, commands, plot_builtins
 
-import numpy as np
-import networkx as nx
-# import pp
-import time
-import pydot
-import graphviz
-import logging
-import importlib
-import json
-from Private.builtins import prob_builtins, showBuiltins, showProbBuiltins, commands, plot_builtins
-
-from networkx.drawing.nx_pydot import write_dot
 from Private.graph import *
 
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
-#import logging
-#_log = logging.getLogger("Private")
-#logging.basicConfig(filename='private.log',level=logging.WARNING)
+
 
 def _debug(msg):
     with open('/tmp/private-debug.log', 'a') as fp:
@@ -29,9 +13,6 @@ def _debug(msg):
             msg = json.dumps(msg)
         fp.write("{}\n".format( msg ))
 
-
-#debug = False
-# depGraph = Graph()
 
 class result:
 
@@ -293,16 +274,11 @@ class InputVisitor(PTNodeVisitor):
     def visit_show_code(self, node, children):                return result("show_code", self.depGraph.show_code())
     def visit_show_eval_code(self, node, children):           return result("show_eval_code", self.depGraph.show_eval_code())
     def visit_show_mccode(self, node, children):              return result("show_mccode", self.depGraph.show_pymc3_code())
-    def visit_show_sampler_status(self, node, children):      return result("show_sampler_status", self.depGraph.canRunSampler("All", verbose=True))
-    #def visit_show_sampler_chains(self, node, children):      return result("show_sampler_chains", self.depGraph.showSamplerChains())
     def visit_show_sampler_results(self, node, children):     return result("show_sampler_results", self.depGraph.show_sampler_results())
     def visit_show_pp_stats(self, node, children):            return result("show_pp_stats", repr(self.depGraph.server.get_stats()['local']))
-    def visit_show_sets(self, node, children):                return result("show_sets", self.depGraph.show_sets())
     def visit_show_globals(self, node, children):             return result("show_globals", self.depGraph.show_globals())
     def visit_show_jobs(self, node, children):                return result("show_jobs", self.depGraph.show_jobs())
     def visit_show_jobs_dict(self, node, children):           return result("show_jobs_dict", self.depGraph.show_jobs(as_dict=True))
-    def visit_variables_to_calculate(self, node, children):   return result("show_variables_to_calculate", self.depGraph.variablesToBeCalculated())
-    def visit_variables_to_sample(self, node, children):      return result("show_variables_to_sample", self.depGraph.variablesToBeSampled())
     def visit_show_builtins(self, node, children):            return result("show_builtins", showBuiltins())
     def visit_show_prob_builtins(self, node, children):       return result("show_prob_builtins", showProbBuiltins())
     def visit_show_ncpus(self, node, children):               return result("show_ncpus", str(self.depGraph.server.get_ncpus()))
