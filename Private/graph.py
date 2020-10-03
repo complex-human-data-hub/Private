@@ -144,20 +144,20 @@ class Graph:
         setBuiltinPrivacy(self)  # set privacy of builtins
 
         if user_ids:
-            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"],
+            self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],
                         skip_name_check=True)
             if self.load_demo_events:
-                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)",
-                            dependson=["getDemoEvents"], skip_name_check=True)
+                self.define("DemoEvents", "", eval_code="getDemoEvents(project_id, user_id)",
+                            depends_on=["getDemoEvents"], skip_name_check=True)
 
-        self.define("NumberOfTuningSamples", "", evalcode="getNumberOfTuningSamples()",
-                    dependson=["getNumberOfTuningSamples"])
-        self.define("NumberOfChains", "", evalcode="getNumberOfChains()", dependson=["getNumberOfChains"])
-        self.define("NumberOfSamples", "", evalcode="getNumberOfSamples()", dependson=["getNumberOfSamples"])
-        self.define("rhat", "", evalcode="{}", skip_name_check=True)
-        self.define("ess", "", evalcode="{}", skip_name_check=True)
-        self.define("loo", "", evalcode="{}", skip_name_check=True)
-        self.define("waic", "", evalcode="{}", skip_name_check=True)
+        self.define("NumberOfTuningSamples", "", eval_code="getNumberOfTuningSamples()",
+                    depends_on=["getNumberOfTuningSamples"])
+        self.define("NumberOfChains", "", eval_code="getNumberOfChains()", depends_on=["getNumberOfChains"])
+        self.define("NumberOfSamples", "", eval_code="getNumberOfSamples()", depends_on=["getNumberOfSamples"])
+        self.define("rhat", "", eval_code="{}", skip_name_check=True)
+        self.define("ess", "", eval_code="{}", skip_name_check=True)
+        self.define("loo", "", eval_code="{}", skip_name_check=True)
+        self.define("waic", "", eval_code="{}", skip_name_check=True)
 
     def __repr__(self):
         code_bits = []
@@ -408,9 +408,8 @@ class Graph:
             return pt_unknown
 
     # Core functions
-    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None,
+    def define(self, name, code, eval_code=None, depends_on=None, prob=False, h_var=None, py_mc3_code=None,
                skip_name_check=False):
-        self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
         if not skip_name_check and name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
 
@@ -422,29 +421,29 @@ class Graph:
             self.release()
             return
 
-        if not dependson:
-            dependson = []
+        if not depends_on:
+            depends_on = []
         else:
-            if self.check_cyclic_dependencies(name, set(dependson)):
+            if self.check_cyclic_dependencies(name, set(depends_on)):
                 self.release()
                 raise Exception("Exception: Cyclic Dependency Found, " + name)
 
         if prob:
             self.probabilistic.add(name)
             self.prob_code[name] = code
-            self.pyMC3code[name] = pyMC3code
-            if dependson:
-                self.probdependson[name] = set(dependson)
-            if hier:
-                self.hierarchical[name] = hier
+            self.pyMC3code[name] = py_mc3_code
+            if depends_on:
+                self.probdependson[name] = set(depends_on)
+            if h_var:
+                self.hierarchical[name] = h_var
         else:
             self.deterministic.add(name)
             self.code[name] = code
-            self.eval_code[name] = evalcode
-            self.dependson[name] = set(dependson)
+            self.eval_code[name] = eval_code
+            self.dependson[name] = set(depends_on)
 
 
-        self.add_to_raw_graph(name, dependson, hier, prob)
+        self.add_to_raw_graph(name, depends_on, h_var, prob)
         node = self.get_node(name, prob)
         # set the timestamp for node define
         node[attr_last_ts] = int(time.time() * 1000000)
