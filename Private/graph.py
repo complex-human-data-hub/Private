@@ -591,7 +591,7 @@ try:
 
             for index_variable in list(set(self.hierarchical.values()) & set(sub_graph)):
                 code += "    global __%s_Dict \n" % index_variable
-                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(set(%s))) \n" % (
+                code += "    __%s_Dict = dict((key, val) for val, key in enumerate(sorted(set(%s)))) \n" % (
                  index_variable, index_variable)
                 code += "    __%s_Indices = [__%s_Dict[__private_index__] for __private_index__ in %s]\n" % (
                  index_variable, index_variable, index_variable)
