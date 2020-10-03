@@ -674,7 +674,8 @@ except Exception as e:
 
         
 
-""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
+""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"],
+            NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
 
             return locals, code
 
