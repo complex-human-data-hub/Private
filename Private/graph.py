@@ -1289,7 +1289,6 @@ except Exception as e:
             elif job_type == 'Manifold:':
                 manifold_jobs += 1
                 manifold_vars.add(job_var)
-        result = None
         if as_dict:
             result = json.dumps({
                 'total_jobs': (compute_jobs + sampler_jobs + manifold_jobs),
@@ -1519,7 +1518,6 @@ except Exception as e:
             return ""
 
     def show_variables_dict(self, pattern):
-        code_width = 50
         value_width = 80
 
         defaults = ['Events','DemoEvents']
@@ -1557,62 +1555,6 @@ except Exception as e:
         return json.dumps(sv)
 
 
-    def show_variables_dict_old(self, pattern):
-        name_bits = []
-        code_bits = []
-        code_width = 50
-        value_width = 80
-        for name in [c for c in self.code.keys() if pattern.lower() in c.lower()]:
-            code_bits.append(name + " = " + str(self.code[name]))
-            name_bits.append(name)
-        for name in [pc for pc in self.probcode.keys() if pattern.lower() in pc.lower()]:
-            if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
-                name_bits.append(name + "[" + self.hierarchical[name] + "]")
-            else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
-                name_bits.append(name)
-        if len(code_bits) > 0:
-            m = max(len(line) for line in code_bits)
-            m = min(m, code_width)
-            newcodebits = [line[0:code_width].ljust(m, " ") for line in code_bits]
-            value_bits = []
-            for name in self.code.keys():
-                value_bits.append(self.get_value(name)[0:value_width])
-            for name in self.probcode.keys():
-                if name in self.samplerexception:
-                    value_bits.append(self.samplerexception[name])
-                else:
-                    value_bits.append(self.get_value(name)[0:value_width])
-            comment_bits = []
-            for name in self.code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            unsatisfied_depends = []
-            for name in self.code.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            for name in self.probcode.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            debug_logger("show_variables_ace")
-            debug_logger([name_bits, newcodebits, value_bits, comment_bits, unsatisfied_depends])
-            sv_ace = {}
-            for i, k in enumerate(name_bits):
-                if k in sv_ace:
-                    continue
-                sv_ace[k] = {
-                    'name': k,
-                    'value': value_bits[i],
-                    'comment': comment_bits[i],
-                    'unsatisfied': unsatisfied_depends[i]
-                    }
-            return json.dumps(sv_ace)
-        else:
-            return '{}'
-
-
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
     name = node[attr_id]
     redis_key = redis_helper.get_redis_key(user, name, project_id, shell_id)
@@ -1620,7 +1562,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
     numpy.random.seed(seed)
-    s3_var_globals = retrieve_s3_vars(globals)
+    s3_var_globals = retrieve_redis_vars(globals)
     for func in user_func:
         try:
             exec(func, s3_var_globals)
@@ -1644,7 +1586,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
 def sampler_job(job_name, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
-        s3vars = retrieve_s3_vars(globals)
+        s3vars = retrieve_redis_vars(globals)
         exec(code, s3vars, locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
@@ -1670,19 +1612,31 @@ def sampler_job(job_name, user, node, code, globals, locals):
         return job_name, user, node, e, "No Exception Variable", None
 
 
-def mp_job(job_name, node, name, user, first_array, second_array):
-    from Private.manifoldprivacy import distManifold
-    debug_logger("mp_job : {} [{}] Shape user: {} \nall {}".format(name, user, first_array.shape,
-                                                                   second_array.shape))
-    debug_logger(
-        "mp_job : {} [{}] Sum user: {} \nall {}".format(name, user, first_array.sum(), second_array.sum()))
+def mp_job(job_name, node, name, user, user_array, all_array):
+    """
+    Calculates the manifold privacy
 
-    d = distManifold(first_array, second_array) * 100.
+    :param job_name: job identifier
+    :param node: i_graph node
+    :param name: name of the variable
+    :param user: user
+    :param user_array: user removed data
+    :param all_array: all data
+    :return: d
+    """
+    from Private.manifoldprivacy import dist_manifold
+    d = dist_manifold(user_array, all_array) * 100.
     return job_name, node, name, user, d
 
 
 def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
+    """
+    Returns the size of the give object recursively(used to decide on caching)
+
+    :param obj: object which require the size calculation
+    :param seen: already visited nodes
+    :return: size of the object in bytes
+    """
     size = sys.getsizeof(obj)
     if seen is None:
         seen = set()
@@ -1702,7 +1656,13 @@ def get_size(obj, seen=None):
     return size
 
 
-def retrieve_s3_vars(var_dict):
+def retrieve_redis_vars(var_dict):
+    """
+    Replace all the redis references in a variable dictionary with actual value
+
+    :param var_dict: dictionary of variables
+    :return: dictionary of variables with values replaced
+    """
     ret_dict = {}
     for key in var_dict.keys():
         if type(var_dict[key]) == RedisReference:
