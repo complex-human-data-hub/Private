@@ -8,7 +8,7 @@ if DEBUG:
     from parser import PrivateParser
     from semantics import PrivateSemanticAnalyser
 else:
-    from Private.parser import PrivateParser
+    from Private.parser import get_private_parser
     from Private.semantics import PrivateSemanticAnalyser
 
 import sys
@@ -59,7 +59,7 @@ def _debug(msg):
 
 class Private:
     project_uid = None
-    parser = PrivateParser()
+    parser = get_private_parser()
     data_source = None
     def __init__(self, project_uid):
         self.project_uid = project_uid

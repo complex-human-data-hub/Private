@@ -23,7 +23,7 @@ _log = logging.getLogger("Private")
 logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log.debug("============================= Starting new interpreter =============================")
 
-from Private.parser import PrivateParser
+from Private.parser import get_private_parser
 from Private.semantics import PrivateSemanticAnalyser
 from Private.graph import Graph
 from datetime import datetime
@@ -252,7 +252,7 @@ def execute_lines(code_lines):
             execute(input_line)
 
 
-parser = PrivateParser()
+parser = get_private_parser()
 if args.filename:
     execute_file(args.filename)
 

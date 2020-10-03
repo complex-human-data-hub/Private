@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-
 import copy
 import multiprocessing
 import reprlib
@@ -16,7 +13,7 @@ import networkx as nx
 import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
-    illegal_variable_names, setGlobals2, data_builtins
+    illegal_variable_names, setGlobals2
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
     pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
@@ -1257,25 +1254,6 @@ except Exception as e:
 
     # Private commands
 
-    def show_sets(self):
-        result = ""
-        result += "deterministic: " + pp_set(self.deterministic) + "\n"
-        result += "probabilistic: " + pp_set(self.probabilistic) + "\n"
-        result += "builtin: " + pp_set(self.builtins) + "\n"
-        result += "\n"
-        result += "uptodate: " + pp_set(self.uptodate["All"]) + "\n"
-        result += "computing: " + pp_set(self.computing["All"]) + "\n"
-        result += "exception: " + pp_set(self.exception["All"]) + "\n"
-        result += "stale: " + pp_set(self.stale["All"]) + "\n"
-        result += "\n"
-        result += "private: " + pp_set(self.private) + "\n"
-        result += "public: " + pp_set(self.public) + "\n"
-        result += "unknown_privacy: " + pp_set(self.unknown_privacy) + "\n"
-        result += "\n"
-        result += "locals: " + pp_set(self.locals.keys()) + "\n"
-        result += "globals: " + pp_set(self.globals["All"].keys()) + "\n"
-        return result
-
     def show_globals(self):
         result = ""
         result += "All: " + str(self.globals["All"].get("r", "Not here")) + "\n"
@@ -1631,9 +1609,6 @@ except Exception as e:
                     'unsatisfied': unsatisfied_depends[i]
                     }
             return json.dumps(sv_ace)
-            #return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
-            #                 codebit, valuebit, commentbit, unsatisfied_depend in
-            #                 zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
         else:
             return '{}'
 

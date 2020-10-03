@@ -1,5 +1,5 @@
 rain = [e.Weather  == "rain" for e in DemoEvents if e.hasField("Weather")]
-subjects = [e.UserId for e in Events if e.hasField("Weather")]
+subjects = [e.UserId for e in DemoEvents if e.hasField("Weather")]
 rain[subjects] ~ Bernoulli(rate[subjects])
 rate[subjects] ~ Beta(rateHier, 0.1)
 rateHier ~ Uniform(0,1)
