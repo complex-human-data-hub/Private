@@ -307,7 +307,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_show_variables_dict(self, node, children):
         pattern = children[1].code if len(children) > 1 else ''
-        return result("show_variables_dict", self.depGraph.show_variables_dict(pattern))
+        return result("show_variables_dict", self.depGraph.show_variables_dict())
 
     def visit_show_values(self, node, children):
         return result("show_values", self.depGraph.show_values())
