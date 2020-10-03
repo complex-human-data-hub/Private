@@ -1,7 +1,8 @@
 import copy
 import multiprocessing
 import reprlib
-import sys, traceback
+import sys
+import traceback
 import time
 from itertools import permutations
 
@@ -13,7 +14,7 @@ import networkx as nx
 import graphviz as gv
 import Private.s3_helper
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
-    illegal_variable_names, setGlobals2
+    illegal_variable_names, setGlobals2, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
     pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
@@ -98,7 +99,7 @@ class Graph:
         self.computing = dict([(u, set()) for u in self.user_ids])
         self.exception = dict([(u, set()) for u in self.user_ids])
         self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.user_ids])
-        self.samplerexception = dict([(u, {}) for u in self.user_ids])
+        self.sampler_exception = dict([(u, {}) for u in self.user_ids])
 
         # variables related to privacy
 
@@ -111,8 +112,8 @@ class Graph:
         # code associated with variables
 
         self.code = OrderedDict()  # private code for deterministic variables
-        self.probcode = OrderedDict()  # private code of probabilistic variables
-        self.evalcode = OrderedDict()  # python code for deterministic variables
+        self.prob_code = OrderedDict()  # private code of probabilistic variables
+        self.eval_code = OrderedDict()  # python code for deterministic variables
         self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
         self.hierarchical = {}  # what is the index variable of this hierarchical variable
 
@@ -123,7 +124,7 @@ class Graph:
         # auxiliary variables
 
         self.lock = multiprocessing.Lock()
-        self.whohaslock = None
+        self.who_has_lock = None
         self.jobs = {}
         self.log = logging.getLogger("Private")
         self.last_server_connect = 0
@@ -143,18 +144,20 @@ class Graph:
         setBuiltinPrivacy(self)  # set privacy of builtins
 
         if user_ids:
-            self.define("Events", "", evalcode="getEvents(project_id, user_id)", dependson=["getEvents"], skip_illegal_name_check=True)
+            self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],
+                        skip_name_check=True)
             if self.load_demo_events:
-                self.define("DemoEvents", "", evalcode="getDemoEvents(project_id, user_id)",
-                            dependson=["getDemoEvents"], skip_illegal_name_check=True)
+                self.define("DemoEvents", "", eval_code="getDemoEvents(project_id, user_id)",
+                            depends_on=["getDemoEvents"], skip_name_check=True)
 
-        self.define("NumberOfTuningSamples", "", evalcode="getNumberOfTuningSamples()", dependson=["getNumberOfTuningSamples"])
-        self.define("NumberOfChains", "", evalcode="getNumberOfChains()", dependson=["getNumberOfChains"])
-        self.define("NumberOfSamples", "", evalcode="getNumberOfSamples()", dependson=["getNumberOfSamples"])
-        self.define("rhat", "", evalcode="{}", skip_illegal_name_check=True)
-        self.define("ess", "", evalcode="{}", skip_illegal_name_check=True)
-        self.define("loo", "", evalcode="{}", skip_illegal_name_check=True)
-        self.define("waic", "", evalcode="{}", skip_illegal_name_check=True)
+        self.define("NumberOfTuningSamples", "", eval_code="getNumberOfTuningSamples()",
+                    depends_on=["getNumberOfTuningSamples"])
+        self.define("NumberOfChains", "", eval_code="getNumberOfChains()", depends_on=["getNumberOfChains"])
+        self.define("NumberOfSamples", "", eval_code="getNumberOfSamples()", depends_on=["getNumberOfSamples"])
+        self.define("rhat", "", eval_code="{}", skip_name_check=True)
+        self.define("ess", "", eval_code="{}", skip_name_check=True)
+        self.define("loo", "", eval_code="{}", skip_name_check=True)
+        self.define("waic", "", eval_code="{}", skip_name_check=True)
 
     def __repr__(self):
         code_bits = []
@@ -162,11 +165,11 @@ class Graph:
         value_width = 80
         for name in self.code.keys():
             code_bits.append(name + " = " + str(self.code[name]))
-        for name in self.probcode.keys():
+        for name in self.prob_code.keys():
             if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.prob_code[name]))
             else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
+                code_bits.append(name + " ~ " + str(self.prob_code[name]))
         if len(code_bits) > 0:
             m = max(len(line) for line in code_bits)
             m = min(m, code_width)
@@ -174,21 +177,21 @@ class Graph:
             value_bits = []
             for name in self.code.keys():
                 value_bits.append(self.get_value(name)[0:value_width])
-            for name in self.probcode.keys():
-                if name in self.samplerexception:
-                    value_bits.append(self.samplerexception[name])
+            for name in self.prob_code.keys():
+                if name in self.sampler_exception:
+                    value_bits.append(self.sampler_exception[name])
                 else:
                     value_bits.append(self.get_value(name)[0:value_width])
             comment_bits = []
             for name in self.code.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 comment_bits.append(self.comment.get(name, ""))
             unsatisfied_depends = []
             for name in self.code.keys():
                 unsatisfied_depends.append(
                     ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 unsatisfied_depends.append(
                     ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
             return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
@@ -210,12 +213,12 @@ class Graph:
 
     def acquire(self, who):
         self.lock.acquire()
-        self.whohaslock = who
+        self.who_has_lock = who
         self.log.debug(who + " just got lock")
 
     def release(self):
-        self.log.debug(self.whohaslock + " just released lock")
-        self.whohaslock = None
+        self.log.debug(self.who_has_lock + " just released lock")
+        self.who_has_lock = None
         self.lock.release()
 
     # Helper functions
@@ -405,42 +408,42 @@ class Graph:
             return pt_unknown
 
     # Core functions
-    def define(self, name, code, evalcode=None, dependson=None, prob=False, hier=None, pyMC3code=None, skip_illegal_name_check=False):
-        self.log.debug("Define {name}, {code}, {dependson}, {prob}, {pyMC3code}".format(**locals()))
-        if not skip_illegal_name_check and name in prob_builtins | illegal_variable_names:
+    def define(self, name, code, eval_code=None, depends_on=None, prob=False, h_var=None, py_mc3_code=None,
+               skip_name_check=False):
+        if not skip_name_check and name in prob_builtins | illegal_variable_names:
             raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
 
         self.acquire("define " + name)
 
         # check if the exact thing already defined
-        if (name in self.probabilistic and self.probcode[name] == code) or (
+        if (name in self.probabilistic and self.prob_code[name] == code) or (
                 name in self.deterministic and self.code[name] == code):
             self.release()
             return
 
-        if not dependson:
-            dependson = []
+        if not depends_on:
+            depends_on = []
         else:
-            if self.check_cyclic_dependencies(name, set(dependson)):
+            if self.check_cyclic_dependencies(name, set(depends_on)):
                 self.release()
                 raise Exception("Exception: Cyclic Dependency Found, " + name)
 
         if prob:
             self.probabilistic.add(name)
-            self.probcode[name] = code
-            self.pyMC3code[name] = pyMC3code
-            if dependson:
-                self.probdependson[name] = set(dependson)
-            if hier:
-                self.hierarchical[name] = hier
+            self.prob_code[name] = code
+            self.pyMC3code[name] = py_mc3_code
+            if depends_on:
+                self.probdependson[name] = set(depends_on)
+            if h_var:
+                self.hierarchical[name] = h_var
         else:
             self.deterministic.add(name)
             self.code[name] = code
-            self.evalcode[name] = evalcode
-            self.dependson[name] = set(dependson)
+            self.eval_code[name] = eval_code
+            self.dependson[name] = set(depends_on)
 
 
-        self.add_to_raw_graph(name, dependson, hier, prob)
+        self.add_to_raw_graph(name, depends_on, h_var, prob)
         node = self.get_node(name, prob)
         # set the timestamp for node define
         node[attr_last_ts] = int(time.time() * 1000000)
@@ -463,7 +466,7 @@ class Graph:
         self.acquire("define " + name)
 
         # check if the exact thing already defined
-        if name in self.deterministic and self.code[name] == code and self.evalcode[name] == evalcode:
+        if name in self.deterministic and self.code[name] == code and self.eval_code[name] == evalcode:
             self.release()
             return
 
@@ -476,7 +479,7 @@ class Graph:
         self.deterministic.add(name)
         self.functions.add(name)
         self.code[name] = code
-        self.evalcode[name] = evalcode
+        self.eval_code[name] = evalcode
         self.dependson[name] = dependson.difference(defines).difference(arguments)
         self.add_to_raw_graph(name, dependson.difference(defines).difference(arguments), None, False)
         node = self.i_graph.nodes[name]
@@ -496,7 +499,6 @@ class Graph:
 
     def delete(self, name, is_prob=True):
         self.acquire("delete " + name)
-        keep_private_variables = ['NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo', 'waic']
         
         if name in keep_private_variables:
             res = name + " cannot be deleted"
@@ -522,7 +524,7 @@ class Graph:
 
             if is_prob:
                 self.probabilistic.discard(name)
-                self.probcode.pop(name, None)
+                self.prob_code.pop(name, None)
                 self.pyMC3code.pop(name, None)
                 self.hierarchical.pop(name, None)
                 self.probdependson.pop(name, None)
@@ -561,7 +563,6 @@ class Graph:
             res = name + " not found."
 
         self.release()
-        # self.compute_privacy(self.get_sub_graphs(name)) # every delete could change the privacy assignments
         return res
 
     def construct_pymc3_code(self, node, user=None):
@@ -625,7 +626,7 @@ try:
                     shape_code = ", shape = len(__%s_Dict)" % self.hierarchical[name]
                     code += "        " + self.pyMC3code[name] % shape_code + "\n"
                 else:
-                    code += "        " + self.pyMC3code[name] % ""+ "\n"
+                    code += "        " + self.pyMC3code[name] % "" + "\n"
 
             observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
             for name in observed_names:
@@ -672,7 +673,8 @@ except Exception as e:
 
         
 
-""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"], NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
+""".format(NumberOfSamples=self.globals["All"]["NumberOfSamples"], NumberOfChains=self.globals["All"]["NumberOfChains"],
+            NumberOfTuningSamples=self.globals["All"]["NumberOfTuningSamples"])
 
             return locals, code
 
@@ -712,8 +714,8 @@ except Exception as e:
                 if success:
                     self.change_state(user, node, "computing")
                     job_name = "Compute:  " + user + " " + n_id
-                    user_func = [self.evalcode[func_name] for func_name in self.functions]
-                    self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.evalcode[n_id],
+                    user_func = [self.eval_code[func_name] for func_name in self.functions]
+                    self.jobs[job_name] = self.server.submit(job, job_name, node, user, self.eval_code[n_id],
                                                              job_globals,
                                                              self.locals, user_func, self.project_id, self.shell_id)
                     self.jobs[job_name].add_done_callback(self.callback)
@@ -734,11 +736,11 @@ except Exception as e:
                     else:
                         success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
                         if success:
-                            jobname = "Manifold: " + user + " " + name
-                            self.jobs[jobname] = self.server.submit(mp_job, jobname, node, name, user,
-                                                                    self.globals[user][name],
-                                                                    self.globals["All"][name])
-                            self.jobs[jobname].add_done_callback(self.mp_callback)
+                            job_name = "Manifold: " + user + " " + name
+                            self.jobs[job_name] = self.server.submit(mp_job, job_name, node, name, user,
+                                                                     self.globals[user][name],
+                                                                     self.globals["All"][name])
+                            self.jobs[job_name].add_done_callback(self.mp_callback)
 
     def callback(self, return_value):
         return_value = return_value.result()
@@ -749,7 +751,8 @@ except Exception as e:
         node_ts = node[attr_last_ts]
         valid_node = name in self.i_graph.nodes and (
                     set(self.i_graph.nodes[name][attr_contains]) == set(node[attr_contains]))
-        successful_return = valid_node and name in self.ts[compute_key][user] and self.ts[compute_key][user][name][started_key] == node_ts
+        successful_return = valid_node and name in self.ts[compute_key][user] and self.ts[compute_key][user][name][
+            started_key] == node_ts
         try:
             if isinstance(value, Exception):
                 if user == "All":
@@ -812,7 +815,8 @@ except Exception as e:
         node_ts = node[attr_last_ts]
         valid_node = n_id in self.i_graph.nodes and (
                     set(self.i_graph.nodes[n_id][attr_contains]) == set(node[attr_contains]))
-        successful_return = valid_node and n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][started_key] == node_ts
+        successful_return = valid_node and n_id in self.ts[sampler_key][user] and self.ts[sampler_key][user][n_id][
+            started_key] == node_ts
         if isinstance(value, Exception):
             self.log.debug("Exception in sampler callback %s %s" % (user, str(value)))
             for name in names:
@@ -824,10 +828,10 @@ except Exception as e:
                 m = re.match(r"__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
                 if m:
                     value = str(int(m.group(1)) - 1) + " arguments required."
-                self.samplerexception[user][exception_variable] = str(value)
+                self.sampler_exception[user][exception_variable] = str(value)
             else:
                 for name in names:
-                    self.samplerexception[user][name] = str(value)
+                    self.sampler_exception[user][name] = str(value)
             self.log.debug("Exception in sampler callback %s %s ...done" % (user, str(value)))
         elif successful_return:
             try:
@@ -894,7 +898,7 @@ except Exception as e:
         node_ts = node[attr_last_ts]
         successful_return = node[attr_id] in self.ts[manifold_key][user] and self.ts[manifold_key][user][node[attr_id]][
             started_key] == node_ts
-        if node[attr_id] in self.ts[manifold_key][user] and self.ts[manifold_key][user][node[attr_id]][started_key] == node_ts:
+        if successful_return:
             try:
                 self.log.debug(f"mp_callback: {user}: {name}: {d}")
                 if self.get_privacy_sampler_result(name) != pt_private:
@@ -1289,7 +1293,6 @@ except Exception as e:
             elif job_type == 'Manifold:':
                 manifold_jobs += 1
                 manifold_vars.add(job_var)
-        result = None
         if as_dict:
             result = json.dumps({
                 'total_jobs': (compute_jobs + sampler_jobs + manifold_jobs),
@@ -1396,9 +1399,9 @@ except Exception as e:
         value_bits = []
         for name in self.code.keys():
             value_bits.append(name + " = " + self.get_value(name)[0:value_width])
-        for name in self.probcode.keys():
-            if name in self.samplerexception:
-                value_bits.append(name + " ~ " + self.samplerexception[name])
+        for name in self.prob_code.keys():
+            if name in self.sampler_exception:
+                value_bits.append(name + " ~ " + self.sampler_exception[name])
             else:
                 value_bits.append(name + " ~ " + self.get_value(name)[0:value_width])
         return "\n".join(value_bits)
@@ -1407,19 +1410,19 @@ except Exception as e:
         code_bits = []
         for name in self.code.keys():
             if name in self.functions:
-                code_bits.append(self.evalcode[name].replace("\t", "    "))
+                code_bits.append(self.eval_code[name].replace("\t", "    "))
             else:
                 code_bits.append(name + " = " + str(self.code[name]))
-        for name in self.probcode.keys():
+        for name in self.prob_code.keys():
             if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.prob_code[name]))
             else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
+                code_bits.append(name + " ~ " + str(self.prob_code[name]))
         if len(code_bits) > 0:
             comment_bits = []
             for name in self.code.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 comment_bits.append(self.comment.get(name, ""))
             return "\n".join(
                 "  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
@@ -1429,14 +1432,14 @@ except Exception as e:
     def show_eval_code(self):
         code_bits = []
         for name in self.code.keys():
-            code_bits.append(name + " = " + str(self.evalcode[name]))
-        for name in self.probcode.keys():
+            code_bits.append(name + " = " + str(self.eval_code[name]))
+        for name in self.prob_code.keys():
             code_bits.append(name + " ~ " + str(self.pyMC3code[name]))
         if len(code_bits) > 0:
             comment_bits = []
             for name in self.code.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 comment_bits.append(self.comment.get(name, ""))
             return "\n".join(
                 "  ".join([code_bit, comment_bit]) for code_bit, comment_bit in zip(code_bits, comment_bits))
@@ -1455,13 +1458,13 @@ except Exception as e:
                 if self.dependson[name] != set([]):
                     res += "    " + repr(list(self.dependson[name]))
             res += "\n"
-        for name in self.probcode.keys():
+        for name in self.prob_code.keys():
             if name in self.hierarchical:
                 res += name + "[" + self.hierarchical[name] + "] ~ "
             else:
                 res += name + " ~ "
             if name not in self.private:
-                res += self.probcode[name][0:60]
+                res += self.prob_code[name][0:60]
             else:
                 res += "Private"
             if name in self.probdependson:
@@ -1483,11 +1486,11 @@ except Exception as e:
         value_width = 80
         for name in [c for c in self.code.keys() if pattern.lower() in c.lower()]:
             code_bits.append(name + " = " + str(self.code[name]))
-        for name in [pc for pc in self.probcode.keys() if pattern.lower() in pc.lower()]:
+        for name in [pc for pc in self.prob_code.keys() if pattern.lower() in pc.lower()]:
             if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
+                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.prob_code[name]))
             else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
+                code_bits.append(name + " ~ " + str(self.prob_code[name]))
         if len(code_bits) > 0:
             m = max(len(line) for line in code_bits)
             m = min(m, code_width)
@@ -1495,21 +1498,21 @@ except Exception as e:
             value_bits = []
             for name in self.code.keys():
                 value_bits.append(self.get_value(name)[0:value_width])
-            for name in self.probcode.keys():
-                if name in self.samplerexception:
-                    value_bits.append(self.samplerexception[name])
+            for name in self.prob_code.keys():
+                if name in self.sampler_exception:
+                    value_bits.append(self.sampler_exception[name])
                 else:
                     value_bits.append(self.get_value(name)[0:value_width])
             comment_bits = []
             for name in self.code.keys():
                 comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 comment_bits.append(self.comment.get(name, ""))
             unsatisfied_depends = []
             for name in self.code.keys():
                 unsatisfied_depends.append(
                     ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            for name in self.probcode.keys():
+            for name in self.prob_code.keys():
                 unsatisfied_depends.append(
                     ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
             return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
@@ -1518,25 +1521,26 @@ except Exception as e:
         else:
             return ""
 
-    def show_variables_dict(self, pattern):
-        code_width = 50
+    def show_variables_dict(self):
         value_width = 80
 
-        defaults = ['Events','DemoEvents']
-        names = defaults + list(set(self.globals[user_all].keys()) - self.builtins) 
+        defaults = ['Events', 'DemoEvents']
+        names = defaults + list(set(self.globals[user_all].keys()) - self.builtins)
         sv = {}
         for name in names:
             sv[name] = {'name': name}
-            if name in self.samplerexception:
-                sv[name]['value'] = self.samplerexception[name]
+            if name in self.sampler_exception:
+                sv[name]['value'] = self.sampler_exception[name]
             else:
                 sv[name]['value'] = self.get_value(name)[0:value_width]
 
             sv[name]['comment'] = self.comment.get(name, "")
             if name in self.code:
-                sv[name]['unsatisfied'] = ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins))
-            elif name in self.probcode:
-                sv[name]['unsatisfied'] = ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins))
+                sv[name]['unsatisfied'] = ", ".join(
+                    self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins))
+            elif name in self.prob_code:
+                sv[name]['unsatisfied'] = ", ".join(
+                    self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins))
             else:
                 sv[name]['unsatisfied'] = ""
 
@@ -1549,68 +1553,12 @@ except Exception as e:
         names = list((set(self.globals[user_all].keys()) - self.builtins) - untested_variables)
         sv = OrderedDict()
         for name in sorted(names):
-            if name in self.samplerexception:
-                sv[name] = self.samplerexception[name]
+            if name in self.sampler_exception:
+                sv[name] = self.sampler_exception[name]
             else:
                 sv[name] = self.get_value(name, long_format=True)
 
         return json.dumps(sv)
-
-
-    def show_variables_dict_old(self, pattern):
-        name_bits = []
-        code_bits = []
-        code_width = 50
-        value_width = 80
-        for name in [c for c in self.code.keys() if pattern.lower() in c.lower()]:
-            code_bits.append(name + " = " + str(self.code[name]))
-            name_bits.append(name)
-        for name in [pc for pc in self.probcode.keys() if pattern.lower() in pc.lower()]:
-            if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.probcode[name]))
-                name_bits.append(name + "[" + self.hierarchical[name] + "]")
-            else:
-                code_bits.append(name + " ~ " + str(self.probcode[name]))
-                name_bits.append(name)
-        if len(code_bits) > 0:
-            m = max(len(line) for line in code_bits)
-            m = min(m, code_width)
-            newcodebits = [line[0:code_width].ljust(m, " ") for line in code_bits]
-            value_bits = []
-            for name in self.code.keys():
-                value_bits.append(self.get_value(name)[0:value_width])
-            for name in self.probcode.keys():
-                if name in self.samplerexception:
-                    value_bits.append(self.samplerexception[name])
-                else:
-                    value_bits.append(self.get_value(name)[0:value_width])
-            comment_bits = []
-            for name in self.code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            for name in self.probcode.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            unsatisfied_depends = []
-            for name in self.code.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            for name in self.probcode.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            debug_logger("show_variables_ace")
-            debug_logger([name_bits, newcodebits, value_bits, comment_bits, unsatisfied_depends])
-            sv_ace = {}
-            for i, k in enumerate(name_bits):
-                if k in sv_ace:
-                    continue
-                sv_ace[k] = {
-                    'name': k,
-                    'value': value_bits[i],
-                    'comment': comment_bits[i],
-                    'unsatisfied': unsatisfied_depends[i]
-                    }
-            return json.dumps(sv_ace)
-        else:
-            return '{}'
 
 
 def job(job_name, node, user, code, globals, locals, user_func, project_id, shell_id):
@@ -1620,7 +1568,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
     # 4294967291 seems to be the largest prime under 2**32 (int limit)
     seed = name_long % 4294967291
     numpy.random.seed(seed)
-    s3_var_globals = retrieve_s3_vars(globals)
+    s3_var_globals = retrieve_redis_vars(globals)
     for func in user_func:
         try:
             exec(func, s3_var_globals)
@@ -1633,7 +1581,6 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
         else:
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
-            # if True:
             value = RedisReference(redis_key, value)
 
         return job_name, node, user, value
@@ -1644,7 +1591,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
 def sampler_job(job_name, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
-        s3vars = retrieve_s3_vars(globals)
+        s3vars = retrieve_redis_vars(globals)
         exec(code, s3vars, locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
@@ -1670,19 +1617,31 @@ def sampler_job(job_name, user, node, code, globals, locals):
         return job_name, user, node, e, "No Exception Variable", None
 
 
-def mp_job(job_name, node, name, user, first_array, second_array):
-    from Private.manifoldprivacy import distManifold
-    debug_logger("mp_job : {} [{}] Shape user: {} \nall {}".format(name, user, first_array.shape,
-                                                                   second_array.shape))
-    debug_logger(
-        "mp_job : {} [{}] Sum user: {} \nall {}".format(name, user, first_array.sum(), second_array.sum()))
+def mp_job(job_name, node, name, user, user_array, all_array):
+    """
+    Calculates the manifold privacy
 
-    d = distManifold(first_array, second_array) * 100.
+    :param job_name: job identifier
+    :param node: i_graph node
+    :param name: name of the variable
+    :param user: user
+    :param user_array: user removed data
+    :param all_array: all data
+    :return: d
+    """
+    from Private.manifoldprivacy import dist_manifold
+    d = dist_manifold(user_array, all_array) * 100.
     return job_name, node, name, user, d
 
 
 def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
+    """
+    Returns the size of the give object recursively(used to decide on caching)
+
+    :param obj: object which require the size calculation
+    :param seen: already visited nodes
+    :return: size of the object in bytes
+    """
     size = sys.getsizeof(obj)
     if seen is None:
         seen = set()
@@ -1702,7 +1661,13 @@ def get_size(obj, seen=None):
     return size
 
 
-def retrieve_s3_vars(var_dict):
+def retrieve_redis_vars(var_dict):
+    """
+    Replace all the redis references in a variable dictionary with actual value
+
+    :param var_dict: dictionary of variables
+    :return: dictionary of variables with values replaced
+    """
     ret_dict = {}
     for key in var_dict.keys():
         if type(var_dict[key]) == RedisReference:

@@ -777,6 +777,7 @@ config_builtins = ("ArrayOutputThreshold",)
 plot_builtins = {"jointplot", "pairplot", "distplot", "kdeplot", "rugplot", "relplot", "catplot", "lmplot", "regplot", "residplot", "heatmap", "clustermap"}
 illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketDate" , "eucDist", "eucDistAll", "locDist", "locDistAll"]) | set(["rhat", "ess", "waic", "loo"]) | set(["Events", "DemoEvents"])
 data_builtins = {'Events', 'DemoEvents', 'Event'}
+keep_private_variables = ['NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo', 'waic']
 
 def setBuiltinPrivacy(graph):
     for name in builtins:

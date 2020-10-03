@@ -246,8 +246,8 @@ class InputVisitor(PTNodeVisitor):
             return result("expression", code, children, evalcode=evalcode)
 
     def visit_deterministic_assignment(self, node, children):
-        self.depGraph.define(children[0].code, children[1].code, evalcode=children[1].evalcode,
-                             dependson=children[1].depend)
+        self.depGraph.define(children[0].code, children[1].code, eval_code=children[1].evalcode,
+                             depends_on=children[1].depend)
         return result("deterministic_assignment", children[0].code, evalcode=children[0].evalcode)
 
     def visit_distribution_parameter(self, node, children):
@@ -266,17 +266,17 @@ class InputVisitor(PTNodeVisitor):
     def visit_distribution_assignment(self, node, children):
         if len(children) > 2:  # then we have a hierarchically defined variable
             dependson = children[1].depend + children[2].depend
-            self.depGraph.define(children[0].code, children[2].code, dependson=dependson, prob=True,
-                                 hier=children[1].code,
-                                 pyMC3code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
+            self.depGraph.define(children[0].code, children[2].code, depends_on=dependson, prob=True,
+                                 h_var=children[1].code,
+                                 py_mc3_code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
         else:
-            self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob=True,
-                                 pyMC3code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+            self.depGraph.define(children[0].code, children[1].code, depends_on=children[1].depend, prob=True,
+                                 py_mc3_code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children):
-        self.depGraph.define(children[0].code, children[1].code, dependson=children[1].depend, prob=True,
-                             pyMC3code=children[0].code + " = " + children[1].code + "%s")
+        self.depGraph.define(children[0].code, children[1].code, depends_on=children[1].depend, prob=True,
+                             py_mc3_code=children[0].code + " = " + children[1].code + "%s")
         return result("expression_assignment", children[0].code)
 
     def visit_probabilistic_assignment(self, node, children):
@@ -307,7 +307,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_show_variables_dict(self, node, children):
         pattern = children[1].code if len(children) > 1 else ''
-        return result("show_variables_dict", self.depGraph.show_variables_dict(pattern))
+        return result("show_variables_dict", self.depGraph.show_variables_dict())
 
     def visit_show_values(self, node, children):
         return result("show_values", self.depGraph.show_values())
