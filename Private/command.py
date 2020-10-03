@@ -119,7 +119,7 @@ def execute_test(test_cases, p_limit, t_limit):
                     execute_lines(code_lines)
                     job_count = 1
                     while job_count > 0:
-                        time.sleep(10)
+                        time.sleep(5)
                         sj = json.loads(graph.show_jobs(True))
                         test_logger(sj)
                         job_count = sum(sj.values())
