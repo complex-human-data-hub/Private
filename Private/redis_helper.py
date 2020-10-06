@@ -1,28 +1,10 @@
 from __future__ import absolute_import
-import logging
 import dill as pickle
-from .config import s3_log_level, redis_server_ip
-import json
-from datetime import datetime
-import os
+from .config import redis_server_ip
 import redis
 import base64
 import io
 import gzip
-
-# Set the s3 related logging level
-logging.getLogger('boto3').setLevel(s3_log_level)
-logging.getLogger('botocore').setLevel(s3_log_level)
-logging.getLogger('redis').setLevel(s3_log_level)
-logging.getLogger('urllib3').setLevel(s3_log_level)
-
-
-def _debug(msg):
-    with open('/tmp/redis-debug.log', 'a') as fp:
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, sort_keys=True, default=str)
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg))
 
 
 def get_project_id(key):
