@@ -34,3 +34,7 @@ manifold_key = 'manifold_privacy_job'
 # other constants
 user_all = 'All'
 graph_folder = 'graphs'
+
+# cache types
+cache_type_redis = 'REDIS'
+cache_type_s3 = 'S3'

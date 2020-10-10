@@ -8,24 +8,21 @@ import numpy
 from ordered_set import OrderedSet
 from scipy import stats
 from .event import Event
-from Private.redis_reference import RedisReference
+# from Private.redis_reference import RedisReference
+from Private.cache_reference import ReferenceFactory
 import Private.redis_helper as redis_helper
 import pymc3 as pm
 import copy
 import theano.tensor
 import math
 from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples
+from Private.graph_constants import cache_type_redis
 
-import os
 from . import preprocessing as pre
 from . import plotting as plot
-from .demo_experiment_events import ExpEvents, DemoProjects
-import json
-import reprlib
+from .demo_experiment_events import DemoProjects
 from dateutil import parser as dateutil_parser
 from datetime import timedelta
-
-#from demo_events import Events, DemoEvents
 
 # Import our source data 
 # defaults to DemoEvents, but this class
@@ -537,13 +534,13 @@ def private_isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
 # from a different project??
 def private_get_events(project_id, user_id):
     rk_events = redis_helper.get_redis_key(user_id, "Events", project_id, "shared")
-    return RedisReference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
+    return ReferenceFactory.get_reference(cache_type_redis, rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
 
 
 def private_get_demo_events(project_id,user_id):
     rk_events = redis_helper.get_redis_key(user_id, "DemoEvents", project_id, "shared")
     display_data = DemoProjects.get(project_id, []) 
-    return RedisReference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
+    return ReferenceFactory.get_reference(cache_type_redis, rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
 
 def private_get_number_of_tuning_samples():
     return number_of_tuning_samples
@@ -851,19 +848,19 @@ def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events
         result[user] = copy.deepcopy(builtins)
         user_events = [e for e in builtins["Events"] if e.UserId != user]
         rk_events = redis_helper.get_redis_key(user, "Events", proj_id, shell_id)
-        result[user]["Events"] = RedisReference(rk_events, user_events,
-                                                keep_existing=rk_events in project_keys)
+        result[user]["Events"] = ReferenceFactory.get_reference(cache_type_redis, rk_events, user_events,
+                                                                keep_existing=rk_events in project_keys)
         if load_demo_events:
             rk_demo_events = redis_helper.get_redis_key(user, "DemoEvents", proj_id, shell_id)
-            result[user]["DemoEvents"] = RedisReference(rk_demo_events, user_events,
-                                                        keep_existing=rk_demo_events in project_keys)
+            result[user]["DemoEvents"] = ReferenceFactory.get_reference(cache_type_redis, rk_demo_events, user_events,
+                                                                        keep_existing=rk_demo_events in project_keys)
 
     rk_events = redis_helper.get_redis_key("All", "Events", proj_id, shell_id)
-    builtins["Events"] = RedisReference(rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
+    builtins["Events"] = ReferenceFactory.get_reference(cache_type_redis, rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
     if load_demo_events:
         rk_demo_events = redis_helper.get_redis_key("All", "DemoEvents", proj_id, shell_id)
-        builtins["DemoEvents"] = RedisReference(rk_demo_events, builtins["DemoEvents"],
-                                                keep_existing=rk_demo_events in project_keys)
+        builtins["DemoEvents"] = ReferenceFactory.get_reference(cache_type_redis, rk_demo_events, builtins["DemoEvents"],
+                                                                keep_existing=rk_demo_events in project_keys)
     else:
         builtins["DemoEvents"] = []
 

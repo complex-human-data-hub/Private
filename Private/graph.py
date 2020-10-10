@@ -17,9 +17,10 @@ from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlob
     illegal_variable_names, setGlobals2, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
-    pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
+    pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node, \
+    cache_type_redis
 
-from Private.redis_reference import RedisReference
+from Private.cache_reference import ReferenceFactory, Reference
 import Private.redis_helper as redis_helper
 import shutil
 import io
@@ -79,7 +80,7 @@ class Graph:
         self.probdependson = {}  # probabilistic dependencies
 
         # variables related to values
-        if events and type(events) == RedisReference:
+        if events and issubclass(type(events), Reference):
             events = events.value()
         self.project_id = project_id
         self.shell_id = shell_id
@@ -278,7 +279,7 @@ class Graph:
                 globals_edited = all_globals if key in self.public else user_globals
                 if key in globals_edited.keys() and key not in job_globals.keys():
                     value = globals_edited[key]
-                    if type(value) == RedisReference:
+                    if issubclass(type(value), Reference):
                         job_globals[key] = copy.copy(value)
                     else:
                         if is_prob and type(value) == numpy.ndarray:
@@ -1320,7 +1321,7 @@ except Exception as e:
             result += code + " is private  "
         elif code not in self.public:
             result += code + " is of unknown privacy  "
-        elif type(self.globals[user][code]) == RedisReference:
+        elif issubclass(type(self.globals[user][code]), Reference):
             result += code + " is too big to print  "
         else:
             val = self.globals[user][code]
@@ -1364,7 +1365,7 @@ except Exception as e:
             elif name in self.uptodate["All"]:
                 if type(self.globals["All"][name]) == io.BytesIO:  # write image to file
                     res += "[PNG Image]"
-                elif type(self.globals["All"][name]) == RedisReference:
+                elif issubclass(type(self.globals["All"][name]), Reference):
                     res += self.globals["All"][name].display_value
                 elif type(self.globals["All"][name]) == numpy.ndarray:
                     if long_format:
@@ -1581,7 +1582,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
         else:
             value = eval(code, s3_var_globals, locals)
         if get_size(value) > 1e6:
-            value = RedisReference(redis_key, value)
+            value = ReferenceFactory.get_reference(cache_type_redis, redis_key, value)
 
         return job_name, node, user, value
     except Exception as e:
@@ -1670,7 +1671,7 @@ def retrieve_redis_vars(var_dict):
     """
     ret_dict = {}
     for key in var_dict.keys():
-        if type(var_dict[key]) == RedisReference:
+        if issubclass(type(var_dict[key]), Reference):
             ret_dict[key] = var_dict[key].value()
         else:
             ret_dict[key] = var_dict[key]
