@@ -3,20 +3,30 @@ import reprlib
 
 import numpy
 import Private.redis_helper
+import Private.disk_helper
 
 
-class RedisReference:
-    redis_key = None
+class Reference:
+    key = None
     display_value = None
 
-    def __init__(self, redis_key, value, keep_existing=False):
-        self.redis_key = redis_key
+    def __init__(self, key, value, keep_existing=False):
+        self.key = key
         if not keep_existing:
-            Private.redis_helper.save_results(redis_key, value)
+            print("saving to disk")
+            Private.disk_helper.save_results(key, value)
         self.display_value = self.get_display_value(value)
 
     def value(self):
-        return Private.redis_helper.read_results(self.redis_key)
+        if Private.redis_helper.if_exist(self.key):
+            print("getting from redis")
+            return Private.redis_helper.read_results(self.key)
+        else:
+            print("getting from disk")
+            value = Private.disk_helper.read_results(self.key)
+            print("save to redis")
+            Private.redis_helper.save_results(self.key, value)
+            return value
 
     @staticmethod
     def get_display_value(value):

@@ -31,6 +31,9 @@ dask_scheduler_port = 8786
 #redis config 
 redis_server_ip = "localhost"
 
+# data location
+data_location = "/home/osboxes/Documents/Private_py3/Private/data/"
+
 # numpy seed
 numpy_seed = 8623574
 
