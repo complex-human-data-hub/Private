@@ -11,24 +11,19 @@ from Private.config import s3_integration
 class Reference:
     key = None
     display_value = None
+    helper = Private.s3_helper if s3_integration else Private.disk_helper
 
     def __init__(self, key, value, keep_existing=False):
         self.key = key
         if not keep_existing:
-            if s3_integration:
-                Private.s3_helper.save_results(key, value)
-            else:
-                Private.disk_helper.save_results(key, value)
+            self.helper.save_results(key, value)
         self.display_value = self.get_display_value(value)
 
     def value(self):
         if Private.redis_helper.if_exist(self.key):
             return Private.redis_helper.read_results(self.key)
         else:
-            if s3_integration:
-                value = Private.s3_helper.read_results(self.key)
-            else:
-                value = Private.disk_helper.read_results(self.key)
+            value = self.helper.read_results(self.key)
             Private.redis_helper.save_results(self.key, value)
             return value
 
