@@ -12,7 +12,7 @@ from collections import OrderedDict, deque
 import logging
 import networkx as nx
 import graphviz as gv
-import Private.s3_helper
+import Private
 from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
     illegal_variable_names, setGlobals2, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
@@ -808,8 +808,7 @@ except Exception as e:
     def sampler_callback(self, return_value):
         return_value = return_value.result()
         self.acquire("sampler_callback")
-        job_name, user, node, value, exception_variable, stats = Private.s3_helper.read_results_s3(
-            return_value) if Private.config.s3_integration else return_value
+        job_name, user, node, value, exception_variable, stats = return_value
         names = node[attr_contains]
         n_id = node[attr_id]
         node_ts = node[attr_last_ts]

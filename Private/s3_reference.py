@@ -12,11 +12,11 @@ class S3Reference:
     def __init__(self, s3_key, value, keep_existing=False):
         self.s3_key = s3_key
         if not keep_existing:
-            Private.s3_helper.save_results_s3(s3_key, value)
+            Private.s3_helper.save_results(s3_key, value)
         self.display_value = self.get_display_value(value)
 
     def value(self):
-        return Private.s3_helper.read_results_s3(self.s3_key)
+        return Private.s3_helper.read_results(self.s3_key)
 
     @staticmethod
     def get_display_value(value):

@@ -11,11 +11,12 @@ from .event import Event
 from Private.reference import Reference
 import Private.redis_helper as redis_helper
 import Private.disk_helper as disk_helper
+import Private.s3_helper as s3_helper
 import pymc3 as pm
 import copy
 import theano.tensor
 import math
-from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples
+from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples, s3_integration
 
 import os
 from . import preprocessing as pre
@@ -845,7 +846,10 @@ def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events
             builtins["DemoEvents"] = DemoEvents
 
     # create a new set of globals with data that removes each user
-    project_keys = disk_helper.get_matching_keys(proj_id)
+    if s3_integration:
+        project_keys = s3_helper.get_matching_keys(proj_id)
+    else:
+        project_keys = disk_helper.get_matching_keys(proj_id)
     result = {}
     users = set(e.UserId for e in builtins["Events"])
     for user in users:

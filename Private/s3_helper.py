@@ -16,6 +16,7 @@ logging.getLogger('botocore').setLevel(s3_log_level)
 logging.getLogger('s3transfer').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
 
+
 def _debug(msg):
     with open('/tmp/s3-debug.log', 'a') as fp:
         if not isinstance(msg, str):
@@ -24,7 +25,7 @@ def _debug(msg):
         fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 
-def save_results_s3(key, value, bucket_name=s3_bucket_name):
+def save_results(key, value, bucket_name=s3_bucket_name):
     """
     Saves a result set in s3
     :param key: s3 key
@@ -36,7 +37,7 @@ def save_results_s3(key, value, bucket_name=s3_bucket_name):
     s3.Object(bucket_name, key).put(Body=pickle_byte_obj)
 
 
-def read_results_s3(key, bucket_name=s3_bucket_name):
+def read_results(key, bucket_name=s3_bucket_name):
     """
     Reads a result set from s3
     :param key: s3 key
@@ -119,7 +120,7 @@ def get_all_s3_keys(bucket=s3_bucket_name):
     return keys
 
 
-def get_matching_s3_keys(prefix='', bucket=s3_bucket_name):
+def get_matching_keys(prefix='', bucket=s3_bucket_name):
     """
     Generate the keys in an S3 bucket.
 

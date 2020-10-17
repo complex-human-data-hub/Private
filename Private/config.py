@@ -20,7 +20,7 @@ tcp_keepalive_time = 7200 #2 hours
 
 
 # S3 configs
-s3_integration = False
+s3_integration = True
 s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 

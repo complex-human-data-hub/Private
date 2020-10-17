@@ -4,6 +4,8 @@ import reprlib
 import numpy
 import Private.redis_helper
 import Private.disk_helper
+import Private.s3_helper
+from Private.config import s3_integration
 
 
 class Reference:
@@ -13,14 +15,20 @@ class Reference:
     def __init__(self, key, value, keep_existing=False):
         self.key = key
         if not keep_existing:
-            Private.disk_helper.save_results(key, value)
+            if s3_integration:
+                Private.s3_helper.save_results(key, value)
+            else:
+                Private.disk_helper.save_results(key, value)
         self.display_value = self.get_display_value(value)
 
     def value(self):
         if Private.redis_helper.if_exist(self.key):
             return Private.redis_helper.read_results(self.key)
         else:
-            value = Private.disk_helper.read_results(self.key)
+            if s3_integration:
+                value = Private.s3_helper.read_results(self.key)
+            else:
+                value = Private.disk_helper.read_results(self.key)
             Private.redis_helper.save_results(self.key, value)
             return value
 
