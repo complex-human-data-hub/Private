@@ -27,9 +27,10 @@ def save_results(key, value, location=data_location):
     b64_data = base64.b64encode(fgz.getvalue())
 
     # Save data to disk
-    folder = '/'.join((location + key).split('/')[:-1])
+    path = os.path.join(location, key)
+    folder = os.path.dirname(path)
     Path(folder).mkdir(parents=True, exist_ok=True)
-    with open(location + key, 'w+') as f:
+    with open(path, 'w+') as f:
         f.write(b64_data.decode('utf-8'))
 
 
