@@ -8,13 +8,15 @@ import numpy
 from ordered_set import OrderedSet
 from scipy import stats
 from .event import Event
-from Private.redis_reference import RedisReference
+from Private.reference import Reference
 import Private.redis_helper as redis_helper
+import Private.disk_helper as disk_helper
+import Private.s3_helper as s3_helper
 import pymc3 as pm
 import copy
 import theano.tensor
 import math
-from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples
+from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples, s3_integration
 
 import os
 from . import preprocessing as pre
@@ -537,13 +539,13 @@ def private_isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
 # from a different project??
 def private_get_events(project_id, user_id):
     rk_events = redis_helper.get_redis_key(user_id, "Events", project_id, "shared")
-    return RedisReference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
+    return Reference(rk_events, [], keep_existing=True) # Empty list is so we can set a display value of that type
 
 
 def private_get_demo_events(project_id,user_id):
     rk_events = redis_helper.get_redis_key(user_id, "DemoEvents", project_id, "shared")
     display_data = DemoProjects.get(project_id, []) 
-    return RedisReference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
+    return Reference(rk_events, display_data, keep_existing=True) # Empty list is so we can set a display value of that type
 
 def private_get_number_of_tuning_samples():
     return number_of_tuning_samples
@@ -844,26 +846,29 @@ def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events
             builtins["DemoEvents"] = DemoEvents
 
     # create a new set of globals with data that removes each user
-    project_keys = redis_helper.get_matching_keys(proj_id)
+    if s3_integration:
+        project_keys = s3_helper.get_matching_keys(proj_id)
+    else:
+        project_keys = disk_helper.get_matching_keys(proj_id)
     result = {}
     users = set(e.UserId for e in builtins["Events"])
     for user in users:
         result[user] = copy.deepcopy(builtins)
         user_events = [e for e in builtins["Events"] if e.UserId != user]
         rk_events = redis_helper.get_redis_key(user, "Events", proj_id, shell_id)
-        result[user]["Events"] = RedisReference(rk_events, user_events,
-                                                keep_existing=rk_events in project_keys)
+        result[user]["Events"] = Reference(rk_events, user_events,
+                                           keep_existing=rk_events in project_keys)
         if load_demo_events:
             rk_demo_events = redis_helper.get_redis_key(user, "DemoEvents", proj_id, shell_id)
-            result[user]["DemoEvents"] = RedisReference(rk_demo_events, user_events,
-                                                        keep_existing=rk_demo_events in project_keys)
+            result[user]["DemoEvents"] = Reference(rk_demo_events, user_events,
+                                                   keep_existing=rk_demo_events in project_keys)
 
     rk_events = redis_helper.get_redis_key("All", "Events", proj_id, shell_id)
-    builtins["Events"] = RedisReference(rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
+    builtins["Events"] = Reference(rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
     if load_demo_events:
         rk_demo_events = redis_helper.get_redis_key("All", "DemoEvents", proj_id, shell_id)
-        builtins["DemoEvents"] = RedisReference(rk_demo_events, builtins["DemoEvents"],
-                                                keep_existing=rk_demo_events in project_keys)
+        builtins["DemoEvents"] = Reference(rk_demo_events, builtins["DemoEvents"],
+                                           keep_existing=rk_demo_events in project_keys)
     else:
         builtins["DemoEvents"] = []
 

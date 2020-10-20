@@ -31,6 +31,9 @@ dask_scheduler_port = 8786
 #redis config 
 redis_server_ip = "localhost"
 
+# data location
+data_location = "/data/cache"
+
 # numpy seed
 numpy_seed = 8623574
 

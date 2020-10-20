@@ -8,13 +8,17 @@ from boto3.session import Session
 import json 
 from datetime import datetime
 import os 
-import traceback 
+import traceback
+import base64
+import io
+import gzip
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
 logging.getLogger('botocore').setLevel(s3_log_level)
 logging.getLogger('s3transfer').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
+
 
 def _debug(msg):
     with open('/tmp/s3-debug.log', 'a') as fp:
@@ -24,7 +28,7 @@ def _debug(msg):
         fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
 
-def save_results_s3(key, value, bucket_name=s3_bucket_name):
+def save_results(key, value, bucket_name=s3_bucket_name):
     """
     Saves a result set in s3
     :param key: s3 key
@@ -32,11 +36,21 @@ def save_results_s3(key, value, bucket_name=s3_bucket_name):
     :param value: result set as a tuple
     """
     s3 = boto3.resource('s3')
+
     pickle_byte_obj = pickle.dumps(value)
-    s3.Object(bucket_name, key).put(Body=pickle_byte_obj)
+
+    # Compress teh pickled object
+    fgz = io.BytesIO()
+    with gzip.GzipFile(mode='wb', fileobj=fgz) as gzip_obj:
+        gzip_obj.write(pickle_byte_obj)
+
+    # Base 64 encode so we can put into redis
+    b64_data = base64.b64encode(fgz.getvalue())
+
+    s3.Object(bucket_name, key).put(Body=b64_data.decode('utf-8'))
 
 
-def read_results_s3(key, bucket_name=s3_bucket_name):
+def read_results(key, bucket_name=s3_bucket_name):
     """
     Reads a result set from s3
     :param key: s3 key
@@ -44,7 +58,10 @@ def read_results_s3(key, bucket_name=s3_bucket_name):
     :return: result set as a tuple
     """
     s3 = boto3.resource('s3')
-    return pickle.loads(s3.Object(bucket_name, key).get()['Body'].read())
+    b64_data = s3.Object(bucket_name, key).get()['Body'].read()
+    gzip_obj = base64.b64decode(b64_data)
+    pickle_obj = gzip.decompress(gzip_obj)
+    return pickle.loads(pickle_obj)
 
 
 def if_exist(key, bucket_name=s3_bucket_name):
@@ -119,7 +136,7 @@ def get_all_s3_keys(bucket=s3_bucket_name):
     return keys
 
 
-def get_matching_s3_keys(prefix='', bucket=s3_bucket_name):
+def get_matching_keys(prefix='', bucket=s3_bucket_name):
     """
     Generate the keys in an S3 bucket.
 
