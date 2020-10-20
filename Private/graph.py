@@ -1591,7 +1591,8 @@ def sampler_job(job_name, user, node, code, globals, locals):
     numpy.random.seed(Private.config.numpy_seed)
     try:
         s3vars = retrieve_redis_vars(globals)
-        exec(code, s3vars, locals)
+        s3_var_locals = retrieve_redis_vars(locals)
+        exec(code, s3vars, s3_var_locals)
         value, exception_variable, model = locals["__private_result__"]
         stats = None
         if user == "All":  # if this is All then initiate comparisons with all of the users that have already returned
