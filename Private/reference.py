@@ -16,8 +16,10 @@ class Reference:
     def __init__(self, key, value, keep_existing=False):
         self.key = key
         if not keep_existing:
-            self.helper.save_results(key, value)
+            self.helper.save_results(self.key, value)
         self.display_value = self.get_display_value(value)
+        # invalidate cache
+        Private.redis_helper.delete_results(self.key)
 
     def value(self):
         if Private.redis_helper.if_exist(self.key):

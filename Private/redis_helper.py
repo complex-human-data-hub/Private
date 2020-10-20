@@ -90,6 +90,11 @@ def read_results(key, server_ip=redis_server_ip):
     return pickle.loads(pickle_obj)
 
 
+def delete_results(key, server_ip=redis_server_ip):
+    r = redis.Redis(host=server_ip)
+    r.delete(key)
+
+
 def if_exist(key, server_ip=redis_server_ip):
     """
     Check if key already exist in the store
