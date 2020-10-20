@@ -1,0 +1,2 @@
+#!/bin/bash
+dask-scheduler

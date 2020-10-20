@@ -1,58 +1,53 @@
-DEBUG = False
+from Private.parser import get_private_parser
+from Private.semantics import PrivateSemanticAnalyser
 
-if DEBUG:
-    import os,sys,inspect
-    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    parentdir = os.path.dirname(currentdir)
-    sys.path.insert(0,parentdir)
-    from parser import PrivateParser
-    from semantics import PrivateSemanticAnalyser
-else:
-    from Private.parser import get_private_parser
-    from Private.semantics import PrivateSemanticAnalyser
-
+import json
+from datetime import datetime
 import sys
 import io
-import traceback
 import logging
 import re
 import os
+import traceback
+import argparse
 
 import signal
 from concurrent import futures
 
 import grpc
-
 import service_pb2
 import service_pb2_grpc
-import json
-from datetime import datetime
 
-import argparse
+
+from arpeggio import NoMatch
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--port", type=int, default=51135)
-args = parser.parse_args()
+parser_args = parser.parse_args()
 
 
 #Setup logging 
-logfile = "/tmp/private-{}.log".format(args.port)
-logging.basicConfig(filename=logfile,level=logging.DEBUG)
+logfile = "/tmp/private-{}.log".format(parser_args.port)
+logging.basicConfig(
+        filename=logfile,
+        level=logging.DEBUG,
+        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        )
+
 
 #Import DataSource
-#from Private.unforgettable_data import Source
 from Private.private_data import Source
 from Private.graph import Graph
 
-import os 
-
 # Regexes
-re_cmd = re.compile(r'\r')
-
+re_oneword = re.compile(r'^[A-Za-z0-9]+$')
 
 def _debug(msg):
     with open('/tmp/private-debug.log', 'a') as fp:
-        if not isinstance(msg, basestring):
-            msg = json.dumps(msg)
+        if not isinstance(msg, str):
+            msg = json.dumps(msg, indent=4, default=str)
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
 
@@ -61,14 +56,15 @@ class Private:
     project_uid = None
     parser = get_private_parser()
     data_source = None
-    def __init__(self, project_uid):
+    def __init__(self, project_uid, events=None, load_demo_events=True, shell_id=None, user_ids=None):
         self.project_uid = project_uid
-        self.graph = None 
-        if args.port > 51150:
-            self.data_source = Source(args, project_uid=project_uid)
-            events = self.data_source.get_events()
-            self.graph = Graph(events=events)
-        _debug("Loading Private")
+        self.graph = Graph(shell_id=shell_id)
+        self.load_demo_events = load_demo_events
+        self.shell_id = shell_id
+        self.user_ids = user_ids
+        if events or user_ids:
+            self.graph = Graph(events=events, project_id=self.project_uid, load_demo_events=self.load_demo_events, shell_id=shell_id, user_ids=user_ids)
+
 
     def execute(self, line):
         if line != "":
@@ -77,7 +73,8 @@ class Private:
                 _debug({'parse_tree': str(parse_tree)})
             except Exception as e:  # didn't parse
                 _debug({'error': str(e)})
-                raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:]) 
+                #raise e
+                raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
             else:
                 try:
                     result = PrivateSemanticAnalyser(parse_tree, update_graph=self.graph)
@@ -87,7 +84,106 @@ class Private:
                     _debug({'error': str(e)})
                     traceback.print_exc(file=sys.stdout)
                     return ( str(e) )
-    
+
+
+    def remove_comments(self, s):
+        if "#" in s:
+            return s[0:s.index("#")]
+        return s
+
+
+    def execute_lines(self, code_lines):
+        result = None
+        current_probabilistic = set()
+        current_deterministic = set()
+        syntax_errors = []
+        for i in range(len(code_lines)):
+            code_line = self.remove_comments(code_lines[i])
+            if code_line and not code_line.isspace():
+                if code_line.startswith("def "):
+                    function_start = i
+                    function_code = ""
+                    function_lines = []
+                    try:
+                        function_code += code_line + '\n'
+                        function_lines.append(code_line)
+                        function_complete = False
+                        while not function_complete:
+                            i += 1
+                            code_line = self.remove_comments(code_lines[i])
+                            if code_line.startswith("    "):
+                                function_code += code_line + ';'
+                                function_lines.append(code_line + ';')
+                                if code_line.strip().startswith("return"):
+                                    function_complete = True
+                                    function_name = self.parser.parse(function_code).value.split('|')[1].strip()
+                                    current_deterministic.add(function_name)
+                            else:
+                                function_complete = True
+                                self.parser.parse(function_code).value.split('|')[1].strip()
+
+                    except NoMatch as e:
+                        position = e.position
+                        for j, function_line in enumerate(function_lines):
+                            if position - len(function_line) > 0:
+                                position = position - len(function_line)
+                            else:
+                                syntax_errors.append((function_start + j +1, position))
+                                break
+
+                elif not code_line.startswith("    "):
+                    try:
+                        if '=' in code_line:
+                            variable = self.parser.parse(code_line).value.split('|')[0].strip()
+                            current_deterministic.add(variable)
+                        elif '~' in code_lines[i]:
+                            variable = self.parser.parse(code_line).value.split('|')[0].strip()
+                            current_probabilistic.add(variable)
+                        elif code_line.strip():
+                            # We have some code that will throw syntax error (i.e., no = or ~)
+                            variable = self.parser.parse(code_line).value.split('|')[0].strip()
+
+                    except NoMatch as e:
+                        syntax_errors.append((i+1, e.position))
+
+        if syntax_errors:
+            raise Exception({'status': 'failed', 'type': 'syntax_error', 'value': syntax_errors})
+
+
+        keep_private_variables = {'NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo',
+                              'waic'}
+
+        delete_probabilistic = self.graph.probabilistic.difference(current_probabilistic)
+        delete_deterministic = self.graph.deterministic.difference(current_deterministic).difference(self.graph.builtins).difference(keep_private_variables)
+
+
+
+        delete_union = delete_probabilistic.union(delete_deterministic)
+        for v in delete_probabilistic:
+            self.graph.delete(v, is_prob=True)
+
+        for v in delete_deterministic:
+            self.graph.delete(v, is_prob=False)
+
+        function_code = ""
+        for line in code_lines:
+            input_line = self.remove_comments(line)
+            if input_line.startswith("def"):
+                function_code += input_line + '\n'
+                continue
+
+            if input_line.startswith("    "):
+                function_code += input_line + ';'
+                if input_line.strip().startswith("return"):
+                    result = self.execute(function_code)
+                    function_code = ""
+                continue
+
+            elif input_line.strip() != "":
+                result = self.execute(input_line)
+
+        return(result) # This should really be an array of results
+
 
 
 class ServerServicer(service_pb2_grpc.ServerServicer):
@@ -95,6 +191,9 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
         self.private = None
         self.initializing = False
         self.skipped = False #Skip the first return after initializing so we can set our first value
+        self.events_cache = "/tmp/uevents-{}.json"
+        self.data_source = None
+
     def Foo(self, request, context):
         return service_pb2.Empty()
 
@@ -102,49 +201,47 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
         try:
             _debug("received request")
 
-            if not self.private:
-                if not self.initializing:
-                    self.initializing = True
-                    newpid = os.fork()
-                    if newpid == 0:
-                        # Not sure if this is okay returning from the child, 
-                        # But seems to work
-                        ret = {'status': 'success', 'response': 'Initializing dataset [1]'}
-                        return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
-                    else:
-                        self.private = Private(request.project_uid)
-                if self.skipped:
-                    #Keep this so that user who keep clicking keep getting an intialising message
-                    ret = {'status': 'success', 'response': 'Initializing dataset [2]'}
-                    return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
-                else:
-                    #Want to skip the parent of the fork coming through
-                    #So that after the data is loaded we will issue the 
-                    #first incoming command
-                    self.skipped = True
+            req = json.loads(request.json)
+            cmd = str(req.get('cmd', ''))
+            ace_cmd = str(req.get('ace-cmd', ''))
 
-            #if str(request.project_uid) != str(self.project_uid):
-            #    raise Exception("Incorrect project ID")
+            # Check if we need to reset the Private Server
+            if cmd == 'reset' or ace_cmd == 'reset':
+                self.private = None
+                self.initializing = False
+                self.data_source = None
+                ret = {'status': 'success', 'response': 'Private Reset'}
+                return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)
+
+            if not self.private:
+                _debug("not private")
+                self.data_source = Source(project_id=request.project_uid)
+                user_ids = self.data_source.get_user_ids() 
+                self.private = Private(request.project_uid, load_demo_events=True, shell_id=parser_args.port, user_ids=user_ids)
+
+
             req = json.loads(request.json)
             _debug({'req':req})
 
-            cmd = str(req.get('cmd'))
+            ace_cmd = str(req.get('ace-cmd', ''))
             res = None
-            # Split on the carriage return
-            # separate cmds 
-            for c in re_cmd.split(cmd):
-                res = self.private.execute(c)
+            if ace_cmd:
+                if (re_oneword.match(ace_cmd)):
+                    res = self.private.execute(ace_cmd)
+                else:
+                    res = self.private.execute_lines(ace_cmd.splitlines())
 
             ret = {'status': 'success', 'response': res}
             _debug(ret)
-            return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)    
-        except Exception as err:
-            _debug({'error': str(err)})
-            ret = {'status': 'failed', 'response': str(err)}
             return service_pb2.PrivateParcel(json=json.dumps(ret), project_uid=request.project_uid)
+        except Exception as err:
+            _debug({'error': str(err), 'traceback': traceback.format_exc()})
+            ret = {'status': 'failed', 'response': str(err)}
+            return service_pb2.PrivateParcel(json=json.dumps(err.args[0]), project_uid=request.project_uid)
+
 
 def main():
-    port = str( args.port )
+    port = str( parser_args.port )
 
     with open('server.key', 'rb') as f:
         private_key = f.read()
@@ -170,4 +267,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

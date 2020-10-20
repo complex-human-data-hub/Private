@@ -316,7 +316,11 @@
                     }else{
                         // We've just comeback from a send
                         // so update variables
-                        sv();
+                        {% if delay_sv_update %}
+                        setTimeout(sv, {{delay_sv_update}});
+                        {% else %}
+                            sv();
+                        {% endif %}
                     }
                 }else if (data.status == 'failed'){
                     alert_failed_request(data);
