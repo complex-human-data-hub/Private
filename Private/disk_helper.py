@@ -57,13 +57,13 @@ def get_matching_keys(prefix='', location=data_location):
     :param prefix: Only fetch keys that start with this prefix (optional).
     :param location: location of data in disk
     """
-    directory = location + prefix
+    directory = os.path.join(location, prefix)
     file_names = []
 
     for root, directories, files in os.walk(directory):
         for file_name in files:
             filepath = os.path.join(root, file_name)
-            file_names.append(filepath[len(location):])
+            file_names.append(filepath[len(location) + 1:])
 
     return file_names
 

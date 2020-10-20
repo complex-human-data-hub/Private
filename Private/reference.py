@@ -17,9 +17,9 @@ class Reference:
         self.key = key
         if not keep_existing:
             self.helper.save_results(self.key, value)
+            # invalidate cache
+            Private.redis_helper.delete_results(self.key)
         self.display_value = self.get_display_value(value)
-        # invalidate cache
-        Private.redis_helper.delete_results(self.key)
 
     def value(self):
         if Private.redis_helper.if_exist(self.key):
