@@ -42,7 +42,8 @@ def read_results(key, location=data_location):
     :param location: location of data in disk
     :return: result set as a tuple
     """
-    with open(location + key, 'r+', encoding="utf-8") as f:
+    path = os.path.join(location, key)
+    with open(path, 'r+', encoding="utf-8") as f:
         b64_data = f.read()
     gzip_obj = base64.b64decode(b64_data)
     pickle_obj = gzip.decompress(gzip_obj)
