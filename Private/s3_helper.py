@@ -8,7 +8,10 @@ from boto3.session import Session
 import json 
 from datetime import datetime
 import os 
-import traceback 
+import traceback
+import base64
+import io
+import gzip
 
 # Set the s3 related logging level
 logging.getLogger('boto3').setLevel(s3_log_level)
@@ -33,8 +36,18 @@ def save_results(key, value, bucket_name=s3_bucket_name):
     :param value: result set as a tuple
     """
     s3 = boto3.resource('s3')
+
     pickle_byte_obj = pickle.dumps(value)
-    s3.Object(bucket_name, key).put(Body=pickle_byte_obj)
+
+    # Compress teh pickled object
+    fgz = io.BytesIO()
+    with gzip.GzipFile(mode='wb', fileobj=fgz) as gzip_obj:
+        gzip_obj.write(pickle_byte_obj)
+
+    # Base 64 encode so we can put into redis
+    b64_data = base64.b64encode(fgz.getvalue())
+
+    s3.Object(bucket_name, key).put(Body=b64_data.decode('utf-8'))
 
 
 def read_results(key, bucket_name=s3_bucket_name):
@@ -45,7 +58,10 @@ def read_results(key, bucket_name=s3_bucket_name):
     :return: result set as a tuple
     """
     s3 = boto3.resource('s3')
-    return pickle.loads(s3.Object(bucket_name, key).get()['Body'].read())
+    b64_data = s3.Object(bucket_name, key).get()['Body'].read()
+    gzip_obj = base64.b64decode(b64_data)
+    pickle_obj = gzip.decompress(gzip_obj)
+    return pickle.loads(pickle_obj)
 
 
 def if_exist(key, bucket_name=s3_bucket_name):
