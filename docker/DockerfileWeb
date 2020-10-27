@@ -7,7 +7,7 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY terminal-server .
-COPY docker-example.crt server.crt
+COPY docker/docker-example.crt server.crt
 
 RUN pip3 install pip --upgrade
 RUN pip3 install wheel
