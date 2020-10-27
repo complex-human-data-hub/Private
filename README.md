@@ -3,8 +3,10 @@ Private privacy preserving analysis language
 
 ## Run on Docker
 1) Install the docker engine and docker-compose. 
-i) Docker engine: https://docs.docker.com/engine/install/
-ii) Docker-Compose: https://docs.docker.com/compose/install (separate install is only necessarily on Linux, on other OSs docker-compose is bundled with Docker Desktop)
+
+- Docker engine: https://docs.docker.com/engine/install/
+
+- Docker-Compose: https://docs.docker.com/compose/install (separate install is only necessarily on Linux, on other OSs docker-compose is bundled with Docker Desktop)
 
 
 2) Initial build and deploy services:
