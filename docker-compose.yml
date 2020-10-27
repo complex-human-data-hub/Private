@@ -13,7 +13,9 @@ services:
           target: /data
     depends_on:
         - redis
-    command: sh docker/docker-init.sh
+    command: > 
+        sh -c "python Private/private_data.py && 
+               python grpc/server.py" 
   web:
     build: 
         context: .
