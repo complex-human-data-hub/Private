@@ -1,26 +1,10 @@
 # Private
 Private privacy preserving analysis language
 
-## Installation
-Use python setuptools:
-```bash
-python setup.py install
-```
-
-## Usage
-To open an interactive session
-```bash
-cd Private
-python command.py
-```
-
-To run commands from a file
-```bash
-python command.py yourCommandsFile.pr
-```
-
 ## Run on Docker
-1) Install docker-compose: https://docs.docker.com/compose/
+1) Install the docker engine and docker-compose. 
+i) Docker engine: https://docs.docker.com/engine/install/
+ii) Docker-Compose: https://docs.docker.com/compose/install
 
 
 2) Initial build and deploy services:
@@ -30,6 +14,10 @@ docker-compose up --build
 #Note: Subsequent deployments can be run with:
 docker-compose up
 ```
+
+You will now be able to access Private on:
+http://localhost:5000/
+
 
 3) Shutdown services:
 ```bash

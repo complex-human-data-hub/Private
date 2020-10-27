@@ -15,10 +15,7 @@ RUN pip3 install -r grpc/requirements.txt
 
 RUN ln -s docker-example.key server.key
 RUN ln -s docker-example.crt server.crt
-RUN cp docker-example.key grpc/server.key
-RUN cp docker-example.crt grpc/server.crt
 
 RUN pip install . 
 
-#RUN python Private/private_data.py
 
