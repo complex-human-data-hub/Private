@@ -19,6 +19,23 @@ To run commands from a file
 python command.py yourCommandsFile.pr
 ```
 
+## Run on Docker
+1) Install docker-compose: https://docs.docker.com/compose/
+
+
+2) Initial build and deploy services:
+```bash
+docker-compose up --build
+
+#Note: Subsequent deployments can be run with:
+docker-compose up
+```
+
+3) Shutdown services:
+```bash
+docker-compose down
+```
+
 ## Tutorials
 More examples of how to use Private are contained in the tutorials directory
 

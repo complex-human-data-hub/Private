@@ -25,11 +25,11 @@ s3_bucket_name = 'chdhprivate'
 s3_log_level = logging.CRITICAL
 
 #dask config
-dask_scheduler_ip = "localhost"
+dask_scheduler_ip = "dask_scheduler" # localhost, dask_scheduler (docker), FQDN
 dask_scheduler_port = 8786
 
 #redis config 
-redis_server_ip = "localhost"
+redis_server_ip = "redis_server" # localhost, redis_server (docker), FQDN
 
 # data location
 data_location = "/data/cache"

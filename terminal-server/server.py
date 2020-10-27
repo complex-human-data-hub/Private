@@ -38,6 +38,7 @@ with open(config.certfile, 'rb') as f:
 #rpc_stub = service_pb2_grpc.ServerStub(channel)
 
 def get_rpc_stub(host, port):
+    _log.info( "get_rpc_stub: " + '{}:{}'.format(host, port) )
     credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
     channel = grpc.secure_channel('{}:{}'.format(host, port), credentials)
     rpc_stub = service_pb2_grpc.ServerStub(channel)
@@ -91,7 +92,7 @@ def run_webserver():
     ''' Run web server '''
     host = "0.0.0.0"
     port = 5000
-    _log.info( "Serving on ", "http://" +  host + ":" + str(port) )
+    _log.info( "Serving on http://" +  host + ":" + str(port) )
     app.run(debug=True, host=host, port=port)
 
 

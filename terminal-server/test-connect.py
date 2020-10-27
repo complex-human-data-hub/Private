@@ -9,7 +9,7 @@ import sys
 # Setup gRPC client
 ###################
 
-rpc_host = 'localhost'
+rpc_host = 'private_server' # localhost, private_server (docker), FQDN
 rpc_port = 51135
 
 with open('server.crt', 'rb') as f:

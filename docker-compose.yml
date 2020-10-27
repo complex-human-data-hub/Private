@@ -1,0 +1,86 @@
+version: "3.8"
+services:
+  private:
+    build: 
+        context: .
+        dockerfile: DockerfilePrivate
+    networks: 
+        - private_network
+    container_name: private_server
+    volumes:
+        - type: volume
+          source: private_data
+          target: /data
+    depends_on:
+        - redis
+    command: sh docker-init.sh
+  web:
+    build: 
+        context: .
+        dockerfile: DockerfileWeb
+
+    networks: 
+        - private_network
+    container_name: aceweb
+    ports:
+        - "5000:5000"
+    environment:
+      FLASK_ENV: development
+    depends_on:
+        - private
+        - redis
+        - dask
+        - daskworker1
+        - daskworker2
+    command: python server.py
+  redis:
+    image: "redis:latest"
+    networks: 
+        - private_network
+    container_name: redis_server
+  dask:
+    build:
+        context: .
+        dockerfile: DockerfileDask
+    networks: 
+        - private_network
+    container_name: dask_scheduler
+    command: dask-scheduler
+    depends_on:
+        - redis
+  daskworker1:
+    build:
+        context: .
+        dockerfile: DockerfileDask
+    container_name: daskworker1
+    networks: 
+        - private_network
+    volumes:
+        - type: volume
+          source: private_data
+          target: /data
+    command: dask-worker dask_scheduler:8786 --no-nanny --nthreads 2 --resources "process=1" --worker-port 60001
+    depends_on:
+        - dask
+        - redis
+  daskworker2:
+    build:
+        context: .
+        dockerfile: DockerfileDask
+    container_name: daskworker2
+    networks: 
+        - private_network
+    volumes:
+        - type: volume
+          source: private_data
+          target: /data
+    command: dask-worker dask_scheduler:8786 --no-nanny --nthreads 2 --resources "process=1" --worker-port 60002
+    depends_on:
+        - dask
+        - redis
+
+networks:
+    private_network:
+
+volumes:
+    private_data:
