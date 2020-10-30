@@ -89,7 +89,6 @@ class Graph:
         self.dependson = {}  # deterministic dependencies
         self.probdependson = {}  # probabilistic dependencies
 
-        CONTINUE = True
         # variables related to values
         if events and type(events) == Reference:
             events = events.value()
@@ -102,11 +101,10 @@ class Graph:
                 user_ids = ['All'] + user_ids
             self.user_ids = OrderedSet(user_ids)
             self.globals = setGlobals2(user_ids)
-        #else:
-            #self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
-            #                          load_demo_events=self.load_demo_events)
-            #self.user_ids = setUserIds(events=events)
-            #CONTINUE = False
+        else:
+            self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
+                                      load_demo_events=self.load_demo_events)
+            self.user_ids = setUserIds(events=events)
         debug_logger("Graph setGlobals ...done")
 
         self.locals = {}  # do we need this?
