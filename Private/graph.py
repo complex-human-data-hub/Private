@@ -13,7 +13,7 @@ import logging
 import networkx as nx
 import graphviz as gv
 import Private
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, setUserIds, config_builtins, \
+from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, config_builtins, \
     illegal_variable_names, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \

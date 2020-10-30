@@ -822,15 +822,6 @@ def showProbBuiltins():
     res += showNames(list(prob_builtins))
     return res
 
-def setUserIds(events=None):
-    if events:
-        builtins["Events"] = events
-        builtins["DemoEvents"] = events
-    else:
-        builtins["Events"] = Events
-        builtins["DemoEvents"] = DemoEvents
-
-    return OrderedSet(["All"] + [e.UserId for e in builtins["Events"]])
 
 def setGlobals(user_ids):
     _log.info("setGlobals")
