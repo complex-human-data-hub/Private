@@ -22,20 +22,18 @@ import service_pb2_grpc
 from arpeggio import NoMatch
 
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--port", type=int, default=51135)
 parser_args = parser.parse_args()
 
+FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
+if logging.getLogger().hasHandlers():
+    logging.getLogger().setLevel(logging.INFO)
+else:
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-#Setup logging 
-logfile = "/tmp/private-{}.log".format(parser_args.port)
-logging.basicConfig(
-        filename=logfile,
-        level=logging.DEBUG,
-        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        )
-
+_log = logging.getLogger("gRPC server")
 
 #Import DataSource
 from Private.private_data import Source
@@ -45,11 +43,7 @@ from Private.graph import Graph
 re_oneword = re.compile(r'^[A-Za-z0-9]+$')
 
 def _debug(msg):
-    with open('/tmp/private-debug.log', 'a') as fp:
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, default=str)
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
+    _log.info(msg)
 
 
 class Private:
@@ -58,7 +52,7 @@ class Private:
     data_source = None
     def __init__(self, project_uid, events=None, load_demo_events=True, shell_id=None, user_ids=None):
         self.project_uid = project_uid
-        self.graph = Graph(shell_id=shell_id)
+        self.graph = None 
         self.load_demo_events = load_demo_events
         self.shell_id = shell_id
         self.user_ids = user_ids
@@ -67,6 +61,7 @@ class Private:
 
 
     def execute(self, line):
+
         if line != "":
             try:
                 parse_tree = self.parser.parse(line)
@@ -216,8 +211,11 @@ class ServerServicer(service_pb2_grpc.ServerServicer):
             if not self.private:
                 _debug("not private")
                 self.data_source = Source(project_id=request.project_uid)
+                _debug("load Source")
                 user_ids = self.data_source.get_user_ids() 
+                _debug("got user_ids")
                 self.private = Private(request.project_uid, load_demo_events=True, shell_id=parser_args.port, user_ids=user_ids)
+                _debug("private loaded")
 
 
             req = json.loads(request.json)

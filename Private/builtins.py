@@ -832,8 +832,8 @@ def setUserIds(events=None):
 
     return OrderedSet(["All"] + [e.UserId for e in builtins["Events"]])
 
-def setGlobals2(user_ids):
-    _log.info("setGlobals2")
+def setGlobals(user_ids):
+    _log.info("setGlobals")
     result = {}
     # We can pickle builtins 
     # so quicker than deepcopy
@@ -842,48 +842,6 @@ def setGlobals2(user_ids):
     for u in user_ids:
         result[u] = pickle.loads(builtins_pickle)
     result["All"] = pickle.loads(builtins_pickle)
-    _log.info("setGlobals2 ...done")
-    return result
-
-def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events=True):
-    _log.info("setGlobals")
-    shell_id = "shared"
-    if events:
-        builtins["Events"] = events
-        if load_demo_events:
-            builtins["DemoEvents"] = events
-    else:
-        builtins["Events"] = Events
-        if load_demo_events:
-            builtins["DemoEvents"] = DemoEvents
-
-    # create a new set of globals with data that removes each user
-    if s3_integration:
-        project_keys = s3_helper.get_matching_keys(proj_id)
-    else:
-        project_keys = disk_helper.get_matching_keys(proj_id)
-    result = {}
-    users = set(e.UserId for e in builtins["Events"])
-    for user in users:
-        result[user] = copy.deepcopy(builtins)
-        user_events = [e for e in builtins["Events"] if e.UserId != user]
-        rk_events = redis_helper.get_redis_key(user, "Events", proj_id, shell_id)
-        result[user]["Events"] = Reference(rk_events, user_events,
-                                           keep_existing=rk_events in project_keys)
-        if load_demo_events:
-            rk_demo_events = redis_helper.get_redis_key(user, "DemoEvents", proj_id, shell_id)
-            result[user]["DemoEvents"] = Reference(rk_demo_events, user_events,
-                                                   keep_existing=rk_demo_events in project_keys)
-
-    rk_events = redis_helper.get_redis_key("All", "Events", proj_id, shell_id)
-    builtins["Events"] = Reference(rk_events, builtins["Events"], keep_existing=rk_events in project_keys)
-    if load_demo_events:
-        rk_demo_events = redis_helper.get_redis_key("All", "DemoEvents", proj_id, shell_id)
-        builtins["DemoEvents"] = Reference(rk_demo_events, builtins["DemoEvents"],
-                                           keep_existing=rk_demo_events in project_keys)
-    else:
-        builtins["DemoEvents"] = []
-
-    result["All"] = copy.deepcopy(builtins)
     _log.info("setGlobals ...done")
     return result
+
