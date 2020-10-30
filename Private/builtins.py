@@ -3,6 +3,12 @@ from __future__ import absolute_import
 #import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
 #matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
                        # note these lines need to be at top of script
+
+import logging
+FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
+logging.basicConfig(level=logging.INFO, format=FORMAT)
+_log = logging.getLogger("Builtins")
+
 import numpy.random
 import numpy
 from ordered_set import OrderedSet
@@ -26,6 +32,7 @@ import json
 import reprlib
 from dateutil import parser as dateutil_parser
 from datetime import timedelta
+import dill as pickle
 
 #from demo_events import Events, DemoEvents
 
@@ -825,16 +832,21 @@ def setUserIds(events=None):
 
     return OrderedSet(["All"] + [e.UserId for e in builtins["Events"]])
 
-
 def setGlobals2(user_ids):
+    _log.info("setGlobals2")
     result = {}
-    for u in user_ids:
-        result[u] = copy.deepcopy(builtins)
+    # We can pickle builtins 
+    # so quicker than deepcopy
+    builtins_pickle = pickle.dumps(builtins) 
 
-    result["All"] = copy.deepcopy(builtins)
+    for u in user_ids:
+        result[u] = pickle.loads(builtins_pickle)
+    result["All"] = pickle.loads(builtins_pickle)
+    _log.info("setGlobals2 ...done")
     return result
 
 def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events=True):
+    _log.info("setGlobals")
     shell_id = "shared"
     if events:
         builtins["Events"] = events
@@ -873,4 +885,5 @@ def setGlobals(events=None, proj_id="proj1", shell_id="shared", load_demo_events
         builtins["DemoEvents"] = []
 
     result["All"] = copy.deepcopy(builtins)
+    _log.info("setGlobals ...done")
     return result
