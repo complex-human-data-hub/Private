@@ -69,119 +69,120 @@ def pp_set(s):
 class Graph:
 
     def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True, user_ids=None):
-        debug_logger("Graph init")
-        # variable types
-        if not shell_id:
-            shell_id = 'shell1'
-        # clear the cache for the shell
-
-        debug_logger("Graph delete_user_keys")
-        redis_helper.delete_user_keys(project_id, shell_id)
-        debug_logger("Graph delete_user_keys ...done")
-
-        self.deterministic = set()
-        self.probabilistic = set()
-        self.functions = set()
-        self.builtins = set(builtins.keys()) | prob_builtins
-
-        # dependencies
-
-        self.dependson = {}  # deterministic dependencies
-        self.probdependson = {}  # probabilistic dependencies
-
-        # variables related to values
-        if events and type(events) == Reference:
-            events = events.value()
-        self.project_id = project_id
-        self.shell_id = shell_id
-        self.load_demo_events = load_demo_events
-        debug_logger("Graph setGlobals")
         if user_ids:
-            if 'All' not in user_ids:
-                user_ids = ['All'] + user_ids
-            self.user_ids = OrderedSet(user_ids)
-            self.globals = setGlobals2(user_ids)
-        else:
-            self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
-                                      load_demo_events=self.load_demo_events)
-            self.user_ids = setUserIds(events=events)
-        debug_logger("Graph setGlobals ...done")
+            debug_logger("Graph init")
+            # variable types
+            if not shell_id:
+                shell_id = 'shell1'
+            # clear the cache for the shell
 
-        self.locals = {}  # do we need this?
-        self.stale = dict([(u, set()) for u in self.user_ids])
-        self.computing = dict([(u, set()) for u in self.user_ids])
-        self.exception = dict([(u, set()) for u in self.user_ids])
-        self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.user_ids])
-        self.sampler_exception = dict([(u, {}) for u in self.user_ids])
+            debug_logger("Graph delete_user_keys")
+            redis_helper.delete_user_keys(project_id, shell_id)
+            debug_logger("Graph delete_user_keys ...done")
 
-        # variables related to privacy
+            self.deterministic = set()
+            self.probabilistic = set()
+            self.functions = set()
+            self.builtins = set(builtins.keys()) | prob_builtins
 
-        self.private = set()
-        self.public = set()
-        self.unknown_privacy = set()
-        self.privacy_sampler_results = {}
-        # the privacy samplers haven't been run since last compute and when they have been run
+            # dependencies
 
-        # code associated with variables
+            self.dependson = {}  # deterministic dependencies
+            self.probdependson = {}  # probabilistic dependencies
 
-        self.code = OrderedDict()  # private code for deterministic variables
-        self.prob_code = OrderedDict()  # private code of probabilistic variables
-        self.eval_code = OrderedDict()  # python code for deterministic variables
-        self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
-        self.hierarchical = {}  # what is the index variable of this hierarchical variable
+            # variables related to values
+            if events and type(events) == Reference:
+                events = events.value()
+            self.project_id = project_id
+            self.shell_id = shell_id
+            self.load_demo_events = load_demo_events
+            debug_logger("Graph setGlobals")
+            if user_ids:
+                if 'All' not in user_ids:
+                    user_ids = ['All'] + user_ids
+                self.user_ids = OrderedSet(user_ids)
+                self.globals = setGlobals2(user_ids)
+            #else:
+            #    self.globals = setGlobals(events=events, proj_id=self.project_id, shell_id=self.shell_id,
+            #                              load_demo_events=self.load_demo_events)
+            #    self.user_ids = setUserIds(events=events)
+            debug_logger("Graph setGlobals ...done")
 
-        # comments
+            self.locals = {}  # do we need this?
+            self.stale = dict([(u, set()) for u in self.user_ids])
+            self.computing = dict([(u, set()) for u in self.user_ids])
+            self.exception = dict([(u, set()) for u in self.user_ids])
+            self.uptodate = dict([(u, set(builtins.keys()) or prob_builtins) for u in self.user_ids])
+            self.sampler_exception = dict([(u, {}) for u in self.user_ids])
 
-        self.comment = {}
+            # variables related to privacy
 
-        # auxiliary variables
+            self.private = set()
+            self.public = set()
+            self.unknown_privacy = set()
+            self.privacy_sampler_results = {}
+            # the privacy samplers haven't been run since last compute and when they have been run
 
-        self.lock = multiprocessing.Lock()
-        self.who_has_lock = None
-        self.jobs = {}
-        self.log = logging.getLogger("Private")
-        self.last_server_connect = 0
-        self.server = None
-        self.check_dask_connection()
-        self.raw_graph = None
-        self.i_graph = None
-        self.p_graph = None
+            # code associated with variables
+
+            self.code = OrderedDict()  # private code for deterministic variables
+            self.prob_code = OrderedDict()  # private code of probabilistic variables
+            self.eval_code = OrderedDict()  # python code for deterministic variables
+            self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
+            self.hierarchical = {}  # what is the index variable of this hierarchical variable
+
+            # comments
+
+            self.comment = {}
+
+            # auxiliary variables
+
+            self.lock = multiprocessing.Lock()
+            self.who_has_lock = None
+            self.jobs = {}
+            self.log = logging.getLogger("Private")
+            self.last_server_connect = 0
+            self.server = None
+            self.check_dask_connection()
+            self.raw_graph = None
+            self.i_graph = None
+            self.p_graph = None
 
 
-        debug_logger("Graph init_raw_graph")
-        self.init_raw_graph()
-        debug_logger("Graph init_raw_graph ...done")
+            debug_logger("Graph init_raw_graph")
+            self.init_raw_graph()
+            debug_logger("Graph init_raw_graph ...done")
 
-        # Keep the time stamps [job_type][user][id][last_completed/last_started]
-        debug_logger("Graph init_ts")
-        self.ts = {}
-        self.init_ts()
-        debug_logger("Graph init_ts ...done")
+            # Keep the time stamps [job_type][user][id][last_completed/last_started]
+            debug_logger("Graph init_ts")
+            self.ts = {}
+            self.init_ts()
+            debug_logger("Graph init_ts ...done")
 
-        self.SamplerParameterUpdated = False
+            self.SamplerParameterUpdated = False
 
-        debug_logger("Graph setBuiltinPrivacy")
-        setBuiltinPrivacy(self)  # set privacy of builtins
-        debug_logger("Graph setBuiltinPrivacy ...done")
+            debug_logger("Graph setBuiltinPrivacy")
+            setBuiltinPrivacy(self)  # set privacy of builtins
+            debug_logger("Graph setBuiltinPrivacy ...done")
 
-        debug_logger("Graph init define")
-        if user_ids:
-            self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],
-                        skip_name_check=True)
-            if self.load_demo_events:
-                self.define("DemoEvents", "", eval_code="getDemoEvents(project_id, user_id)",
-                            depends_on=["getDemoEvents"], skip_name_check=True)
+            debug_logger("Graph init define")
+            if user_ids:
+                self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],
+                            skip_name_check=True)
+                if self.load_demo_events:
+                    self.define("DemoEvents", "", eval_code="getDemoEvents(project_id, user_id)",
+                                depends_on=["getDemoEvents"], skip_name_check=True)
 
-        self.define("NumberOfTuningSamples", "", eval_code="getNumberOfTuningSamples()",
-                    depends_on=["getNumberOfTuningSamples"])
-        self.define("NumberOfChains", "", eval_code="getNumberOfChains()", depends_on=["getNumberOfChains"])
-        self.define("NumberOfSamples", "", eval_code="getNumberOfSamples()", depends_on=["getNumberOfSamples"])
-        self.define("rhat", "", eval_code="{}", skip_name_check=True)
-        self.define("ess", "", eval_code="{}", skip_name_check=True)
-        self.define("loo", "", eval_code="{}", skip_name_check=True)
-        self.define("waic", "", eval_code="{}", skip_name_check=True)
+            self.define("NumberOfTuningSamples", "", eval_code="getNumberOfTuningSamples()",
+                        depends_on=["getNumberOfTuningSamples"])
+            self.define("NumberOfChains", "", eval_code="getNumberOfChains()", depends_on=["getNumberOfChains"])
+            self.define("NumberOfSamples", "", eval_code="getNumberOfSamples()", depends_on=["getNumberOfSamples"])
+            self.define("rhat", "", eval_code="{}", skip_name_check=True)
+            self.define("ess", "", eval_code="{}", skip_name_check=True)
+            self.define("loo", "", eval_code="{}", skip_name_check=True)
+            self.define("waic", "", eval_code="{}", skip_name_check=True)
 
-        debug_logger("Graph init define ...done")
+            debug_logger("Graph init define ...done")
 
     def __repr__(self):
         code_bits = []
