@@ -1547,7 +1547,7 @@ except Exception as e:
         value_width = 80
 
         defaults = ['Events', 'DemoEvents']
-        names = defaults + list(set(self.globals[user_all].keys()) - self.builtins)
+        names = defaults + list((self.probabilistic | self.deterministic) - self.builtins)
         sv = {}
         for name in names:
             sv[name] = {'name': name}
