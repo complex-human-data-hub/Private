@@ -1,0 +1,7 @@
+FROM private_web
+WORKDIR /code
+
+COPY terminal-server .
+COPY docker/docker-example.crt server.crt
+
+

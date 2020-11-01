@@ -1,0 +1,6 @@
+FROM private_private
+WORKDIR /code
+
+COPY . .
+
+
