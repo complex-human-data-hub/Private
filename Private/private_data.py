@@ -88,7 +88,7 @@ class Source:
        
         print("Number of jobs", len(jobs))
         pool = mp.Pool(processes=6)
-        parallel_results = pool.map(store_cache, jobs)
+        pool.map(store_cache, jobs)
         pool.close()
         pool.join()
        
@@ -105,7 +105,7 @@ def store_cache(opts):
             opts['event_type'],
             project_id=opts['project_id'],
             shell_id=opts['shell_id'])
-    r = Reference(rk_events, user_events, keep_existing=False)
+    Reference(rk_events, user_events, keep_existing=False)
     print(rk_events)
     return None
 
