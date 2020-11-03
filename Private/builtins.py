@@ -811,7 +811,7 @@ def show_prob_builtins():
     return res
 
 
-def setGlobals(user_ids):
+def set_globals(user_ids):
     _log.info("set_globals")
     result = {}
     # We can pickle builtins 
