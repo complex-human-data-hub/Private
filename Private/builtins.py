@@ -1,8 +1,5 @@
 from __future__ import print_function
 from __future__ import absolute_import
-#import matplotlib      # need to add these two lines to stop matplotlib from using interactive mode to generate plots
-#matplotlib.use('Agg')  # it slows down generation a lot when it  has to look for DISPLAY variables and is unecessary
-                       # note these lines need to be at top of script
 
 import logging
 FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
@@ -11,30 +8,22 @@ _log = logging.getLogger("Builtins")
 
 import numpy.random
 import numpy
-from ordered_set import OrderedSet
 from scipy import stats
 from .event import Event
 from Private.reference import Reference
 import Private.redis_helper as redis_helper
-import Private.disk_helper as disk_helper
-import Private.s3_helper as s3_helper
 import pymc3 as pm
-import copy
 import theano.tensor
 import math
 from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples, s3_integration
 
-import os
 from . import preprocessing as pre
 from . import plotting as plot
-from .demo_experiment_events import ExpEvents, DemoProjects
-import json
-import reprlib
+from .demo_experiment_events import DemoProjects
 from dateutil import parser as dateutil_parser
 from datetime import timedelta
 import dill as pickle
 
-#from demo_events import Events, DemoEvents
 
 # Import our source data 
 # defaults to DemoEvents, but this class
@@ -788,7 +777,7 @@ illegal_variable_names = prob_builtins | set(["fft", "mfcc", "zipDate", "bucketD
 data_builtins = {'Events', 'DemoEvents', 'Event'}
 keep_private_variables = ['NumberOfSamples', 'NumberOfTuningSamples', 'NumberOfChains', 'rhat', 'ess', 'loo', 'waic']
 
-def setBuiltinPrivacy(graph):
+def set_builtin_privacy(graph):
     for name in builtins:
         graph.set_privacy(name, "public")
     for name in prob_builtins:
@@ -798,8 +787,7 @@ def setBuiltinPrivacy(graph):
     graph.set_privacy("getEvents", "private")
 
 
-def showNames(names, width=80):
-    res = ""
+def show_names(names, width=80):
     names.sort()
     columnWidth = max(len(s) for s in names)+2
     numColumns = width // columnWidth
@@ -811,20 +799,20 @@ def showNames(names, width=80):
     return "\n".join(rows)
 
 
-def showBuiltins():
+def show_builtins():
     res = "Builtins\n\n"
-    res += showNames(list(builtins.keys()))
+    res += show_names(list(builtins.keys()))
     return res
 
 
-def showProbBuiltins():
+def show_prob_builtins():
     res = "Probabilistic Builtins\n\n"
-    res += showNames(list(prob_builtins))
+    res += show_names(list(prob_builtins))
     return res
 
 
 def setGlobals(user_ids):
-    _log.info("setGlobals")
+    _log.info("set_globals")
     result = {}
     # We can pickle builtins 
     # so quicker than deepcopy
@@ -833,6 +821,6 @@ def setGlobals(user_ids):
     for u in user_ids:
         result[u] = pickle.loads(builtins_pickle)
     result["All"] = pickle.loads(builtins_pickle)
-    _log.info("setGlobals ...done")
+    _log.info("set_globals ...done")
     return result
 

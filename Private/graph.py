@@ -13,7 +13,7 @@ import logging
 import networkx as nx
 import graphviz as gv
 import Private
-from Private.builtins import builtins, prob_builtins, setBuiltinPrivacy, setGlobals, config_builtins, \
+from Private.builtins import builtins, prob_builtins, set_builtin_privacy, set_globals, config_builtins, \
     illegal_variable_names, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
@@ -98,12 +98,12 @@ class Graph:
         self.project_id = project_id
         self.shell_id = shell_id
         self.load_demo_events = load_demo_events
-        debug_logger("Graph setGlobals")
+        debug_logger("Graph set_globals")
         if 'All' not in user_ids:
             user_ids = ['All'] + user_ids
         self.user_ids = OrderedSet(user_ids)
-        self.globals = setGlobals(user_ids)
-        debug_logger("Graph setGlobals ...done")
+        self.globals = set_globals(user_ids)
+        debug_logger("Graph set_globals ...done")
 
         self.locals = {}  # do we need this?
         self.stale = dict([(u, set()) for u in self.user_ids])
@@ -158,9 +158,9 @@ class Graph:
 
         self.SamplerParameterUpdated = False
 
-        debug_logger("Graph setBuiltinPrivacy")
-        setBuiltinPrivacy(self)  # set privacy of builtins
-        debug_logger("Graph setBuiltinPrivacy ...done")
+        debug_logger("Graph set_builtin_privacy")
+        set_builtin_privacy(self)  # set privacy of builtins
+        debug_logger("Graph set_builtin_privacy ...done")
 
         debug_logger("Graph init define")
         self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],

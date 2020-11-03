@@ -1,6 +1,6 @@
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
-from Private.builtins import showBuiltins, showProbBuiltins, commands, plot_builtins
+from Private.builtins import show_builtins, show_prob_builtins, commands, plot_builtins
 from Private.graph import *
 
 def _debug(msg):
@@ -344,10 +344,10 @@ class InputVisitor(PTNodeVisitor):
         return result("show_jobs_dict", self.depGraph.show_jobs(as_dict=True))
 
     def visit_show_builtins(self, node, children):
-        return result("show_builtins", showBuiltins())
+        return result("show_builtins", show_builtins())
 
     def visit_show_prob_builtins(self, node, children):
-        return result("show_prob_builtins", showProbBuiltins())
+        return result("show_prob_builtins", show_prob_builtins())
 
     def visit_show_ncpus(self, node, children):
         return result("show_ncpus", str(self.depGraph.server.get_ncpus()))
