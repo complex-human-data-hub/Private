@@ -31,8 +31,6 @@ class result:
                             self.depend.extend(child.depend)
             elif type(depend) == str:
                 self.depend = [depend]
-            elif type(depend) == str:
-                self.depend = [depend]
             else:
                 raise Exception(
                     "result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a str: " + str(
