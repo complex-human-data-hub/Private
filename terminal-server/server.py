@@ -3,6 +3,7 @@ FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 from flask import Flask, render_template, jsonify, request, make_response
+from flask_wtf.csrf import CSRFProtect
 import grpc
 import json
 import service_pb2
@@ -18,6 +19,8 @@ import traceback
 _log = logging.getLogger("Private Server")
 
 app = Flask("Testing_Server")
+app.config['SECRET_KEY'] = config.SECRET_KEY
+csrf = CSRFProtect(app)
 
 re_terminal_graph = re.compile(r'^data:image')
 

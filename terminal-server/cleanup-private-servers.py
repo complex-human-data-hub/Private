@@ -16,11 +16,6 @@ with open(config.certfile, 'rb') as f:
     trusted_certs = f.read()
 
 
-#opts = {
-#    'GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS': 1,
-#    'GRPC_ARG_HTTP2_MIN_SENT_PING_INTERVAL_WITHOUT_DATA_MS': 10000
-#}
-
 def get_rpc_stub(host, port):
     credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
     channel = grpc.secure_channel('{}:{}'.format(host, port), credentials)
