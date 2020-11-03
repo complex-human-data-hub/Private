@@ -181,46 +181,6 @@ class Graph:
 
         debug_logger("Graph init define ...done")
 
-    def __repr__(self):
-        code_bits = []
-        code_width = 50
-        value_width = 80
-        for name in self.code.keys():
-            code_bits.append(name + " = " + str(self.code[name]))
-        for name in self.prob_code.keys():
-            if name in self.hierarchical:
-                code_bits.append(name + "[" + self.hierarchical[name] + "] ~ " + str(self.prob_code[name]))
-            else:
-                code_bits.append(name + " ~ " + str(self.prob_code[name]))
-        if len(code_bits) > 0:
-            m = max(len(line) for line in code_bits)
-            m = min(m, code_width)
-            newcodebits = [line[0:code_width].ljust(m, " ") for line in code_bits]
-            value_bits = []
-            for name in self.code.keys():
-                value_bits.append(self.get_value(name)[0:value_width])
-            for name in self.prob_code.keys():
-                if name in self.sampler_exception:
-                    value_bits.append(self.sampler_exception[name])
-                else:
-                    value_bits.append(self.get_value(name)[0:value_width])
-            comment_bits = []
-            for name in self.code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            for name in self.prob_code.keys():
-                comment_bits.append(self.comment.get(name, ""))
-            unsatisfied_depends = []
-            for name in self.code.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.dependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            for name in self.prob_code.keys():
-                unsatisfied_depends.append(
-                    ", ".join(self.probdependson[name] - (self.deterministic | self.probabilistic | self.builtins)))
-            return "\n".join("  ".join([codebit, valuebit, commentbit, unsatisfied_depend]) for
-                             codebit, valuebit, commentbit, unsatisfied_depend in
-                             zip(newcodebits, value_bits, comment_bits, unsatisfied_depends))
-        else:
-            return ""
 
     def check_dask_connection(self):
 
