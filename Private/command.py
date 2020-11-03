@@ -114,7 +114,7 @@ def execute_test(test_cases, p_limit, t_limit):
                 code_lines = open(test_folder + "/" + test_name + test_case_ext, "r").readlines()
                 failed = []
                 permutations_tried = 0
-                for i in range(p_limit):
+                for _ in range(p_limit):
                     permutations_tried += 1
                     execute_lines(code_lines)
                     job_count = 1
@@ -246,8 +246,6 @@ def execute_lines(code_lines):
             if input_line.strip().startswith("return"):
                 execute(function_code)
                 function_code = ""
-            continue
-
         elif input_line.strip() != "":
             execute(input_line)
 

@@ -310,7 +310,6 @@ class InputVisitor(PTNodeVisitor):
         return result("show_variables", self.depGraph.show_variables(pattern))
 
     def visit_show_variables_dict(self, node, children):
-        pattern = children[1].code if len(children) > 1 else ''
         return result("show_variables_dict", self.depGraph.show_variables_dict())
 
     def visit_show_values(self, node, children):
@@ -438,18 +437,15 @@ help: this message
             depends = depends.union(set(c.depend))
         if len(children) > 1:
             func_name = children[0].code.split(" ")[1]
-            code = children[0].code + "\n"
             evalcode = children[0].evalcode + "\n"
             for c in children[1:]:
                 if c.result_type == "function_body_line":
-                    code += '\t' + c.code + '\n'
                     evalcode += '\t' + c.evalcode + '\n'
                 if c.result_type == "function_return":
-                    code += '\t' + c.code
                     evalcode += '\t' + c.evalcode
             self.depGraph.define_function(func_name, "User Function", evalcode, depends, defines,
                                           set(children[0].depend))
-            return
+            
 
     def visit_code_block(self, node, children):
         if len(children) > 0:

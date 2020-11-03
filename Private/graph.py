@@ -156,7 +156,7 @@ class Graph:
         self.init_ts()
         debug_logger("Graph init_ts ...done")
 
-        self.SamplerParameterUpdated = False
+        self.sampler_parameter_updated = False
 
         debug_logger("Graph set_builtin_privacy")
         set_builtin_privacy(self)  # set privacy of builtins
@@ -754,7 +754,7 @@ except Exception as e:
                         if name == "NumberOfSamples" and value > 4000:
                             self.comment[name] = "# Maximum Number of Samples is 4000"
                             self.globals[user][name] = original_value
-                        self.SamplerParameterUpdated = True
+                        self.sampler_parameter_updated = True
                     if type(value) == io.BytesIO:  # write image to file
                         value.seek(0)
                         with open(name + '.png', 'wb') as f:
