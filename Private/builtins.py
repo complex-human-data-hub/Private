@@ -789,13 +789,13 @@ def set_builtin_privacy(graph):
 
 def show_names(names, width=80):
     names.sort()
-    columnWidth = max(len(s) for s in names)+2
-    numColumns = width // columnWidth
+    column_width = max(len(s) for s in names)+2
+    num_columns = width // column_width
 
-    numRows = len(names) // numColumns
-    rows = [""] * numRows
+    num_rows = len(names) // num_columns
+    rows = [""] * num_rows
     for i, name in enumerate(names):
-        rows[i%numRows] += name.ljust(columnWidth)
+        rows[i%num_rows] += name.ljust(column_width)
     return "\n".join(rows)
 
 
