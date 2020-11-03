@@ -16,6 +16,7 @@ class PrivateSemanticsException(Exception):
     """
     pass
 
+
 class result:
 
     def __init__(self, result_type, code=None, depend=None, evalcode=None, pyMC3code=None, defines=()):
@@ -42,8 +43,8 @@ class result:
                     "result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a str: " + str(
                         depend) + " is a " + str(type(depend)))
 
-    def remove_dependencies(self, dependenciesToRemove):
-        self.depend = list(set(self.depend) - set(dependenciesToRemove))
+    def remove_dependencies(self, dependencies_to_remove):
+        self.depend = list(set(self.depend) - set(dependencies_to_remove))
 
     def __repr__(self):
         return "type: " + self.result_type + " code: " + self.code + " evalcode: " + str(
@@ -264,8 +265,8 @@ class InputVisitor(PTNodeVisitor):
     def visit_distribution_call(self, node, children):
         fn = children[0].code
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
-        pyMC3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.pyMC3code for c in children[1:]) + "%%s)"
-        return result("distribution_call", private_code, children, pyMC3code=pyMC3_code)
+        py_mc3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.pyMC3code for c in children[1:]) + "%%s)"
+        return result("distribution_call", private_code, children, pyMC3code=py_mc3_code)
 
     def visit_distribution_assignment(self, node, children):
         if len(children) > 2:  # then we have a hierarchically defined variable
@@ -445,7 +446,7 @@ help: this message
                     evalcode += '\t' + c.evalcode
             self.depGraph.define_function(func_name, "User Function", evalcode, depends, defines,
                                           set(children[0].depend))
-            
+
 
     def visit_code_block(self, node, children):
         if len(children) > 0:
