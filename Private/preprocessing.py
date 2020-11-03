@@ -19,7 +19,7 @@ def fft(file_itr, segment_size):
     output_length = 512
     file_arrays = []
     file_itr.reset()
-    for count in range(0, file_itr.get_file_count()):
+    for _ in range(0, file_itr.get_file_count()):
         byte_file = next(file_itr)
         str_file = np.fromstring(byte_file, dtype=np.float64).byteswap()
         file_arrays.append(str_file)

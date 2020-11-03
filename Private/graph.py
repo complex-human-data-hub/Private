@@ -28,9 +28,7 @@ import os
 import base64
 import pymc3 as pm
 from dask.distributed import Client
-from datetime import datetime
 from ordered_set import OrderedSet
-from .config import ppservers
 import json
 
 FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
@@ -50,11 +48,6 @@ display_precision = 3
 
 def debug_logger(msg):
     _log.info(msg)
-    #with open("/tmp/monday.log", "a") as fp:
-    #    if not isinstance(msg, str):
-    #        msg = json.dumps(msg, indent=4, default=str)
-    #    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    #    fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg))
 
 
 def pp_set(s):
@@ -66,12 +59,19 @@ def pp_set(s):
     return " ".join(s)
 
 
+class PrivateGraphException(Exception):
+    """
+    Allows us to separate private exceptions from more generic exceptions
+    """
+    pass
+
+
 class Graph:
 
     def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True, user_ids=None):
         debug_logger("Graph init")
         if not user_ids:
-            raise Exception("No user_ids provided")
+            raise PrivateGraphException("No user_ids provided")
 
         # variable types
         if not shell_id:
@@ -314,9 +314,8 @@ class Graph:
         :param i_node: node from inferential graph
         """
         for name in i_node[attr_contains]:
-            if name in self.unknown_privacy:
-                if name in self.privacy_sampler_results:
-                    self.set_privacy(name, self.get_privacy_sampler_result(name))
+            if name in self.unknown_privacy and name in self.privacy_sampler_results:
+                self.set_privacy(name, self.get_privacy_sampler_result(name))
 
     def change_state(self, user, node, new_state):
         for name in node[attr_contains]:
@@ -334,7 +333,7 @@ class Graph:
             elif new_state == st_stale:  # when a variable changes to be stale its privacy is unknown
                 self.stale[user].add(name)
             else:
-                raise Exception("Exception: " + "Unknown state %s in changeState" % new_state)
+                raise PrivateGraphException("Exception: " + "Unknown state %s in changeState" % new_state)
 
         # Set all to children to stale
         if new_state == st_stale:
@@ -393,7 +392,7 @@ class Graph:
     def define(self, name, code, eval_code=None, depends_on=None, prob=False, h_var=None, py_mc3_code=None,
                skip_name_check=False):
         if not skip_name_check and name in prob_builtins | illegal_variable_names:
-            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+            raise PrivateGraphException("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
 
         self.acquire("define " + name)
 
@@ -408,7 +407,7 @@ class Graph:
         else:
             if self.check_cyclic_dependencies(name, set(depends_on)):
                 self.release()
-                raise Exception("Exception: Cyclic Dependency Found, " + name)
+                raise PrivateGraphException("Exception: Cyclic Dependency Found, " + name)
 
         if prob:
             self.probabilistic.add(name)
@@ -444,7 +443,7 @@ class Graph:
 
     def define_function(self, name, code, evalcode, dependson, defines, arguments):
         if name in prob_builtins | illegal_variable_names:
-            raise Exception("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+            raise PrivateGraphException("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
         self.acquire("define " + name)
 
         # check if the exact thing already defined
@@ -457,7 +456,7 @@ class Graph:
         else:
             if self.check_cyclic_dependencies(name, dependson):
                 self.release()
-                raise Exception("Exception: Cyclic Dependency Found, " + name)
+                raise PrivateGraphException("Exception: Cyclic Dependency Found, " + name)
         self.deterministic.add(name)
         self.functions.add(name)
         self.code[name] = code
@@ -752,10 +751,9 @@ except Exception as e:
                     if name in config_builtins:
                         builtins.get(name)(value)
                     if name in ["NumberOfSamples", "NumberOfChains", "NumberOfTuningSamples"]:
-                        if name == "NumberOfSamples":
-                            if value > 4000:
-                                self.comment[name] = "# Maximum Number of Samples is 4000"
-                                self.globals[user][name] = original_value
+                        if name == "NumberOfSamples" and value > 4000:
+                            self.comment[name] = "# Maximum Number of Samples is 4000"
+                            self.globals[user][name] = original_value
                         self.SamplerParameterUpdated = True
                     if type(value) == io.BytesIO:  # write image to file
                         value.seek(0)
@@ -1057,9 +1055,9 @@ except Exception as e:
             self.raw_graph.remove_edges_from(in_edges)
         # remove linked nodes if they are only serving the removed node
         for edge in in_edges:
-            if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0])):
-                if edge[0] not in self.raw_graph.graph[d_key]:
-                    self.raw_graph.remove_node(edge[0])
+            if not set(self.raw_graph.in_edges(edge[0])) and not set(self.raw_graph.out_edges(edge[0]))\
+             and edge[0] not in self.raw_graph.graph[d_key]:
+                self.raw_graph.remove_node(edge[0])
 
         # update i_graph and p_graph
         self.update_graphs()
@@ -1363,7 +1361,7 @@ except Exception as e:
                     else:
                         res += reprlib.repr(self.globals["All"][name])
             else:
-                raise Exception("Exception: " + name + " is not stale, computing, exception or uptodate.")
+                raise PrivateGraphException("Exception: " + name + " is not stale, computing, exception or uptodate.")
         elif name in self.builtins:
             if name in self.public:
                 if long_format:
@@ -1373,7 +1371,7 @@ except Exception as e:
             else:
                 res += "Private"
         else:
-            raise Exception("Exception: Unknown variable in getValue " + name)
+            raise PrivateGraphException("Exception: Unknown variable in getValue " + name)
         return res
 
     def show_values(self):
@@ -1436,9 +1434,8 @@ except Exception as e:
                 res += self.code[name][0:60]
             else:
                 res += "Private"
-            if name in self.dependson:
-                if self.dependson[name] != set([]):
-                    res += "    " + repr(list(self.dependson[name]))
+            if name in self.dependson and self.dependson[name] != set([]):
+                res += "    " + repr(list(self.dependson[name]))
             res += "\n"
         for name in self.prob_code.keys():
             if name in self.hierarchical:
@@ -1449,9 +1446,8 @@ except Exception as e:
                 res += self.prob_code[name][0:60]
             else:
                 res += "Private"
-            if name in self.probdependson:
-                if self.probdependson[name] != set([]):
-                    res += "    " + repr(list(self.probdependson[name]))
+            if name in self.probdependson and self.probdependson[name] != set([]):
+                res += "    " + repr(list(self.probdependson[name]))
             res += "\n"
         return res[0:-1]
 
@@ -1555,7 +1551,7 @@ def job(job_name, node, user, code, globals, locals, user_func, project_id, shel
         try:
             exec(func, s3_var_globals)
         except Exception as e:
-            e = Exception("Error in User Function: " + func[4:10] + "...")
+            e = PrivateGraphException("Error in User Function: " + func[4:10] + "...")
             return job_name, name, user, e
     try:
         if code.startswith("def"):

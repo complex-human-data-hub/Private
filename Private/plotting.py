@@ -9,6 +9,12 @@ keyword_title = 'title'
 data_columns = {"col", "row", "style", "hue", "size"}
 
 
+class PrivatePlottingException(Exception):
+    """
+    Allows us to separate private exceptions from more generic exceptions
+    """
+    pass
+
 # plotting helper methods
 def create_data_frame(argument_names, kw_argument_names, *args, **kwargs):
     """
@@ -31,7 +37,7 @@ def create_data_frame(argument_names, kw_argument_names, *args, **kwargs):
         if kw == keyword_labels:
             labels = kwargs[kw]
     if len(argument_names) != len(args):
-        raise Exception("Expected exactly " + str(len(args)) + " column names")
+        raise PrivatePlottingException("Expected exactly " + str(len(args)) + " column names")
     zipped_list = list(zip(*args))
     if labels:
         for n, argument_name in enumerate(argument_names):
@@ -86,9 +92,8 @@ def generate_plot_data(argument_names, kw_argument_names, *args, **kwargs):
     """
     df = create_data_frame(argument_names, kw_argument_names, *args, **kwargs)
     title = ""
-    if keyword_labels in kwargs:
-        if keyword_title in kwargs[keyword_labels]:
-            title = kwargs[keyword_labels][keyword_title]
+    if keyword_labels in kwargs and keyword_title in kwargs[keyword_labels]:
+        title = kwargs[keyword_labels][keyword_title]
     kwargs = modify_plot_kwargs(kw_argument_names, kwargs)
     return df, title, kwargs
 
@@ -110,7 +115,7 @@ def jointplot(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -134,7 +139,7 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.pairplot(df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -149,7 +154,7 @@ def distplot(argument_names, kw_argument_names, *args, **kwargs):
     try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
         sns.distplot(df[df.columns[0]], **kwargs)
         plt.title(title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -176,7 +181,7 @@ def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
         else:
             sns.kdeplot(df.ix[:,0], df.ix[:,1], **kwargs)
         plt.title(title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -198,7 +203,7 @@ def rugplot(argument_names, kw_argument_names, *args, **kwargs):
     try:
         sns.rugplot(df.ix[:,0], **kwargs)
         plt.title(title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -228,9 +233,9 @@ def relplot(argument_names, kw_argument_names, *args, **kwargs):
         elif len(args) == 2:
             g = sns.relplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         else:
-            raise Exception("At least 2 parameters expected for the relplot")
+            raise PrivatePlottingException("At least 2 parameters expected for the relplot")
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -278,7 +283,7 @@ def catplot(argument_names, kw_argument_names, *args, **kwargs):
         else:
             g = sns.catplot(x=argument_names[0], data=df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -305,7 +310,7 @@ def lmplot(argument_names, kw_argument_names, *args, **kwargs):
         else:
             g = sns.lmplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -329,7 +334,7 @@ def regplot(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -353,7 +358,7 @@ def residplot(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -378,7 +383,7 @@ def heatmap(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.heatmap(df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
@@ -402,7 +407,7 @@ def clustermap(argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = sns.clustermap(df, **kwargs)
         set_plot_title(g, title)
-    except Exception as e:
+    except Exception:
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
