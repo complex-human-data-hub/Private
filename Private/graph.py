@@ -709,20 +709,20 @@ except Exception as e:
         node_ts = node[attr_last_ts]
         for name in names:
             if self.get_privacy_sampler_result(name) != pt_private and not (
-                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained."):
+                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.") \
+                    and name in self.globals[user].keys() and name in self.globals["All"].keys():
                 # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
-                if name in self.globals[user].keys() and name in self.globals["All"].keys():
-                    # if shape is affected by dropping a user then this variable is private
-                    if self.globals[user][name].shape != self.globals["All"][name].shape:
-                        self.privacy_sampler_results[name][user] = pt_private
-                    else:
-                        success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
-                        if success:
-                            job_name = "Manifold: " + user + " " + name
-                            self.jobs[job_name] = self.server.submit(mp_job, job_name, node, name, user,
-                                                                     self.globals[user][name],
-                                                                     self.globals["All"][name])
-                            self.jobs[job_name].add_done_callback(self.mp_callback)
+                # if shape is affected by dropping a user then this variable is private
+                if self.globals[user][name].shape != self.globals["All"][name].shape:
+                    self.privacy_sampler_results[name][user] = pt_private
+                else:
+                    success = self.reg_ts(manifold_key, user, name, started_key, node_ts)
+                    if success:
+                        job_name = "Manifold: " + user + " " + name
+                        self.jobs[job_name] = self.server.submit(mp_job, job_name, node, name, user,
+                                                                 self.globals[user][name],
+                                                                 self.globals["All"][name])
+                        self.jobs[job_name].add_done_callback(self.mp_callback)
 
     def callback(self, return_value):
         return_value = return_value.result()

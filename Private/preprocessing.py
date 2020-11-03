@@ -7,6 +7,13 @@ from datetime import timedelta
 from dateutil.parser import parse
 
 
+class PrivatePreprocessException(Exception):
+    """
+    Allows us to separate private exceptions from more generic exceptions
+    """
+    pass
+
+
 def fft(file_itr, segment_size):
     """
     This method will concat all the files under a single iterator (coming from a event) and divide it by segment size,
@@ -273,7 +280,7 @@ def all_pair_euclidean_distance(vector_dict1, vector_dict2):
         vector_list1 = vector_dict1
         vector_list2 = vector_dict2
     else:
-        raise Exception("Incompatible types" + str(type(vector_dict1)))
+        raise PrivatePreprocessException("Incompatible types" + str(type(vector_dict1)))
 
     for v1 in vector_list1:
         for v2 in vector_list2:

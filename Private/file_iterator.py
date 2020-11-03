@@ -11,6 +11,13 @@ SOURCE_TYPE_LOCAL_FILE_SYSTEM = 'localfs'
 SOURCE_LOCAL_FILE_PATH_KEY = 'filepath'
 
 
+class PrivateFileException(Exception):
+    """
+    Allows us to separate private exceptions from more generic exceptions
+    """
+    pass
+
+
 class FileIterator:
     """
     Return a file iterator for given list of file objects. This will return the raw file content on the next call
@@ -56,10 +63,10 @@ class FileIterator:
                         byte_file = file.read()
                         return byte_file
                 except IOError:
-                    raise Exception('Issue when reading local file ' + file_object[SOURCE_LOCAL_FILE_PATH_KEY])
+                    raise PrivateFileException('Issue when reading local file ' + file_object[SOURCE_LOCAL_FILE_PATH_KEY])
 
             else:
-                raise Exception('Unknown data source type')
+                raise PrivateFileException('Unknown data source type')
         else:
             raise StopIteration
 

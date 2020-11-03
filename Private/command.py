@@ -24,7 +24,7 @@ logging.basicConfig(filename=logfile,level=logging.DEBUG)
 _log.debug("============================= Starting new interpreter =============================")
 
 from Private.parser import get_private_parser
-from Private.semantics import PrivateSemanticAnalyser
+from Private.semantics import private_semantic_analyser
 from Private.graph import Graph
 from datetime import datetime
 
@@ -48,7 +48,7 @@ def execute(line):
             print("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
         else:
             try:
-                result = PrivateSemanticAnalyser(parse_tree, update_graph=graph)
+                result = private_semantic_analyser(parse_tree, update_graph=graph)
                 if result:
                     print(result)
             except Exception as e:

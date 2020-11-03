@@ -1,5 +1,5 @@
 from Private.parser import get_private_parser
-from Private.semantics import PrivateSemanticAnalyser
+from Private.semantics import private_semantic_analyser
 
 import json
 from datetime import datetime
@@ -72,7 +72,7 @@ class Private:
                 raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
             else:
                 try:
-                    result = PrivateSemanticAnalyser(parse_tree, update_graph=self.graph)
+                    result = private_semantic_analyser(parse_tree, update_graph=self.graph)
                     _debug({'result': result})
                     return(result)
                 except Exception as e:

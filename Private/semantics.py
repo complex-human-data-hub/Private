@@ -10,6 +10,12 @@ def _debug(msg):
         fp.write("{}\n".format(msg))
 
 
+class PrivateSemanticsException(Exception):
+    """
+    Allows us to separate private exceptions from more generic exceptions
+    """
+    pass
+
 class result:
 
     def __init__(self, result_type, code=None, depend=None, evalcode=None, pyMC3code=None, defines=()):
@@ -32,7 +38,7 @@ class result:
             elif type(depend) == str:
                 self.depend = [depend]
             else:
-                raise Exception(
+                raise PrivateSemanticsException(
                     "result in InputVisitor got a depend that was not None, or SemanticActionResults or a string or a str: " + str(
                         depend) + " is a " + str(type(depend)))
 
@@ -51,7 +57,7 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_identifier(self, node, children):
         if node.value in commands:
-            raise Exception("Exception: Illegal Identifier '" + node.value + "' is a Private Command")
+            raise PrivateSemanticsException("Exception: Illegal Identifier '" + node.value + "' is a Private Command")
         return result("identifier", node.value, node.value)
 
     def visit_distribution_name(self, node, children):
@@ -459,5 +465,5 @@ help: this message
                       str(self.depGraph.eval_command_line_expression(node.value)))
 
 
-def PrivateSemanticAnalyser(parse_tree, update_graph=None):
+def private_semantic_analyser(parse_tree, update_graph=None):
     return visit_parse_tree(parse_tree, InputVisitor(depGraph=update_graph))
