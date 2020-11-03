@@ -14,8 +14,7 @@ services:
     depends_on:
         - redis
     command: > 
-        sh -c "python Private/private_data.py && 
-               python grpc/server.py" 
+        sh -c "python grpc/server.py" 
   web:
     build: 
         context: .
