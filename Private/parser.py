@@ -97,26 +97,3 @@ def code_block():               return [function, line]
 
 def get_private_parser():
     return ParserPython(code_block, debug=False, autokwd=True)
-
-
-if __name__ == "__main__":
-
-    input_lines = [(expression, "True or False"),
-                   (identifier, "a"),
-                   (line, "a="),
-                   (boolean_expression, "True"),
-                   (deterministic_assignment, "a = 9"),
-                   (line, "AlisonSimon=9"),
-                   (line, "Alison_Simon=9"),
-                   (line, "Alison+Simon=9"),
-                   (line, "a=b*3"),
-                   (line, "a=[b, 3]")]
-
-    for rule, input_line in input_lines:
-        try:
-            parser = ParserPython(rule, debug=True, autokwd=True)
-            parse_tree = parser.parse(input_line)
-            print(parse_tree)
-            print(input_line, " is valid")
-        except:
-            print(input_line, " is invalid")
