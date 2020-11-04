@@ -159,6 +159,7 @@
 
     #figures-img{
         margin:auto;
+        display:none;
     }
 
     .figures-close{
@@ -302,11 +303,13 @@
                         }else if(data.type == 'graph'){
                             // show graph
                             $("#figures-img").prop("src", data.response);
+                            $("#figures-img").show();
                             $("#figures-caption").text(cmd);
                             $(".figures-outer").fadeIn('slow');
 
                         }else if (data.type == 'terminal'){
                             // show data
+                            $("#figures-img").hide();
                             $("#figures-data").text(data.response);
                             $("#figures-caption").text(cmd);
                             $(".figures-outer").fadeIn('slow');
@@ -520,6 +523,7 @@
         event.handled = true;
        
         $(".figures-outer").hide();
+        $("#figures-img").hide();
         $("#figures-img").prop("src", "");
         $("#figures-caption").text("");
         $("#figures-data").text("");
