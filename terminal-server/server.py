@@ -20,7 +20,9 @@ _log = logging.getLogger("Private Server")
 
 app = Flask("Testing_Server")
 app.config['SECRET_KEY'] = config.SECRET_KEY
-csrf = CSRFProtect(app)
+
+if config.USE_CSRF:
+    csrf = CSRFProtect(app)
 
 re_terminal_graph = re.compile(r'^data:image')
 
@@ -59,6 +61,7 @@ def index():
     return render_template(
             'index.html', 
             title="Private", 
+            use_csrf=config.USE_CSRF, 
             analyze_url=analyze_url,
             delay_sv_update=1000, # delay time to sv update as it goes too quickly on localhost
             )
