@@ -10,7 +10,7 @@ import service_pb2
 import service_pb2_grpc
 import sys
 import re
-import private_config as config
+import config
 import uuid
 import time
 from datetime import datetime

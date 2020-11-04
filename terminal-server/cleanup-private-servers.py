@@ -4,7 +4,7 @@ import json
 from . import service_pb2
 from . import service_pb2_grpc
 import time
-from . import private_config as config
+import config
 import shelvelock
 import sys
 

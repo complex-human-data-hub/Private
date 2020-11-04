@@ -1,6 +1,6 @@
 from __future__ import print_function
 import shelvelock
-from . import private_config as config
+import config
 import json
 import time
 now = time.time() 
