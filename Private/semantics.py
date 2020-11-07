@@ -19,14 +19,14 @@ class PrivateSemanticsException(Exception):
 
 class result:
 
-    def __init__(self, result_type, code=None, depend=None, evalcode=None, pyMC3code=None, defines=()):
+    def __init__(self, result_type, code=None, depend=None, evalcode=None, py_mc3_code=None, defines=()):
         self.result_type = result_type
         self.code = code
         if evalcode == None:
             self.evalcode = code
         else:
             self.evalcode = evalcode
-        self.pyMC3code = pyMC3code
+        self.py_mc3_code = py_mc3_code
         self.depend = None
         self.defines = defines
         if depend:
@@ -257,26 +257,26 @@ class InputVisitor(PTNodeVisitor):
 
     def visit_distribution_parameter(self, node, children):
         if len(children) == 1:
-            return result("distribution_parameter", children[0].code, children, pyMC3code=children[0].code)
+            return result("distribution_parameter", children[0].code, children, py_mc3_code=children[0].code)
         else:
             return result("distribution_parameter", children[0].code + "[" + children[1].code + "]", children,
-                          pyMC3code=children[0].code + "[__" + children[1].code + "_Indices]")
+                          py_mc3_code=children[0].code + "[__" + children[1].code + "_Indices]")
 
     def visit_distribution_call(self, node, children):
         fn = children[0].code
         private_code = fn + "(" + ", ".join(c.code for c in children[1:]) + ")"
-        py_mc3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.pyMC3code for c in children[1:]) + "%%s)"
-        return result("distribution_call", private_code, children, pyMC3code=py_mc3_code)
+        py_mc3_code = "pymc3." + fn + "(\'%s\', " + ", ".join(c.py_mc3_code for c in children[1:]) + "%%s)"
+        return result("distribution_call", private_code, children, py_mc3_code=py_mc3_code)
 
     def visit_distribution_assignment(self, node, children):
         if len(children) > 2:  # then we have a hierarchically defined variable
             dependson = children[1].depend + children[2].depend
             self.depGraph.define(children[0].code, children[2].code, depends_on=dependson, prob=True,
                                  h_var=children[1].code,
-                                 py_mc3_code=children[0].code + " = " + children[2].pyMC3code % children[0].code)
+                                 py_mc3_code=children[0].code + " = " + children[2].py_mc3_code % children[0].code)
         else:
             self.depGraph.define(children[0].code, children[1].code, depends_on=children[1].depend, prob=True,
-                                 py_mc3_code=children[0].code + " = " + children[1].pyMC3code % children[0].code)
+                                 py_mc3_code=children[0].code + " = " + children[1].py_mc3_code % children[0].code)
         return result("distribution_assignment", children[0].code)
 
     def visit_expression_assignment(self, node, children):

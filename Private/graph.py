@@ -17,7 +17,7 @@ from Private.builtins import builtins, prob_builtins, set_builtin_privacy, set_g
     illegal_variable_names, keep_private_variables
 from Private.graph_constants import pd_key, p_key, d_key, attr_label, attr_color, attr_is_prob, attr_contains, \
     attr_id, attr_last_ts, user_all, compute_key, sampler_key, manifold_key, completed_key, started_key, pt_private, \
-    pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node
+    pt_public, pt_unknown, st_stale, st_uptodate, st_computing, st_exception, graph_folder, attr_pd_node, st_not_retained
 
 from Private.reference import Reference
 import Private.redis_helper as redis_helper
@@ -125,7 +125,7 @@ class Graph:
         self.code = OrderedDict()  # private code for deterministic variables
         self.prob_code = OrderedDict()  # private code of probabilistic variables
         self.eval_code = OrderedDict()  # python code for deterministic variables
-        self.pyMC3code = OrderedDict()  # pyMC3 code for probabilistic variables
+        self.py_mc3_code = OrderedDict()  # pyMC3 code for probabilistic variables
         self.hierarchical = {}  # what is the index variable of this hierarchical variable
 
         # comments
@@ -333,7 +333,7 @@ class Graph:
             elif new_state == st_stale:  # when a variable changes to be stale its privacy is unknown
                 self.stale[user].add(name)
             else:
-                raise PrivateGraphException("Exception: " + "Unknown state %s in changeState" % new_state)
+                raise PrivateGraphException(f"Exception: Unknown state {new_state} in changeState")
 
         # Set all to children to stale
         if new_state == st_stale:
@@ -392,7 +392,7 @@ class Graph:
     def define(self, name, code, eval_code=None, depends_on=None, prob=False, h_var=None, py_mc3_code=None,
                skip_name_check=False):
         if not skip_name_check and name in prob_builtins | illegal_variable_names:
-            raise PrivateGraphException("Exception: Illegal Identifier '" + name + "' is a Private Built-in")
+            raise PrivateGraphException(f"Exception: Illegal Identifier '{name}' is a Private Built-in")
 
         self.acquire("define " + name)
 
@@ -412,7 +412,7 @@ class Graph:
         if prob:
             self.probabilistic.add(name)
             self.prob_code[name] = code
-            self.pyMC3code[name] = py_mc3_code
+            self.py_mc3_code[name] = py_mc3_code
             if depends_on:
                 self.probdependson[name] = set(depends_on)
             if h_var:
@@ -506,7 +506,7 @@ class Graph:
             if is_prob:
                 self.probabilistic.discard(name)
                 self.prob_code.pop(name, None)
-                self.pyMC3code.pop(name, None)
+                self.py_mc3_code.pop(name, None)
                 self.hierarchical.pop(name, None)
                 self.probdependson.pop(name, None)
             else:
@@ -606,15 +606,15 @@ try:
                 code += '        exception_variable = "%s"\n' % name
                 if name in self.hierarchical:
                     shape_code = ", shape = len(__%s_Dict)" % self.hierarchical[name]
-                    code += "        " + self.pyMC3code[name] % shape_code + "\n"
+                    code += "        " + self.py_mc3_code[name] % shape_code + "\n"
                 else:
-                    code += "        " + self.pyMC3code[name] % "" + "\n"
+                    code += "        " + self.py_mc3_code[name] % "" + "\n"
 
             observed_names = list(self.probabilistic & self.deterministic & set(sub_graph))
             for name in observed_names:
                 code += '        exception_variable = "%s"\n' % name
                 obs_name = "__private_%s_observed" % name
-                code += "        " + self.pyMC3code[name] % (", observed=%s" % obs_name) + "\n"
+                code += "        " + self.py_mc3_code[name] % (", observed=%s" % obs_name) + "\n"
                 if user:
                     if name in self.globals[user]:
                         locals[obs_name] = self.globals[user][name]
@@ -709,7 +709,7 @@ except Exception as e:
         node_ts = node[attr_last_ts]
         for name in names:
             if self.get_privacy_sampler_result(name) != pt_private and not (
-                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == "Not retained.") \
+                    isinstance(self.globals[user].get(name), str) and self.globals[user].get(name) == st_not_retained) \
                     and name in self.globals[user].keys() and name in self.globals["All"].keys():
                 # Some variables (e.g., logs of SDs) are returned from the sampler, but are not variables in our code.
                 # if shape is affected by dropping a user then this variable is private
@@ -827,7 +827,7 @@ except Exception as e:
                             value[name])  # permute to break the joint information across variables
                     else:  # manifold privacy is applied to individual variables
                         # so there could be more information in the joint information
-                        self.globals[user][name] = "Not retained."
+                        self.globals[user][name] = st_not_retained
                 self.change_state(user, node, "uptodate")
 
                 self.log.debug("sampler_callback: name in names ...done ")
@@ -1337,8 +1337,8 @@ except Exception as e:
                 res += "Private"
             elif name in self.unknown_privacy:
                 if name in self.uptodate["All"] and isinstance(self.globals['All'].get(name), str) and self.globals[
-                 'All'].get(name) == "Not retained.":
-                    res += "Not retained."
+                 'All'].get(name) == st_not_retained:
+                    res += st_not_retained
                 else:
                     res += "Privacy Unknown"
             elif name in self.uptodate["All"]:
@@ -1361,7 +1361,7 @@ except Exception as e:
                     else:
                         res += reprlib.repr(self.globals["All"][name])
             else:
-                raise PrivateGraphException("Exception: " + name + " is not stale, computing, exception or uptodate.")
+                raise PrivateGraphException(f"Exception: {name} is not stale, computing, exception or uptodate.")
         elif name in self.builtins:
             if name in self.public:
                 if long_format:
@@ -1414,7 +1414,7 @@ except Exception as e:
         for name in self.code.keys():
             code_bits.append(name + " = " + str(self.eval_code[name]))
         for name in self.prob_code.keys():
-            code_bits.append(name + " ~ " + str(self.pyMC3code[name]))
+            code_bits.append(name + " ~ " + str(self.py_mc3_code[name]))
         if len(code_bits) > 0:
             comment_bits = []
             for name in self.code.keys():

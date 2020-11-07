@@ -24,6 +24,7 @@ st_stale = 'stale'
 st_uptodate = 'uptodate'
 st_computing = 'computing'
 st_exception = 'exception'
+st_not_retained = 'Not retained.'
 
 # job types
 compute_key = 'compute_job'
