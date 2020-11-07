@@ -68,7 +68,6 @@ class Private:
                 _debug({'parse_tree': str(parse_tree)})
             except Exception as e:  # didn't parse
                 _debug({'error': str(e)})
-                #raise e
                 raise Exception("Syntax Error: " + line[:e.position] + "*" + line[e.position:])
             else:
                 try:
@@ -151,9 +150,6 @@ class Private:
         delete_probabilistic = self.graph.probabilistic.difference(current_probabilistic)
         delete_deterministic = self.graph.deterministic.difference(current_deterministic).difference(self.graph.builtins).difference(keep_private_variables)
 
-
-
-        delete_union = delete_probabilistic.union(delete_deterministic)
         for v in delete_probabilistic:
             self.graph.delete(v, is_prob=True)
 

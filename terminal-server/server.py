@@ -3,13 +3,14 @@ FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 
 from flask import Flask, render_template, jsonify, request, make_response
+from flask_wtf.csrf import CSRFProtect
 import grpc
 import json
 import service_pb2
 import service_pb2_grpc
 import sys
 import re
-import private_config as config
+import config
 import uuid
 import time
 from datetime import datetime
@@ -18,6 +19,10 @@ import traceback
 _log = logging.getLogger("Private Server")
 
 app = Flask("Testing_Server")
+app.config['SECRET_KEY'] = config.SECRET_KEY
+
+if config.USE_CSRF:
+    csrf = CSRFProtect(app)
 
 re_terminal_graph = re.compile(r'^data:image')
 
@@ -56,6 +61,7 @@ def index():
     return render_template(
             'index.html', 
             title="Private", 
+            use_csrf=config.USE_CSRF, 
             analyze_url=analyze_url,
             delay_sv_update=1000, # delay time to sv update as it goes too quickly on localhost
             )
