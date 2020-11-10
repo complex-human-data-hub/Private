@@ -37,3 +37,5 @@ ordered-set
 # Optionally add bokeh if you want 
 # to use dask insteractive dashboard
 bokeh
+pytest
+coverage
