@@ -97,17 +97,6 @@ def if_exist(key, server_ip=redis_server_ip):
     return r.exists(key)
 
 
-def get_matching_keys(prefix='', server_ip=redis_server_ip):
-    """
-    Generate the keys in an S3 bucket.
-
-    :param prefix: Only fetch keys that start with this prefix (optional).
-    :param server_ip: redis server IP
-    """
-    r = redis.Redis(host=server_ip)
-    return list(map(lambda x: x.decode('utf-8'), r.smembers(prefix)))
-
-
 def delete_user_keys(project_id, shell_id, server_ip=redis_server_ip):
     """
     Delete the redis keys under a given prefix
