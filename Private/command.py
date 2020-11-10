@@ -8,7 +8,7 @@ import time
 import traceback
 import logging
 import argparse
-from Private.config import logfile
+from .config import config_logger
 from arpeggio import NoMatch
 import threading
 import copy
@@ -19,9 +19,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("filename", nargs="?", default = None)
 args = parser.parse_args()
 
-_log = logging.getLogger("Private")
-logging.basicConfig(filename=logfile,level=logging.DEBUG)
-_log.debug("============================= Starting new interpreter =============================")
+config_logger()
+logger = logging.getLogger("Private")
+logger.debug("============================= Starting new interpreter =============================")
 
 from Private.parser import get_private_parser
 from Private.semantics import private_semantic_analyser

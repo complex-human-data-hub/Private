@@ -17,13 +17,6 @@ logging.getLogger('redis').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
 
 
-def _debug(msg):
-    with open('/tmp/redis-debug.log', 'a') as fp:
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, sort_keys=True, default=str)
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg))
-
 
 def get_project_id(key):
     """

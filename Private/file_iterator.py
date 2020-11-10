@@ -110,6 +110,3 @@ class FileIterator:
         file_name = os.path.basename(self.file_obj_list[file_id]['key'])
         file_name_parts = file_name.split('_')
         return datetime.strptime(file_name_parts[1], '%Y%m%d%H%M%SZ')
-
-    def get_iter_id(self):
-        return hashlib.sha224(str(self.file_obj_list).encode('utf-8')).hexdigest()

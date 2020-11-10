@@ -3,7 +3,7 @@ import logging
 import dill as pickle
 import boto3
 from botocore.exceptions import ClientError
-from .config import s3_log_level, s3_bucket_name
+from .config import s3_log_level, s3_bucket_name, config_logger
 from boto3.session import Session
 import json 
 from datetime import datetime
@@ -19,13 +19,8 @@ logging.getLogger('botocore').setLevel(s3_log_level)
 logging.getLogger('s3transfer').setLevel(s3_log_level)
 logging.getLogger('urllib3').setLevel(s3_log_level)
 
-
-def _debug(msg):
-    with open('/tmp/s3-debug.log', 'a') as fp:
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, sort_keys=True, default=str)
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        fp.write("[{}][{}] {}\n".format(timestamp, os.getpid(), msg ))
+config_logger()
+logger = logging.getLogger("s3_helper")
 
 
 def save_results(key, value, bucket_name=s3_bucket_name):
@@ -90,7 +85,7 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
     :param bucket_name: s3 bucket name
     :return: result set as a tuple
     """
-    _debug({
+    logger.debug({
         'function': 'read_file',
         'bucket': bucket_name,
         'aws_profile': aws_profile
@@ -106,10 +101,11 @@ def read_file(key, bucket_name=s3_bucket_name, aws_profile=None):
             body = theobject["Body"]
             data = body.read()
         except Exception as err:
-            _debug({
+            logger.debug({
                 'error': str(err),
                 'traceback': traceback.format_exc()
                 })
+            logger.error('Error in s3 read file')
         
         return data
     else:
