@@ -2,6 +2,14 @@ from __future__ import print_function
 import logging
 import os
 
+
+def config_logger():
+    log_format = '[%(asctime)s] %(levelname)s - %(message)s'
+    if logging.getLogger().hasHandlers():
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.basicConfig(level=logging.INFO, format=log_format)
+
 mypid = os.getpid()
 
 print("PID = ", mypid)

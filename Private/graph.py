@@ -30,24 +30,16 @@ import pymc3 as pm
 from dask.distributed import Client
 from ordered_set import OrderedSet
 import json
+from .config import config_logger
 
-FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
-if logging.getLogger().hasHandlers():
-    logging.getLogger().setLevel(logging.INFO)
-else:
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
-
-_log = logging.getLogger("Private")
+config_logger()
+logger = logging.getLogger("Private")
 
 numpy.set_printoptions(precision=3)
 numpy.set_printoptions(threshold=2000)
 
 privacy_criterion = 15.0   # percent
 display_precision = 3
-
-
-def debug_logger(msg):
-    _log.info(msg)
 
 
 def pp_set(s):
@@ -69,7 +61,7 @@ class PrivateGraphException(Exception):
 class Graph:
 
     def __init__(self, events=None, project_id='proj1', shell_id=None, load_demo_events=True, user_ids=None):
-        debug_logger("Graph init")
+        logger.info("Graph init")
         if not user_ids:
             raise PrivateGraphException("No user_ids provided")
 
@@ -78,9 +70,9 @@ class Graph:
             shell_id = 'shell1'
         # clear the cache for the shell
 
-        debug_logger("Graph delete_user_keys")
+        logger.debug("Graph delete_user_keys")
         redis_helper.delete_user_keys(project_id, shell_id)
-        debug_logger("Graph delete_user_keys ...done")
+        logger.debug("Graph delete_user_keys ...done")
 
         self.deterministic = set()
         self.probabilistic = set()
@@ -98,12 +90,12 @@ class Graph:
         self.project_id = project_id
         self.shell_id = shell_id
         self.load_demo_events = load_demo_events
-        debug_logger("Graph set_globals")
+        logger.debug("Graph set_globals")
         if 'All' not in user_ids:
             user_ids = ['All'] + user_ids
         self.user_ids = OrderedSet(user_ids)
         self.globals = set_globals(user_ids)
-        debug_logger("Graph set_globals ...done")
+        logger.debug("Graph set_globals ...done")
 
         self.locals = {}  # do we need this?
         self.stale = dict([(u, set()) for u in self.user_ids])
@@ -145,24 +137,23 @@ class Graph:
         self.i_graph = None
         self.p_graph = None
 
-
-        debug_logger("Graph init_raw_graph")
+        logger.debug("Graph init_raw_graph")
         self.init_raw_graph()
-        debug_logger("Graph init_raw_graph ...done")
+        logger.debug("Graph init_raw_graph ...done")
 
         # Keep the time stamps [job_type][user][id][last_completed/last_started]
-        debug_logger("Graph init_ts")
+        logger.debug("Graph init_ts")
         self.ts = {}
         self.init_ts()
-        debug_logger("Graph init_ts ...done")
+        logger.debug("Graph init_ts ...done")
 
         self.sampler_parameter_updated = False
 
-        debug_logger("Graph set_builtin_privacy")
+        logger.debug("Graph set_builtin_privacy")
         set_builtin_privacy(self)  # set privacy of builtins
-        debug_logger("Graph set_builtin_privacy ...done")
+        logger.debug("Graph set_builtin_privacy ...done")
 
-        debug_logger("Graph init define")
+        logger.debug("Graph init define")
         self.define("Events", "", eval_code="getEvents(project_id, user_id)", depends_on=["getEvents"],
                     skip_name_check=True)
         
@@ -179,8 +170,7 @@ class Graph:
         self.define("loo", "", eval_code="{}", skip_name_check=True)
         self.define("waic", "", eval_code="{}", skip_name_check=True)
 
-        debug_logger("Graph init define ...done")
-
+        logger.debug("Graph init define done")
 
     def check_dask_connection(self):
 
@@ -229,9 +219,9 @@ class Graph:
                     if sk == gray:
                         raise ValueError("cycle")
                 except Exception:
-                    _log.debug("topological_sort GREY")
-                    _log.debug(self.dependson.get(node))
-                    _log.debug(self.probdependson.get(node))
+                    logger.debug("topological_sort GREY")
+                    logger.debug(self.dependson.get(node))
+                    logger.debug(self.probdependson.get(node))
                     raise ValueError("cycle 2")
                 if sk == black:
                     continue
@@ -554,18 +544,11 @@ class Graph:
 try:
     logging = __import__("logging")
     FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=FORMAT)
-    _log = logging.getLogger("Private")
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    logger = logging.getLogger("Private")
     #logging.disable(100)
-    _log.debug("Running PyMC3 Code")
+    logger.info("Running PyMC3 Code")
     json = __import__("json")
-    def debug_logger(msg):
-        if not isinstance(msg, str):
-            msg = json.dumps(msg, indent=4, default=str)
-        with open("/tmp/private-worker.log", "a") as fp:
-            fp.write(msg + "\\n")
-
-    debug_logger("Running PyMC3 Code")
 """
 
             code = loggingcode
@@ -625,14 +608,14 @@ try:
 
             code += """
         __private_result__ = (pymc3.sample({NumberOfSamples}, tune={NumberOfTuningSamples}, chains={NumberOfChains}, random_seed=987654321, progressbar = False), "No Exception Variable", basic_model)
-        _log.debug("Finished PyMC3 Code")
+        logger.info("Finished PyMC3 Code")
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Finished PyMC3 Code\\n")
 
 except Exception as e:
     try:
         # remove stuff after the : as that sometimes reveals private information
-        _log.debug("PyMC3 Code Exception: " + str(e))
+        logger.debug("PyMC3 Code Exception: " + str(e))
         with open("/tmp/private-worker.log", "a") as fp:
             fp.write("Error " + str(e) + "\\n")
 
@@ -727,7 +710,7 @@ except Exception as e:
     def callback(self, return_value):
         return_value = return_value.result()
         self.acquire("callback")
-        debug_logger("In callback")
+        logger.debug("In callback")
         job_name, node, user, value = return_value
         name = node[attr_id]
         node_ts = node[attr_last_ts]
@@ -738,7 +721,8 @@ except Exception as e:
         try:
             if isinstance(value, Exception):
                 if user == "All":
-                    debug_logger(["callback Exception", user, name, value])
+                    logger.debug(["callback Exception", user, name, value])
+                    logger.error("callback Exception")
                     function_stack = [s.name for s in traceback.extract_tb(value.__traceback__)[2:]]
                     self.globals[user][name] = str(value) + ' in ' + ' > '.join(function_stack)
                     self.change_state(user, node, "exception")
@@ -802,7 +786,8 @@ except Exception as e:
             for name in names:
                 # ** Might need to remove the Exception message here
                 self.globals[user][name] = str(value)
-                debug_logger(["sampler_callback Exception", user, name, value])
+                logger.debug(["sampler_callback Exception", user, name, value])
+                logger.error("sampler_callback Exception")
             self.change_state(user, node, "exception")
             if exception_variable != "No Exception Variable":
                 m = re.match(r"__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
@@ -821,7 +806,7 @@ except Exception as e:
                         name_long = int("".join(map(str, [ord(c) for c in name])))
                         # 4294967291 seems to be the largest prime under 2**32 (int limit)
                         seed = name_long % 4294967291
-                        debug_logger("name_seed {}: {} ({})".format(name, seed, name_long))
+                        logger.debug("name_seed {}: {} ({})".format(name, seed, name_long))
                         numpy.random.seed(seed)
                         self.globals[user][name] = numpy.random.permutation(
                             value[name])  # permute to break the joint information across variables

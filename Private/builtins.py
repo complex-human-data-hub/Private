@@ -2,10 +2,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import logging
-FORMAT = '[%(asctime)s] %(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-_log = logging.getLogger("Builtins")
-
 import numpy.random
 import numpy
 from scipy import stats
@@ -15,7 +11,7 @@ import Private.redis_helper as redis_helper
 import pymc3 as pm
 import theano.tensor
 import math
-from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples, s3_integration
+from .config import numpy_seed, number_of_tuning_samples, number_of_chains, number_of_samples, config_logger
 
 from . import preprocessing as pre
 from . import plotting as plot
@@ -33,7 +29,8 @@ import dill as pickle
 from .private_data import Source
 from functools import reduce
 
-
+config_logger()
+logger = logging.getLogger("Builtins")
 data_source = Source()
 Events = data_source.get_events()
 DemoEvents = data_source.get_demo_events()
@@ -812,7 +809,7 @@ def show_prob_builtins():
 
 
 def set_globals(user_ids):
-    _log.info("set_globals")
+    logger.debug("set_globals")
     result = {}
     # We can pickle builtins 
     # so quicker than deepcopy
@@ -821,6 +818,6 @@ def set_globals(user_ids):
     for u in user_ids:
         result[u] = pickle.loads(builtins_pickle)
     result["All"] = pickle.loads(builtins_pickle)
-    _log.info("set_globals ...done")
+    logger.debug("set_globals ...done")
     return result
 

@@ -1,13 +1,6 @@
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
 from Private.builtins import show_builtins, show_prob_builtins, commands, plot_builtins
-from Private.graph import *
-
-def _debug(msg):
-    with open('/tmp/private-debug.log', 'a') as fp:
-        if not isinstance(msg, str):
-            msg = json.dumps(msg)
-        fp.write("{}\n".format(msg))
 
 
 class PrivateSemanticsException(Exception):
