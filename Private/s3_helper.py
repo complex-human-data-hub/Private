@@ -5,9 +5,6 @@ import boto3
 from botocore.exceptions import ClientError
 from .config import s3_log_level, s3_bucket_name, config_logger
 from boto3.session import Session
-import json 
-from datetime import datetime
-import os 
 import traceback
 import base64
 import io
