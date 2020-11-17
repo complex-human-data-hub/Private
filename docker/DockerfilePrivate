@@ -2,6 +2,7 @@ FROM ubuntu:latest
 WORKDIR /code
 
 RUN apt-get update && apt-get install -y  gcc g++ python3 python3-dev python-numpy python3-venv 
+RUN apt-get install -y graphviz
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"

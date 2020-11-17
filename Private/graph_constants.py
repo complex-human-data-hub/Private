@@ -1,3 +1,5 @@
+import os 
+
 # inferential dependency graph keys
 pd_key = 'p_'
 p_key = 'p'
@@ -35,3 +37,6 @@ manifold_key = 'manifold_privacy_job'
 # other constants
 user_all = 'All'
 graph_folder = 'graphs'
+
+if not os.path.isdir(graph_folder):
+    os.mkdir(graph_folder)
