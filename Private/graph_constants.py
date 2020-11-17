@@ -38,5 +38,8 @@ manifold_key = 'manifold_privacy_job'
 user_all = 'All'
 graph_folder = 'graphs'
 
+# plotting constants
+data_columns = {"col", "row", "style", "hue", "size"}
+
 if not os.path.isdir(graph_folder):
     os.mkdir(graph_folder)
