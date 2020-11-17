@@ -1,6 +1,7 @@
 from arpeggio import SemanticActionResults, PTNodeVisitor, visit_parse_tree
 
 from Private.builtins import show_builtins, show_prob_builtins, commands, plot_builtins
+from .graph_constants import data_columns
 
 
 class PrivateSemanticsException(Exception):
@@ -215,6 +216,11 @@ class InputVisitor(PTNodeVisitor):
                 c.replace("\"", "") if type(c) == str else c.code.replace("\"", "") for c in children[1:] if
                 c.result_type == "named_argument")
             argument_names = "[\"" + argument_names + "\"], "
+            for c in children[1:]:
+                if type(c) != str:
+                    argument = c.evalcode.split(' = ')[0]
+                    if c.result_type == "named_argument" and argument in data_columns:
+                        c.depend = [c.evalcode.split(' = ')[1]]
             if len(kw_argument_names) > 0:
                 kw_argument_names = "[\"" + kw_argument_names + "\"], "
             else:
