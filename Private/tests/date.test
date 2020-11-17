@@ -2,6 +2,7 @@ SemaEvents = [e for e in DemoEvents if e.Type == "__SEMA__" and e.hasField("Happ
 AppEvents = [e for e in DemoEvents if e.Type == "__App__" and e.hasField("Temperature")]
 
 CombinedEvents = zipDate([SemaEvents, AppEvents])
+# CombinedEvents = zipDate([SemaEvents, AppEvents], "StartDateTime", [["minutes", 120]])
 
 t = CombinedEvents[1]
 
