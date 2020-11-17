@@ -1,12 +1,18 @@
+import logging
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 import pandas as pd
+from Private.graph_constants import data_columns
+from Private.config import config_logger
+
+# worked when I added config code here, rather than a function call (was writing to a file)
+config_logger()
+logger = logging.getLogger("plotting")
 
 # helper Variable
 keyword_labels = "labels"
 keyword_title = 'title'
-data_columns = {"col", "row", "style", "hue", "size"}
 
 
 class PrivatePlottingException(Exception):

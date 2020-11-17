@@ -1,0 +1,19 @@
+SemaEvents = [e for e in DemoEvents if e.Type == "__SEMA__" and e.hasField("Happy")]
+AppEvents = [e for e in DemoEvents if e.Type == "__App__" and e.hasField("Temperature")]
+
+CombinedEvents = zipDate([SemaEvents, AppEvents])
+
+t = CombinedEvents[1]
+
+Temperature = [p[1].Temperature for p in CombinedEvents]
+Happy = [int(p[0].Happy) for p in CombinedEvents]
+
+Temperature = [p[1].Temperature for p in CombinedEvents]
+Happy = [int(p[0].Happy) for p in CombinedEvents]
+Happy ~ Normal(mHappy, sHappy)
+mHappy ~ Temperature * betaHappy + interceptHappy
+sHappy ~ HalfNormal(5)
+betaHappy ~ Normal(0,10)
+interceptHappy ~ Normal(0,30)
+betaHappyPlot = distplot(betaHappy)
+percentilesHappy = percentile(betaHappy, percent=90)
