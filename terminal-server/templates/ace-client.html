@@ -362,13 +362,13 @@
     }
 
     editor.commands.addCommand({
-        name: "sv",
+        name: "Update Variables",
         exec: sv,
         bindKey: { win: "ctrl-s", mac: "cmd-s" }
     });
     
     editor.commands.addCommand({
-        name: "send",
+        name: "Run",
         exec: send_exec,
         bindKey: { win: "ctrl-m", mac: "cmd-m" }
     });
@@ -377,15 +377,15 @@
         ["button", {
             ref: "sendButton",
             onclick: send_exec
-        }, "send"],
+        }, "Run"],
         ["button", {
             ref: "svButton",
             onclick: sv
-        }, "sv"],
+        }, "Update Variables"],
         ["button", {
             ref: "sjButton",
             onclick: sj
-        }, "sj"],
+        }, "Show Jobs"],
     ], document.getElementById('editor-container'), refs);
 
 
