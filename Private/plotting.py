@@ -1,4 +1,6 @@
 import logging
+import threading
+from enum import Enum, auto
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
@@ -9,10 +11,27 @@ from Private.config import config_logger
 # worked when I added config code here, rather than a function call (was writing to a file)
 config_logger()
 logger = logging.getLogger("plotting")
+lock = threading.Lock()
 
 # helper Variable
-keyword_labels = "labels"
+keyword_labels = 'labels'
 keyword_title = 'title'
+
+
+class GraphType(Enum):
+    JOINTPLOT = auto()
+    PAIRPLOT = auto()
+    DISTPLOT = auto()
+    KDEPLOT = auto()
+    RUGPLOT = auto()
+    RELPLOT = auto()
+    CATPLOT = auto()
+    LMPLOT = auto()
+    REGPLOT = auto()
+    RESIDPLOT = auto()
+    HEATMAP = auto()
+    CLUSTERMAP = auto()
+    POINTPLOT = auto()
 
 
 class PrivatePlottingException(Exception):
@@ -20,6 +39,7 @@ class PrivatePlottingException(Exception):
     Allows us to separate private exceptions from more generic exceptions
     """
     pass
+
 
 # plotting helper methods
 def create_data_frame(argument_names, kw_argument_names, *args, **kwargs):
@@ -116,18 +136,12 @@ def jointplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        g = sns.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.JOINTPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _jointplot(args, argument_names, df, kwargs):
+    g = sns.jointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    return g
 
 
 def pairplot(argument_names, kw_argument_names, *args, **kwargs):
@@ -140,33 +154,21 @@ def pairplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        g = sns.pairplot(df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.PAIRPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _pairplot(args, argument_names, df, kwargs):
+    g = sns.pairplot(df, **kwargs)
+    return g
 
 
 def distplot(argument_names, kw_argument_names, *args, **kwargs):
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:  # this is wrapped in a try because distplot throws a future warning that prevents execution
-        sns.distplot(df[df.columns[0]], **kwargs)
-        plt.title(title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.DISTPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _distplot(args, argument_names, df, kwargs):
+    g = sns.displot(data=df, x=argument_names[0], **kwargs)
+    return g
 
 
 def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
@@ -179,21 +181,15 @@ def kdeplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        if len(args) > 1 is None:
-            sns.kdeplot(df.ix[:,0], **kwargs)
-        else:
-            sns.kdeplot(df.ix[:,0], df.ix[:,1], **kwargs)
-        plt.title(title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.KDEPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _kdeplot(args, argument_names, df, kwargs):
+    if len(args) > 1:
+        g = sns.kdeplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    else:
+        g = sns.kdeplot(x=argument_names[0], data=df, **kwargs)
+    return g
 
 
 def rugplot(argument_names, kw_argument_names, *args, **kwargs):
@@ -204,18 +200,17 @@ def rugplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        sns.rugplot(df.ix[:,0], **kwargs)
-        plt.title(title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.RUGPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _rugplot(args, argument_names, df, kwargs):
+    if len(args) > 1:
+        sns.scatterplot(data=df, x=argument_names[0], y=argument_names[1], **kwargs)
+        g = sns.rugplot(data=df, x=argument_names[0], y=argument_names[1], **kwargs)
+    else:
+        sns.scatterplot(data=df, x=argument_names[0], **kwargs)
+        g = sns.rugplot(data=df, x=argument_names[0], **kwargs)
+    return g
 
 
 #   Relational plots
@@ -231,23 +226,17 @@ def relplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        if len(args) == 3:
-            g = sns.relplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
-        elif len(args) == 2:
-            g = sns.relplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        else:
-            raise PrivatePlottingException("At least 2 parameters expected for the relplot")
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.RELPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _relplot(args, argument_names, df, kwargs):
+    if len(args) == 3:
+        g = sns.relplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+    elif len(args) == 2:
+        g = sns.relplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    else:
+        raise PrivatePlottingException("At least 2 parameters expected for the relplot")
+    return g
 
 
 #   Categorical plots
@@ -279,23 +268,17 @@ def catplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        if len(args) == 3:
-            g = sns.catplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
-        elif len(args) == 2:
-            g = sns.catplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        else:
-            g = sns.catplot(x=argument_names[0], data=df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.CATPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _catplot(args, argument_names, df, kwargs):
+    if len(args) == 3:
+        g = sns.catplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+    elif len(args) == 2:
+        g = sns.catplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    else:
+        g = sns.catplot(x=argument_names[0], data=df, **kwargs)
+    return g
 
 
 # Regression plots
@@ -308,21 +291,15 @@ def lmplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        if len(args) == 3:
-            g = sns.lmplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
-        else:
-            g = sns.lmplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.LMPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _lmplot(args, argument_names, df, kwargs):
+    if len(args) == 3:
+        g = sns.lmplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+    else:
+        g = sns.lmplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    return g
 
 
 def regplot(argument_names, kw_argument_names, *args, **kwargs):
@@ -335,18 +312,12 @@ def regplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        g = sns.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.REGPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _regplot(args, argument_names, df, kwargs):
+    g = sns.regplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    return g
 
 
 def residplot(argument_names, kw_argument_names, *args, **kwargs):
@@ -359,18 +330,12 @@ def residplot(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        g = sns.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.RESIDPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _residplot(args, argument_names, df, kwargs):
+    g = sns.residplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    return g
 
 
 # Matrix plots
@@ -384,18 +349,12 @@ def heatmap(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
-    df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
-    plt.figure()
-    try:
-        g = sns.heatmap(df, **kwargs)
-        set_plot_title(g, title)
-    except Exception:
-        pass
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    plt.clf()
-    plt.close()
-    return buf
+    return private_plot(GraphType.HEATMAP, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _heatmap(args, argument_names, df, kwargs):
+    g = sns.heatmap(df, **kwargs)
+    return g
 
 
 def clustermap(argument_names, kw_argument_names, *args, **kwargs):
@@ -408,10 +367,60 @@ def clustermap(argument_names, kw_argument_names, *args, **kwargs):
     :param kwargs: Other arguments that can be passed to seaborn
     :return: Data URL
     """
+    return private_plot(GraphType.CLUSTERMAP, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _clustermap(args, argument_names, df, kwargs):
+    g = sns.clustermap(df, **kwargs)
+    return g
+
+
+def pointplot(argument_names, kw_argument_names, *args, **kwargs):
+    """
+    Plot a matrix dataset as a hierarchically-clustered heatmap.
+
+    :param argument_names: String list of argument names. Should be in the same order as data lists
+    :param kw_argument_names: String list of key word arg names. Should be in the same order as data lists
+    :param args: data lists, Rectangular data for clustering. Cannot contain NAs.
+    :param kwargs: Other arguments that can be passed to seaborn
+    :return: Data URL
+    """
+    return private_plot(GraphType.POINTPLOT, argument_names, kw_argument_names, *args, **kwargs)
+
+
+def _pointplot(args, argument_names, df, kwargs):
+    if len(args) == 3:
+        g = sns.pointplot(x=argument_names[0], y=argument_names[1], hue=argument_names[2], data=df, **kwargs)
+    elif len(args) == 2:
+        g = sns.pointplot(x=argument_names[0], y=argument_names[1], data=df, **kwargs)
+    else:
+        g = sns.pointplot(x=argument_names[0], data=df, **kwargs)
+    return g
+
+
+plot_types = {
+    GraphType.JOINTPLOT: _jointplot,
+    GraphType.PAIRPLOT: _pairplot,
+    GraphType.DISTPLOT: _distplot,
+    GraphType.KDEPLOT: _kdeplot,
+    GraphType.RUGPLOT: _rugplot,
+    GraphType.RELPLOT: _relplot,
+    GraphType.CATPLOT: _catplot,
+    GraphType.LMPLOT: _lmplot,
+    GraphType.REGPLOT: _regplot,
+    GraphType.RESIDPLOT: _residplot,
+    GraphType.HEATMAP: _heatmap,
+    GraphType.CLUSTERMAP: _clustermap,
+    GraphType.POINTPLOT: _pointplot
+}
+
+
+def private_plot(plot_type, argument_names, kw_argument_names, *args, **kwargs):
     df, title, kwargs = generate_plot_data(argument_names, kw_argument_names, *args, **kwargs)
+    lock.acquire()
     plt.figure()
     try:
-        g = sns.clustermap(df, **kwargs)
+        g = plot_types[plot_type](args, argument_names, df, kwargs)
         set_plot_title(g, title)
     except Exception:
         pass
@@ -419,4 +428,5 @@ def clustermap(argument_names, kw_argument_names, *args, **kwargs):
     plt.savefig(buf, format="png")
     plt.clf()
     plt.close()
+    lock.release()
     return buf
