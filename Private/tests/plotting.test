@@ -13,6 +13,13 @@ rel5 = relplot(totalbill, tip, day, col=time, row=sex)
 rel6 = relplot(totalbill, tip, time, size=size, palette=["b", "r"], sizes=tuple([10, 100]), col=time)
 rel7 = relplot(totalbill, tip, sex, style=sex, col=time, kind="line")
 
+dist1 = distplot(totalbill)
+dist2 = distplot(totalbill, hue=day)
+
+kde1 = kdeplot(totalbill)
+kde2 = kdeplot(totalbill, hue=day)
+
+rug1 = rugplot(totalbill, tip)
 
 pulse= [85, 85, 88, 90, 92, 93, 97, 97, 94, 80, 82, 83, 91, 92, 91, 83, 83, 84, 87, 88, 90, 92, 94, 95, 97, 99, 96, 100, 97, 100, 86, 86, 84, 93, 103, 104, 90, 92, 93, 95, 96, 100, 89, 96, 95, 84, 86, 89, 103, 109, 90, 92, 96, 101, 97, 98, 100, 102, 104, 103, 93, 98, 110, 98, 104, 112, 98, 105, 99, 87, 132, 120, 94, 110, 116, 95, 126, 143, 100, 126, 140, 103, 124, 140, 94, 135, 130, 99, 111, 150]
 diet = ['low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'low fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat', 'no fat']
