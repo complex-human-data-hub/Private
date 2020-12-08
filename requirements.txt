@@ -16,7 +16,6 @@ numpy
 pandas
 patsy
 pydot
-pymc3
 pyparsing
 python-dateutil
 pytz
@@ -27,7 +26,8 @@ six
 sklearn
 subprocess32
 text-unidecode
-Theano
+pymc3==3.8
+Theano==1.0.4
 tqdm
 boto3
 dask
