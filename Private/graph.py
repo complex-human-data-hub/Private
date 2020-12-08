@@ -622,7 +622,7 @@ except Exception as e:
         estring = e.args[0]
         newErrorString = estring[estring.rfind("\\n")+1:]
         if 'Bad initial energy' in newErrorString:
-            newErrorString +=  "\\n" + str(basic_model.check_test_point())
+            newErrorString +=  "\\n" + str(basic_model.check_test_point()) + "\\n\\n" + json.dumps(basic_model.test_point, indent=4, default=str)
 
         # Need to create a new Exception here 
         # some exceptions were cpickle when pp passed the result back to the master
