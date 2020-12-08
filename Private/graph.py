@@ -621,6 +621,9 @@ except Exception as e:
 
         estring = e.args[0]
         newErrorString = estring[estring.rfind("\\n")+1:]
+        if 'Bad initial energy' in newErrorString:
+            newErrorString +=  "\\n" + str(basic_model.check_test_point())
+
         # Need to create a new Exception here 
         # some exceptions were cpickle when pp passed the result back to the master
         return_exception = Exception(newErrorString)
@@ -786,14 +789,18 @@ except Exception as e:
             for name in names:
                 # ** Might need to remove the Exception message here
                 self.globals[user][name] = str(value)
-                logger.debug(["sampler_callback Exception", user, name, value])
+                logger.debug(["sampler_callback Exception", user, name, value, exception_variable])
                 logger.error("sampler_callback Exception")
             self.change_state(user, node, "exception")
             if exception_variable != "No Exception Variable":
                 m = re.match(r"__init__\(\) takes at least (\d+) arguments \(\d+ given\)", str(value))
                 if m:
                     value = str(int(m.group(1)) - 1) + " arguments required."
-                self.sampler_exception[user][exception_variable] = str(value)
+                ## ** Changing to use name instead of exception_variable          ##
+                ## ** May have unwanted side effect, but I can't see it           ##
+                ## ** So leaving this ugly message for now                        ## 
+                #self.sampler_exception[user][exception_variable] = str(value)    
+                self.sampler_exception[user][name] = str(value)
             else:
                 for name in names:
                     self.sampler_exception[user][name] = str(value)
@@ -1276,11 +1283,13 @@ except Exception as e:
     def eval_command_line_expression(self, code, user="All"):
         self.acquire("eval_command_line_expression")
         result = ""
-
         if code not in (self.deterministic | self.probabilistic | self.builtins):
             result += code + " is undefined  "
         elif code not in self.uptodate[user]:
-            result += code + " is not uptodate  "
+            if code in self.sampler_exception[user]:
+                result += self.sampler_exception[user][code]
+            else:
+                result += code + " is not uptodate  "
         elif code not in (self.public | self.unknown_privacy):
             result += code + " is private  "
         elif code not in self.public:
