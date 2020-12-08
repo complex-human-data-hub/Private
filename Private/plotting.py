@@ -422,7 +422,8 @@ def private_plot(plot_type, argument_names, kw_argument_names, *args, **kwargs):
     try:
         g = plot_types[plot_type](args, argument_names, df, kwargs)
         set_plot_title(g, title)
-    except Exception:
+    except Exception as err:
+        logger.error(err)
         pass
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
