@@ -27,7 +27,9 @@ docker-compose down
 ```
 
 ## Tutorials
-More examples of how to use Private are contained in the tutorials directory
+More examples of how to use Private can be found on Simon Dennis' blog:
+https://simondennis.blog/category/private/
+
 
 ## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
